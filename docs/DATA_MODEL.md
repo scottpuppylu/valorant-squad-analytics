@@ -1,0 +1,61 @@
+# Data model
+
+TASK-001 uses a deterministic fictional dataset. It contains no private player identifiers, Riot API data, or third-party match data.
+
+## Entities
+
+### `Player`
+
+Stable profile metadata stored in `src/data/players.ts`:
+
+- `id`: internal stable key used by routes and joins
+- `handle` and `displayName`: fictional display labels
+- `role`: Duelist, Initiator, Controller, or Sentinel
+- `agents`: the fictional player's demonstrated agent pool
+- `accent`, `tagline`, and `playstyle`: presentation metadata
+
+### `MatchRecord`
+
+One row per fictional squad match in `src/data/demoMatches.ts`:
+
+- stable match ID and ISO timestamp
+- map and fictional opponent
+- squad and opponent round scores
+- win/loss state and duration
+- five `MatchPerformance` rows, one for each squad member in the lineup
+
+The fixture produces 32 unique matches. Five of eight players participate in each match, giving every player 20 appearances. The match generator is deterministic so tests and screenshots are reproducible.
+
+### `MatchPerformance`
+
+The raw player-match grain. Required fields are kills, deaths, assists, ACS, ADR, KAST, agent, and player ID. HS%, first kills, first deaths, clutch attempts, and clutch wins are optional to exercise missing-data behavior.
+
+### `RawPlayerStats`
+
+`src/utils/aggregateStats.ts` aggregates player-match rows. Totals are additive. ACS, ADR, and KAST are round-weighted averages. HS% is kill-weighted when present. Ratios use safe division and return a finite fallback when the denominator is zero.
+
+### `PlayerScores`
+
+`src/scoring/` converts aggregated statistics into the initial 0–100 Firepower, Entry, Teamplay, Clutch, and Consistency categories. Overall is a weighted combination of those categories. Confidence is stored alongside the scores but is never included in Overall.
+
+## Data flow
+
+```text
+fictional player metadata + 32 fictional matches
+  -> aggregatePlayerStats
+  -> role-aware normalization
+  -> category scores
+  -> overall score + separate confidence
+  -> dashboard, leaderboard, and profile UI
+```
+
+## Missing data
+
+- Optional statistics remain `undefined`; they are not silently converted to observed zero.
+- A category renormalizes its available weights when one optional input is missing.
+- A category with no usable inputs returns the documented neutral fallback of 50.
+- A zero denominator returns a finite fallback rather than `Infinity` or `NaN`.
+
+## Future-compatible fields
+
+Economy, utility, trade, impact, and synergy evidence are deliberately absent from TASK-001 because the fixture does not support them. Later tasks can add new raw fields and derived modules without placing calculation logic in React components.
