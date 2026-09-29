@@ -25,9 +25,9 @@ const scoreRows = [
 ] as const;
 
 const formCopy = {
-  up: ['↗', '近期上升'],
+  up: ['↑', '近期上升'],
   flat: ['→', '近期持平'],
-  down: ['↘', '近期下降'],
+  down: ['↓', '近期下降'],
   insufficient: ['—', '樣本不足'],
 } as const;
 
