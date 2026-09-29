@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-專案初始化完成，尚未建立前端應用程式。
+TASK-001 已建立靜態前端基礎：8 位虛構玩家、32 場可重現的示範比賽、角色調整的初始計分、儀表板、排行榜、玩家頁面與 GitHub Pages 工作流程。
 
 ## V1 原則
 
@@ -34,7 +34,22 @@
 - npm
 - Git
 
-應用程式建立後，本節會補上安裝、測試與執行指令。
+```bash
+npm install
+npm run dev
+```
+
+品質檢查：
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
+Vite 的 production base path 是 `/valorant-squad-analytics/`，應用程式使用 hash routing，讓靜態 GitHub Pages 可以直接切換頁面。
+
+計分公式見 [docs/SCORING.md](docs/SCORING.md)，資料結構見 [docs/DATA_MODEL.md](docs/DATA_MODEL.md)。
 
 ## 安全與商標
 

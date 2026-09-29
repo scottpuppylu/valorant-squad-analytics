@@ -6,8 +6,8 @@
 - [x] Add README, Node ignore rules, line-ending rules, project brief, and roadmap.
 - [x] Add repository-level Codex instructions.
 - [x] Add conservative project-scoped Codex defaults.
-- [ ] Create and connect the public GitHub repository.
-- [ ] Push the initial commit.
+- [x] Create and connect the public GitHub repository.
+- [x] Push the initial commit.
 
 ## Task 001 — application scaffold
 
@@ -15,14 +15,14 @@ Create the V1 application skeleton with React, TypeScript, Vite, Tailwind CSS, R
 
 Required outcomes:
 
-- Establish the folder structure described in `docs/PROJECT_BRIEF.md`.
-- Create realistic demo data for eight fictional players and at least thirty matches.
-- Implement responsive navigation, a first dashboard, and a first leaderboard.
-- Add placeholder routes for all planned V1 pages.
-- Add `docs/SCORING.md` and `docs/DATA_MODEL.md`.
-- Configure linting, unit tests, CI, and GitHub Pages deployment.
-- Ensure the Vite base path works under `/valorant-squad-analytics/`.
-- Verify `npm run lint`, `npm test`, and `npm run build`.
+- [x] Establish the folder structure described in `docs/PROJECT_BRIEF.md`.
+- [x] Create realistic demo data for eight fictional players and at least thirty matches.
+- [x] Implement responsive navigation, a first dashboard, and a first leaderboard.
+- [x] Add placeholder routes for all planned V1 pages.
+- [x] Add `docs/SCORING.md` and `docs/DATA_MODEL.md`.
+- [x] Configure linting, unit tests, CI, and GitHub Pages deployment.
+- [x] Ensure the Vite base path works under `/valorant-squad-analytics/`.
+- [x] Verify `npm run lint`, `npm test`, and `npm run build`.
 
 Do not implement the full scoring engine during this task. Use clearly labeled initial calculations or fixtures and leave advanced scoring for Task 002.
 
