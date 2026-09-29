@@ -1,79 +1,69 @@
 # Third-party VALORANT data spike
 
-Research and probe date: 2026-09-29
+Decision date: 2026-09-29
 
-## Decision
+## Current status
 
-HenrikDev VALORANT API v4 is the selected short-lived spike source because its provider documentation publishes match-history and match-detail schemas at player, team, round and kill-event grain. It is unofficial, key-gated and explicitly consent-sensitive. It is not approved as a production dependency.
+TASK-002A.1 is **PARTIALLY COMPLETE / CLOSED FOR NOW**.
 
-Primary sources:
+Completed:
+
+- emoji player identity and browser-local preferences;
+- a typed provider response summarizer;
+- a dormant consent/key-gated probe script;
+- provider, normalization and proxy boundary preparation.
+
+Deferred to `TASK-API-01`:
+
+- a Henrik API key and consenting real account;
+- latest-match retrieval;
+- normalization of observed real responses;
+- a real-data field and nullability audit;
+- comparison of documented and observed analytics capability.
+
+No live player-data capability has been verified. This is an intentional deferral, not a task failure. The public application does not require `.env.local`, credentials, consent configuration, a real Riot ID, or network access to HenrikDev.
+
+## Architecture decision
+
+HenrikDev VALORANT API v4 remains the selected candidate for a future, short-lived validation spike because its published documentation describes match-history and match-detail shapes at player, team, round and kill-event grain. It is unofficial, key-gated and consent-sensitive. It is not approved as a production dependency.
+
+Primary documentation retained for future review:
 
 - [HenrikDev authentication documentation](https://docs.henrikdev.xyz/general/auth)
 - [HenrikDev v4 match-history schema](https://docs.henrikdev.xyz/api-reference/valorant/get-matches-by-name-v4)
 - [HenrikDev project policy and rate-limit notes](https://github.com/Henrik-3/unofficial-valorant-api)
 - [Riot VALORANT developer policy](https://developer.riotgames.com/docs/valorant)
 
-The provider requires an API key, asks developers to obtain player consent, and says large analytics projects are not allowed. Riot also requires opt-in for products displaying identifiable player statistics. This spike therefore has a narrower boundary than the future official integration.
+Published schemas establish candidates only. They do not verify field presence, nullability, queue variation, remakes, overtime, hidden identities, or whether reconstructed analytics are honest.
 
-## Baseline before TASK-002A.1
+## Prepared code boundary
 
-- Git: clean `main`, tracking `origin/main`, HEAD `37e335f`.
-- `npm run lint`: exit 0.
-- `npm test`: exit 0; 2 files and 18 tests passed in 852 ms.
-- `npm run build`: exit 0; Vite 7.3.6 transformed 664 modules and built in 2.91 s.
-- `npm audit`: exit 0; 0 vulnerabilities.
+- `src/dataSources/thirdParty/henrikV4.ts` validates provider-shaped envelopes and emits only non-identifying field-coverage counts.
+- `scripts/probe-henrik-api.mjs` is a dormant local diagnostic scaffold. It is not imported by the application, is not executed by normal development/build commands, and does not write raw responses.
+- Scoring and React components do not import provider DTOs.
+- The deployed GitHub Pages application uses only deterministic fictional fixtures.
 
-## Live access probe
+The repository contains no API key, real Riot ID, consent value, raw response archive, or normalized real-player record.
 
-A credential-free request was sent to the documented v4 match-history route with a deliberately fictional Riot ID. The service returned HTTP 401 with `Unauthorized`. No real player was queried, no credential was available in the worktree/process environment, and no response was saved.
+## Capability status
 
-This confirms the live host and authentication gate, but it does **not** validate real player data. TASK-002A.1 remains incomplete until a consenting player and a locally supplied key produce one successful, non-identifying coverage summary.
-
-## Published v4 evidence coverage
-
-| Evidence | Published v4 field shape | Analytics decision before live verification |
+| Evidence | Published schema suggests | Current validation status |
 |---|---|---|
-| Match context | metadata, map, queue, season, start and duration | Candidate for cohorts and recency |
-| Player totals | score, kills, deaths, assists, damage and hit locations | Candidate for ACS, ADR, K/D, KPR, APR and HS% |
-| Agent/team/outcome | agent, team ID, team round totals and win | Candidate for agent, role and result splits |
-| Kill timeline | round, killer, victim, assistants and timestamps | Candidate for first kills/deaths, trades and alive-state reconstruction |
-| Round evidence | player stats, damage events, economy and ability casts | Candidate for round impact, economy and limited utility volume |
-| Objective events | plant/defuse player, time, site and location | Candidate for objective context |
-| Explicit trade/KAST/clutch labels | not published as authoritative labels | Must remain product-defined reconstructions with coverage |
-| Communication/space creation/utility outcome | not established by the schema | Not supportable from this source alone |
+| Match context | map, queue, season, start and duration | NOT VERIFIED |
+| Player combat totals | score, kills, deaths, assists and damage | NOT VERIFIED |
+| Hit locations | head, body and leg hits | NOT VERIFIED |
+| Team and outcome | team identity, rounds and win state | NOT VERIFIED |
+| Kill timeline | round, killer, victim, assists and timestamps | NOT VERIFIED |
+| Round economy | loadout and economy values | NOT VERIFIED |
+| Objective events | plant and defuse context | NOT VERIFIED |
+| Ability casts | cast counts | NOT VERIFIED |
+| Trades, KAST and clutch | product-defined reconstruction would be required | NOT VERIFIED |
+| Communication, space creation and utility outcome | not established by published schema | NOT AVAILABLE FROM CURRENT EVIDENCE |
 
-Schema documentation establishes possibility, not correctness. A live response must still verify nullability, queue/mode variation, incomplete matches, remakes, overtime, round counts, hidden identities and field consistency.
+The historical credential-free reachability check only returned HTTP 401 for a fictional identifier. It did not retrieve real match data and is not evidence that any analytics field is usable.
 
-## Local probe contract
+## Future TASK-API-01 gate
 
-Run only for a player who explicitly agreed to this project using their data. Do not paste a key into chat, source files, shell history or npm arguments. Copy `.env.example` to ignored `.env.local`, then set these values there (or in the process environment):
+Only when TASK-API-01 is explicitly started should the team obtain a provider key, use an explicitly consenting player, retrieve a small latest-match sample and record a non-identifying capability audit. That future task must still avoid committing secrets, identifiers or raw private payloads.
 
-```text
-HENRIK_API_KEY
-VALORANT_RIOT_NAME
-VALORANT_RIOT_TAG
-VALORANT_DATA_CONSENT_CONFIRMED=true
-VALORANT_AFFINITY=ap            # optional, defaults to ap
-VALORANT_PLATFORM=pc            # optional, defaults to pc
-VALORANT_MATCH_LIMIT=3          # optional, clamped to 1..10
-```
-
-Then run:
-
-```text
-npm run spike:henrik
-```
-
-The script sends the key only in the HTTPS `Authorization` header. It prints counts and Boolean field-coverage flags; it does not print Riot IDs, PUUIDs, match IDs or raw payloads and does not write files.
-
-## Gate before TASK-002B
-
-After one consented successful run, record only:
-
-- query timestamp, provider/version, affinity/platform and match count;
-- HTTP success and rate-limit metadata if available;
-- non-identifying field coverage and observed null/mode caveats;
-- whether K/D/A, ACS candidate, ADR, HS%, opening events, economy, trades, KAST and clutch can be calculated honestly;
-- fields that remain unavailable or too ambiguous.
-
-Do not import the real player into the public demo, calibrate benchmarks from one player, call this MMR/Elo, or begin TASK-002B until the evidence decision is recorded.
+TASK-002B does not wait for this gate. It may proceed using demo evidence while marking unavailable evidence explicitly and keeping every formula transparent.

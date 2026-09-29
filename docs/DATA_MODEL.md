@@ -68,9 +68,11 @@ Every `Player` has a required `defaultEmoji`. `AvatarRepository` stores only an 
 
 Resolution order is browser override, then the player's committed default emoji. The previous uploaded-image blob path is no longer read. Legacy IndexedDB records are left untouched rather than deleted automatically.
 
+Malformed JSON, an unknown storage version, or a record with an emoji outside the allow-list is ignored and resolves to the player's default emoji. Selecting the default emoji or pressing `重設頭像` removes that player's override from the versioned map. Legacy image-avatar IndexedDB data is safely retired: active application code neither reads nor writes it, and automatic destructive deletion is intentionally avoided.
+
 ## Third-party spike boundary
 
-`src/dataSources/thirdParty/henrikV4.ts` validates and summarizes provider-shaped v4 match envelopes without importing them into scoring or React components. `scripts/probe-henrik-api.mjs` is a local diagnostic only: it requires an API key, an explicitly consented Riot ID and a consent flag, prints a non-identifying coverage summary, and retains no raw response. The deployed application does not call the provider.
+`src/dataSources/thirdParty/henrikV4.ts` validates and summarizes provider-shaped v4 match envelopes without importing them into scoring or React components. `scripts/probe-henrik-api.mjs` is a dormant local diagnostic scaffold for the future TASK-API-01. It is not required by the application and was not used for real-account or real-match validation. The deployed application does not call the provider.
 
 ## Missing data
 

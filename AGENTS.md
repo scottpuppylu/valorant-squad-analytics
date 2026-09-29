@@ -5,7 +5,7 @@
 - Build VALORANT Squad Analytics as a transparent community performance dashboard for a private friend group.
 - Never describe the score as MMR, Elo, official rank, or a replacement for Riot's ranked system.
 - Keep V1 static and compatible with GitHub Pages. Do not add a backend, commit API keys, or call unofficial VALORANT APIs from the deployed frontend.
-- TASK-002A.1 may use a local, consent-gated third-party API spike to validate schemas and evidence. Keep credentials in process environment only, retain no raw player payload, and do not turn the spike into a production data source.
+- Third-party live-data validation is deferred to `TASK-API-01`. Until that task is explicitly started, do not request credentials, real Riot IDs, consent configuration, or make live provider requests. The existing provider/probe scaffold must not become a production data source.
 - Do not copy Riot, VALORANT, VLR, or third-party visual assets or page designs.
 
 ## Technology
@@ -38,5 +38,5 @@
 
 ## Current stage
 
-- TASK-001 and TASK-002A are complete. TASK-002A.1 must finish before TASK-002B begins. Read `docs/PROJECT_BRIEF.md`, `docs/TASKS.md`, `docs/RIOT_API_CAPABILITY.md`, `docs/RIOT_INTEGRATION_PLAN.md`, and `docs/THIRD_PARTY_API_SPIKE.md` before changing data or scoring boundaries.
+- TASK-001 and TASK-002A are complete. TASK-002A.1 is partially complete and closed for now: emoji identity and provider boundaries are implemented; live validation is deferred. TASK-002B may proceed from transparent demo evidence without waiting for live API access. Read `docs/PROJECT_BRIEF.md`, `docs/TASKS.md`, `docs/RIOT_API_CAPABILITY.md`, `docs/RIOT_INTEGRATION_PLAN.md`, and `docs/THIRD_PARTY_API_SPIKE.md` before changing data or scoring boundaries.
 - Stay within the requested task. Record later ideas under the roadmap instead of silently expanding scope.

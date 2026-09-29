@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-002A 已在 TASK-001 靜態前端基礎上加入 zh-TW 介面、可搜尋數據字典、Riot 官方 API 能力研究，以及 About／Privacy／Connect Riot 準備頁面。TASK-002A.1 正把圖片上傳簡化為瀏覽器本機 emoji 頭像，並加入需要玩家同意與本機環境變數的第三方資料 spike。網站目前仍只顯示 8 位虛構玩家與 32 場可重現示範比賽；未把真實帳號資料部署到公開網站。
+TASK-002A 已完成 zh-TW 介面、可搜尋數據字典、Riot 官方 API 能力研究與資料來源邊界。TASK-002A.1 已完成瀏覽器本機 emoji 頭像與第三方 provider／proxy 架構準備，並以「部分完成、暫時關閉」結案；真實 Henrik 帳號、比賽與欄位驗證延後到 `TASK-API-01`。網站目前仍只顯示 8 位虛構玩家與 32 場可重現示範比賽，不需要 API key、真實 Riot 帳號或 `.env.local`。
 
 ## V1 原則
 
@@ -20,12 +20,11 @@ TASK-002A 已在 TASK-001 靜態前端基礎上加入 zh-TW 介面、可搜尋�
 ## 開發階段
 
 1. 建立應用程式骨架、示範資料、儀表板與排行榜
-2. 以本機、明確同意、無資料留存的第三方 API spike 驗證真實 schema 與可用證據
-3. 修正證據覆蓋與小樣本問題，實作透明、角色調整的八維計分引擎
-4. 加入交叉篩選、玩家比較、地圖／特務／對戰頁面與動態稱號
-5. 加入 Duo Synergy
-6. 完成 CSV／JSON 匯入與 GitHub Pages v1.0
-7. 官方 API／RSO 準備研究已提前完成；正式真實資料整合仍須 Production API、RSO 核准與安全後端
+2. 使用既有虛構資料修正證據覆蓋與小樣本問題，實作透明、角色調整的八維計分引擎
+3. 加入交叉篩選、玩家比較、地圖／特務／對戰頁面與動態稱號
+4. 加入 Duo Synergy
+5. 完成 CSV／JSON 匯入與 GitHub Pages v1.0
+6. 未來另以 `TASK-API-01` 驗證第三方真實資料；正式官方整合仍須 Production API、RSO 核准與安全後端
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
 
@@ -52,7 +51,7 @@ Vite 的 production base path 是 `/valorant-squad-analytics/`，應用程式使
 
 計分公式見 [docs/SCORING.md](docs/SCORING.md)，資料結構見 [docs/DATA_MODEL.md](docs/DATA_MODEL.md)，官方欄位能力見 [docs/RIOT_API_CAPABILITY.md](docs/RIOT_API_CAPABILITY.md)，未來整合前提見 [docs/RIOT_INTEGRATION_PLAN.md](docs/RIOT_INTEGRATION_PLAN.md)。
 
-第三方資料 spike 的 consent、執行方式、實測狀態與證據限制見 [docs/THIRD_PARTY_API_SPIKE.md](docs/THIRD_PARTY_API_SPIKE.md)。
+第三方資料 spike 的架構準備、延後狀態與未驗證限制見 [docs/THIRD_PARTY_API_SPIKE.md](docs/THIRD_PARTY_API_SPIKE.md)。
 
 ## 安全與商標
 

@@ -31,7 +31,7 @@ The product must not become:
 ## Prototype user flow
 
 1. A visitor can understand the product through `#/about`, the demo dashboard and the metric dictionary.
-2. `#/connect-riot` explains that account linking is disabled and why official approval is required.
+2. The unfinished public connection placeholder remains hidden until an approved integration provides user value.
 3. A future approved user chooses **Connect Riot**, leaves the app for official RSO, and returns through a server-side OAuth callback.
 4. The server resolves the authenticated account using the official RSO account endpoint and stores the minimum identity link.
 5. The player reviews what the friend group can see and explicitly opts in.
@@ -61,7 +61,7 @@ GitHub Pages can remain the static presentation tier, but it cannot safely perfo
 - [x] Working public demo with fictional data.
 - [x] About page with accurate use case and non-affiliation statement.
 - [x] Privacy page covering local data and future opt-in/unlink concepts.
-- [x] Disabled connection page showing the intended RSO flow without fake login.
+- [x] Intended RSO flow documented without exposing an unfinished connection page or fake login in public navigation.
 - [x] Transparent metric dictionary and current formula limitations.
 - [x] Official endpoint and DTO capability matrix.
 - [ ] Production API application and Riot approval.
@@ -72,4 +72,4 @@ GitHub Pages can remain the static presentation tier, but it cannot safely perfo
 
 Live work remains blocked by official approval, Production API access and RSO. It must not begin as a frontend-only shortcut.
 
-The TASK-002A.1 HenrikDev probe is not a replacement for this plan. It is a local, consent-gated schema/evidence experiment only; it must not become the deployed player-data path or weaken RSO opt-in requirements.
+The TASK-002A.1 HenrikDev scaffold is not a replacement for this plan. Live use is deferred to TASK-API-01; it must not become the deployed player-data path or weaken RSO opt-in requirements.

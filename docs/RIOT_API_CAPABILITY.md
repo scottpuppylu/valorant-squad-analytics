@@ -4,7 +4,7 @@ Research date: 2026-09-29
 
 This document maps the product's desired evidence to Riot's current official VALORANT documentation. It is a readiness study, not a live integration. No key, OAuth client, request code, or unofficial API dependency is included.
 
-TASK-002A.1 separately evaluates one unofficial provider as a local evidence spike. It does not change the official status labels in this document; see `docs/THIRD_PARTY_API_SPIKE.md`.
+TASK-002A.1 prepared an unofficial-provider evidence boundary but closed without real-account validation. That live work is deferred to TASK-API-01 and does not change the official status labels in this document; see `docs/THIRD_PARTY_API_SPIKE.md`.
 
 Primary sources:
 

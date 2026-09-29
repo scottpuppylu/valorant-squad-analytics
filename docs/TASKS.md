@@ -28,26 +28,45 @@ Do not implement the full scoring engine during this task. Use clearly labeled i
 
 ## Task 002A — usability and official API readiness
 
+Status: **COMPLETE**
+
 - [x] Convert user-facing application text to Taiwan Traditional Chinese.
-- [x] Add browser-local avatar upload, resize, preview, persistence and reset.
+- [x] Prototype browser-local image avatar behavior (subsequently retired and replaced by emoji identity in TASK-002A.1).
 - [x] Add a typed, searchable and filterable metric dictionary.
 - [x] Research official VALORANT endpoints and DTO capabilities.
-- [x] Add About, Privacy and disabled Connect Riot readiness flows.
+- [x] Add About, Privacy and documented Connect Riot readiness flows; the unfinished connection page is now hidden from the public product.
 - [x] Add Demo/Riot data-source boundaries without network requests or credentials.
 
 ## Task 002A.1 — emoji identity and real-data evidence spike
+
+Status: **PARTIALLY COMPLETE / CLOSED FOR NOW**
 
 - [x] Replace uploaded image avatars with one default emoji per player and one browser-local override.
 - [x] Add an accessible Chinese emoji picker with immediate app-wide updates, refresh persistence and reset.
 - [x] Remove image validation, resizing, blob display and IndexedDB dependencies from the active product path.
 - [x] Add a typed HenrikDev v4 schema summarizer and a local consent/key-gated probe command.
-- [x] Record provider policy, authentication, schema coverage, privacy limits and the unauthenticated live probe result.
-- [ ] Run the probe against one player who explicitly consented, using a locally supplied HenrikDev key, and record only the non-identifying coverage summary.
-- [ ] Decide whether the observed coverage is sufficient to begin TASK-002B calibration work.
+- [x] Prepare the provider/proxy boundary without connecting it to the deployed application.
+- [x] Record provider policy, documented schema possibilities and privacy limits without treating them as live verification.
 
-Do not begin TASK-002B until the two unchecked evidence gates above are complete. The deployed GitHub Pages application must remain on deterministic fictional data.
+Real account validation, match retrieval, field auditing and capability comparison are deferred to `TASK-API-01`. This closure is intentional and is not a failed task. The deployed GitHub Pages application remains on deterministic fictional data.
+
+## Task API-01 — real third-party data validation
+
+Status: **DEFERRED**
+
+- [ ] Obtain a Henrik API key through the provider's approved process.
+- [ ] Use one explicitly consenting account and retrieve a small latest-match sample.
+- [ ] Normalize the real response without committing identifiers, credentials or raw private payloads.
+- [ ] Audit observed field coverage, nullability, queues, incomplete matches and reconstruction limits.
+- [ ] Compare documented capability with observed capability and record unsupported analytics honestly.
+
+This future task is separate from TASK-002B. Nothing in the current application requires its credentials or live access.
 
 ## Task 002B — evidence-aware scoring correctness
+
+Status: **READY TO START FROM DEMO EVIDENCE**
+
+TASK-002B does not depend on live API completion. It may use the current deterministic demo evidence while keeping formulas transparent, representing unavailable evidence explicitly and avoiding claims about unverified real-provider coverage.
 
 The next scoring task must address all audit findings before adding new dimensions:
 
