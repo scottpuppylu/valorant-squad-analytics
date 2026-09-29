@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAvatars } from '../hooks/useAvatars';
 import type { Player } from '../types/valorant';
 import { getPlayerInitials, resolveAvatarFallback } from '../utils/avatar';
@@ -13,13 +13,26 @@ export function PlayerAvatar({ player, size = 'small', previewBlob }: PlayerAvat
   const { avatars } = useAvatars();
   const customBlob = previewBlob ?? avatars.get(player.id)?.blob ?? null;
   const [failedSource, setFailedSource] = useState<string | null>(null);
-  const customUrl = useMemo(() => customBlob ? URL.createObjectURL(customBlob) : null, [customBlob]);
+  const [loadedAvatar, setLoadedAvatar] = useState<{ blob: Blob; source: string } | null>(null);
+  const customUrl = customBlob && loadedAvatar?.blob === customBlob ? loadedAvatar.source : null;
   const fallback = resolveAvatarFallback(player, customUrl === failedSource ? null : customUrl);
   const defaultFailed = fallback.kind === 'default' && failedSource === fallback.source;
 
-  useEffect(() => () => {
-    if (customUrl) URL.revokeObjectURL(customUrl);
-  }, [customUrl]);
+  useEffect(() => {
+    if (!customBlob) return undefined;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return;
+      setLoadedAvatar({ blob: customBlob, source: reader.result });
+      setFailedSource(null);
+    };
+    reader.readAsDataURL(customBlob);
+    return () => {
+      reader.onload = null;
+      if (reader.readyState === FileReader.LOADING) reader.abort();
+    };
+  }, [customBlob]);
 
   const className = size === 'large' ? 'player-avatar player-avatar--large' : 'player-avatar';
   if (fallback.kind === 'initials' || defaultFailed) {
