@@ -4,6 +4,7 @@ import type {
   ErrorResponse,
   ImportResponse,
   ImportSize,
+  ProviderAuditResponse,
   ProviderPublicErrorCode,
   ProviderStatusResponse,
 } from './contracts';
@@ -49,6 +50,10 @@ export class ValorantBackendClient {
 
   importMatches(input: ConnectionRequest, limit: ImportSize): Promise<ImportResponse> {
     return requestJson('/api/valorant/matches/import', post({ ...input, limit }));
+  }
+
+  auditEvidence(input: ConnectionRequest): Promise<ProviderAuditResponse> {
+    return requestJson('/api/valorant/provider/audit', post({ ...input, limit: 3 }));
   }
 }
 
