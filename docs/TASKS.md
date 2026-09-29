@@ -81,9 +81,26 @@ The next scoring task must address all audit findings before adding new dimensio
 
 Required outcome: a transparent, role-aware, evidence-coverage-aware eight-dimension engine for Firepower, Round Impact, Entry, Teamplay, Clutch, Economy, Consistency and Role Value. Confidence remains separate from performance.
 
+## Task 003 — cross ranking, comparison and contextual analysis
+
+Status: **COMPLETE**
+
+By explicit user decision, TASK-003 was executed before TASK-002B. It consumes the current prototype scoring engine only through aggregation/scoring interfaces; the future correctness work can replace that implementation without rewriting the analytical pages.
+
+- [x] Derive provider-independent player-match performance entries from the normalized dataset.
+- [x] Add composable player, period, custom date, map, agent, role, game-mode and sample filters.
+- [x] Define recent 10/30 as each player's most recent eligible appearances after contextual filtering.
+- [x] Add URL-shareable leaderboard metric, sort and filter state with safe empty/sample states.
+- [x] Add 2–4 player comparison with radar, raw metrics and computed relative strengths.
+- [x] Add map and agent/role summaries, rankings and score profiles.
+- [x] Add paginated demo match history with expandable participating-player performance.
+- [x] Enhance player profiles with filtered map/agent splits, recent form and sample-aware map extremes.
+- [x] Add eight computed badges with explicit metric, sample and tie rules.
+- [x] Keep HashRouter and repository-subpath GitHub Pages compatibility.
+- [x] Add domain tests and browser verification for desktop and mobile flows.
+
 ## Later roadmap
 
-- Task 003: cross-ranking filters, player comparison, map, agent and match views
 - Task 004: teammate synergy matrix and Duo Synergy page
 - Task 005: impact kills and trade analysis
 - Task 006: clutch engine

@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-002A 已完成 zh-TW 介面、可搜尋數據字典、Riot 官方 API 能力研究與資料來源邊界。TASK-002A.1 已完成瀏覽器本機 emoji 頭像與第三方 provider／proxy 架構準備，並以「部分完成、暫時關閉」結案；真實 Henrik 帳號、比賽與欄位驗證延後到 `TASK-API-01`。網站目前仍只顯示 8 位虛構玩家與 32 場可重現示範比賽，不需要 API key、真實 Riot 帳號或 `.env.local`。
+TASK-003 已依使用者指定順序先於 TASK-002B 完成。網站現在提供共用的 player-performance 查詢層、交叉排名、2–4 人比較、地圖、特務／角色、對戰紀錄、玩家切分與動態徽章。所有分析仍只使用 8 位虛構玩家與 32 場可重現示範比賽，不需要 API key、真實 Riot 帳號或 `.env.local`；目前分數仍是透明的原型模型，TASK-002B 尚未完成。
 
 ## V1 原則
 
@@ -20,8 +20,8 @@ TASK-002A 已完成 zh-TW 介面、可搜尋數據字典、Riot 官方 API 能�
 ## 開發階段
 
 1. 建立應用程式骨架、示範資料、儀表板與排行榜
-2. 使用既有虛構資料修正證據覆蓋與小樣本問題，實作透明、角色調整的八維計分引擎
-3. 加入交叉篩選、玩家比較、地圖／特務／對戰頁面與動態稱號
+2. 已先完成交叉篩選、玩家比較、地圖／特務／對戰頁面與動態稱號
+3. 使用既有虛構資料修正證據覆蓋與小樣本問題，實作透明、角色調整的八維計分引擎
 4. 加入 Duo Synergy
 5. 完成 CSV／JSON 匯入與 GitHub Pages v1.0
 6. 未來另以 `TASK-API-01` 驗證第三方真實資料；正式官方整合仍須 Production API、RSO 核准與安全後端
@@ -48,6 +48,8 @@ npm run build
 ```
 
 Vite 的 production base path 是 `/valorant-squad-analytics/`，應用程式使用 hash routing，讓靜態 GitHub Pages 可以直接切換頁面。
+
+分析頁的條件會以簡短 query parameters 保留在 hash route 後方，可分享目前的指標、期間、地圖、特務、角色、模式與樣本門檻。「最近 10／30 場」是每位玩家在其他條件套用後各自最新的合格出賽，不是小隊全域最新場次。
 
 計分公式見 [docs/SCORING.md](docs/SCORING.md)，資料結構見 [docs/DATA_MODEL.md](docs/DATA_MODEL.md)，官方欄位能力見 [docs/RIOT_API_CAPABILITY.md](docs/RIOT_API_CAPABILITY.md)，未來整合前提見 [docs/RIOT_INTEGRATION_PLAN.md](docs/RIOT_INTEGRATION_PLAN.md)。
 

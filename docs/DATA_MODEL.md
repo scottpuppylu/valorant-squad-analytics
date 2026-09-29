@@ -19,7 +19,7 @@ Stable profile metadata stored in `src/data/players.ts`:
 One row per fictional squad match in `src/data/demoMatches.ts`:
 
 - stable match ID and ISO timestamp
-- map and fictional opponent
+- map, deterministic demo game mode, and fictional opponent
 - squad and opponent round scores
 - win/loss state and duration
 - five `MatchPerformance` rows, one for each squad member in the lineup
@@ -61,6 +61,32 @@ Riot API DTO -> server-side Riot adapter -> normalized internal model
 ```
 
 Scoring and React components must not import Riot DTOs directly. See `docs/RIOT_API_CAPABILITY.md`.
+
+## Analytical selection layer
+
+TASK-003 derives `PerformanceEntry` values from any `NormalizedAnalyticsDataset`. Each entry references, rather than copies, the source `Player`, `MatchRecord` and `MatchPerformance`, and adds the resolved player plus round count needed for selection.
+
+```text
+NormalizedAnalyticsDataset
+  -> createPerformanceEntries
+  -> contextual filters (player/date/map/agent/role/game mode)
+  -> per-player chronological grouping
+  -> recent 10/30 cap per player when requested
+  -> aggregateSelection
+  -> existing aggregatePlayerStats + calculatePlayerScores
+  -> ranking, comparison, map/agent/profile summaries
+```
+
+Minimum matches and minimum rounds are cohort eligibility rules applied after aggregation. They never create a numeric score for a zero-observation player. Agent filtering occurs at the individual `MatchPerformance.agent` grain, so teammates are not included merely because someone else selected that agent.
+
+Filter state uses compact HashRouter-compatible query parameters. It does not serialize datasets or large application state.
+
+## Contextual derived analysis
+
+- Recent Form is `Overall(latest up to 5 eligible appearances) − Overall(all earlier eligible appearances)`. Both windows require at least three matches; more than +2 is up, below −2 is down, otherwise flat.
+- Map and agent groups add totals and round-weighted ACS, ADR and KAST, then call the current scoring interface for player score profiles.
+- Strongest/weakest profile maps require at least two eligible appearances on the map.
+- Badges are recalculated from the current selection. Firepower, Entry, Teamplay, Clutch, Consistency and HS% require at least five matches and 100 rounds; Map requires three appearances on one map; Recent Improvement requires five recent and at least three prior appearances. Values within 0.1 of the maximum tie.
 
 ## Browser-local emoji identity
 

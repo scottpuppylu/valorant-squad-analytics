@@ -38,5 +38,5 @@
 
 ## Current stage
 
-- TASK-001 and TASK-002A are complete. TASK-002A.1 is partially complete and closed for now: emoji identity and provider boundaries are implemented; live validation is deferred. TASK-002B may proceed from transparent demo evidence without waiting for live API access. Read `docs/PROJECT_BRIEF.md`, `docs/TASKS.md`, `docs/RIOT_API_CAPABILITY.md`, `docs/RIOT_INTEGRATION_PLAN.md`, and `docs/THIRD_PARTY_API_SPIKE.md` before changing data or scoring boundaries.
+- TASK-001, TASK-002A and TASK-003 are complete. TASK-002A.1 is partially complete and closed for now: emoji identity and provider boundaries are implemented; live validation is deferred. TASK-003 was intentionally completed before TASK-002B and its pages consume the current prototype score model through the reusable analytics layer. TASK-002B remains incomplete and may proceed from transparent demo evidence without waiting for live API access. Read `docs/PROJECT_BRIEF.md`, `docs/TASKS.md`, `docs/RIOT_API_CAPABILITY.md`, `docs/RIOT_INTEGRATION_PLAN.md`, and `docs/THIRD_PARTY_API_SPIKE.md` before changing data or scoring boundaries.
 - Stay within the requested task. Record later ideas under the roadmap instead of silently expanding scope.

@@ -113,6 +113,25 @@ Confidence = clamp(100 * sqrt(matches / 30), 0, 100)
 
 Thirty matches reaches 100% under this initial rule. TASK-001's demo players each have 20 appearances.
 
+## TASK-003 contextual calculations
+
+TASK-003 does not change any score weight or benchmark. It selects eligible player-match performances, aggregates them, and calls the same scoring engine documented above.
+
+```text
+Recent Form Δ = Overall(latest up to 5 eligible appearances)
+              − Overall(all earlier eligible appearances)
+```
+
+Both windows require at least three matches. A delta above `+2` is shown as upward, below `−2` as downward, and otherwise as flat. It is a transparent trend over the current prototype Overall, not a new rating.
+
+Badge rules use the current selected population:
+
+- 火力王、開戰王、團隊核心、殘局王、最穩定: highest corresponding score among players with at least 5 matches and 100 rounds.
+- 爆頭王: highest HS% under the same 5-match/100-round rule; missing HS% is ineligible.
+- 地圖王: highest current Overall on a single map with at least 3 appearances on that map.
+- 近期進步最多: highest Recent Form delta with 5 recent and at least 3 preceding matches.
+- Any value within `0.1` of the maximum ties. No eligible evidence means no badge.
+
 ## Limitations
 
 - Benchmarks are prototype design values, not official or global population percentiles.
