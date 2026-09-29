@@ -71,3 +71,5 @@ GitHub Pages can remain the static presentation tier, but it cannot safely perfo
 - [ ] Live integration security/privacy review.
 
 Live work remains blocked by official approval, Production API access and RSO. It must not begin as a frontend-only shortcut.
+
+The TASK-002A.1 HenrikDev probe is not a replacement for this plan. It is a local, consent-gated schema/evidence experiment only; it must not become the deployed player-data path or weaken RSO opt-in requirements.

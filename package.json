@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "spike:henrik": "node --env-file-if-exists=.env.local scripts/probe-henrik-api.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

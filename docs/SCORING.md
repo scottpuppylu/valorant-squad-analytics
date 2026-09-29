@@ -128,4 +128,4 @@ Thirty matches reaches 100% under this initial rule. TASK-001's demo players eac
 - One observation has zero measured dispersion and can therefore produce a perfect Consistency score.
 - Economy, round impact, role value, trade, utility, and synergy scoring are deferred to later tasks.
 
-TASK-002B owns corrections to these issues. TASK-002A documents current prototype behavior without silently changing the ranking model.
+TASK-002B owns corrections to these issues. TASK-002A.1 validates real-data evidence coverage first and does not change any score or benchmark. TASK-002B must remain blocked until that spike has one consented live result.

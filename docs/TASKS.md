@@ -35,6 +35,18 @@ Do not implement the full scoring engine during this task. Use clearly labeled i
 - [x] Add About, Privacy and disabled Connect Riot readiness flows.
 - [x] Add Demo/Riot data-source boundaries without network requests or credentials.
 
+## Task 002A.1 — emoji identity and real-data evidence spike
+
+- [x] Replace uploaded image avatars with one default emoji per player and one browser-local override.
+- [x] Add an accessible Chinese emoji picker with immediate app-wide updates, refresh persistence and reset.
+- [x] Remove image validation, resizing, blob display and IndexedDB dependencies from the active product path.
+- [x] Add a typed HenrikDev v4 schema summarizer and a local consent/key-gated probe command.
+- [x] Record provider policy, authentication, schema coverage, privacy limits and the unauthenticated live probe result.
+- [ ] Run the probe against one player who explicitly consented, using a locally supplied HenrikDev key, and record only the non-identifying coverage summary.
+- [ ] Decide whether the observed coverage is sufficient to begin TASK-002B calibration work.
+
+Do not begin TASK-002B until the two unchecked evidence gates above are complete. The deployed GitHub Pages application must remain on deterministic fictional data.
+
 ## Task 002B — evidence-aware scoring correctness
 
 The next scoring task must address all audit findings before adding new dimensions:
@@ -60,4 +72,4 @@ Required outcome: a transparent, role-aware, evidence-coverage-aware eight-dimen
 - Task 008: advanced UI refinement
 - Task 009: CSV and JSON import
 - Task 010: GitHub Pages v1.0 release
-- Official Riot integration: application readiness is now documented early, but live player data remains dependent on Production API approval, RSO access and a secure backend.
+- Official Riot integration: application readiness is now documented early, but live production player data remains dependent on Production API approval, RSO access and a secure backend.
