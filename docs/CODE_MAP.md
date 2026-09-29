@@ -93,4 +93,3 @@ scheduled/manual sync command
 ### Future Synergy
 
 Synergy remains after durable shared match/membership evidence and TASK-002B. It must not be inferred from one browser-local player import.
-

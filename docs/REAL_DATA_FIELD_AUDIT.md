@@ -1,8 +1,11 @@
 # Real data field audit
 
-Audit date: 2026-09-30  
-Task: TASK-API-02.1  
-Provider: HenrikDev (unofficial)  
+Audit date: 2026-09-30
+
+Task: TASK-API-02.1
+
+Provider: HenrikDev (unofficial)
+
 Observed OpenAPI version: 4.6.0
 
 ## Scope and privacy boundary
@@ -161,4 +164,3 @@ Stored matches are provider-cached records previously retrieved by the API, not 
 - [HenrikDev unofficial VALORANT API repository](https://github.com/Henrik-3/unofficial-valorant-api)
 - [HenrikDev v4.6.0 release notes](https://docs.henrikdev.xyz/valorant/changes/v4.6.0)
 - [HenrikDev OpenAPI 4.6.0](https://api.henrikdev.xyz/openapi.json)
-
