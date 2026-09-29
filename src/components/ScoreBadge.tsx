@@ -1,3 +1,5 @@
+import { formatScore } from '../utils/format';
+
 interface ScoreBadgeProps {
   value: number;
   label?: string;
@@ -10,9 +12,9 @@ export function ScoreBadge({ value, label, compact = false }: ScoreBadgeProps) {
     <div
       className={compact ? 'score-badge score-badge--compact' : 'score-badge'}
       style={{ '--score-hue': hue } as React.CSSProperties}
-      aria-label={(label ?? '分數') + ' ' + value.toFixed(1)}
+      aria-label={(label ?? '分數') + ' ' + formatScore(value)}
     >
-      <strong>{value.toFixed(1)}</strong>
+      <strong>{formatScore(value)}</strong>
       {label ? <span>{label}</span> : null}
     </div>
   );

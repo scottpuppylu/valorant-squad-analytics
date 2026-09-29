@@ -1,6 +1,7 @@
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { PlayerAnalytics } from '../types/valorant';
 import { zhTW } from '../i18n/zhTW';
+import { formatScore } from '../utils/format';
 
 interface ScoreRadarProps {
   analytics: PlayerAnalytics;
@@ -31,7 +32,7 @@ export function ScoreRadar({ analytics }: ScoreRadarProps) {
             strokeWidth={2}
           />
           <Tooltip
-            formatter={(value) => [Number(value).toFixed(1), '分數']}
+            formatter={(value) => [formatScore(Number(value)), '分數']}
             contentStyle={{ background: '#0d1422', border: '1px solid rgba(148,163,184,.18)', borderRadius: 12 }}
             itemStyle={{ color: '#f8fafc' }}
           />

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { PlayerAnalytics } from '../types/valorant';
 import { zhTW } from '../i18n/zhTW';
-import { formatPercent } from '../utils/format';
+import { formatPercent, formatRatio, formatScore } from '../utils/format';
 import { MetricInfo } from './MetricInfo';
 import { PlayerAvatar } from './PlayerAvatar';
 import { ScoreBadge } from './ScoreBadge';
@@ -33,7 +33,7 @@ export function PlayerCard({ analytics, rank }: PlayerCardProps) {
       <div className="grid grid-cols-3 gap-2 border-t border-white/5 pt-4 text-center">
         <div>
           <p className="metric-label"><MetricInfo metricId="kd" linked={false} /></p>
-          <p className="mt-1 font-mono text-sm text-slate-100">{stats.kd.toFixed(2)}</p>
+          <p className="mt-1 font-mono text-sm text-slate-100">{formatRatio(stats.kd)}</p>
         </div>
         <div>
           <p className="metric-label"><MetricInfo metricId="kast" linked={false} /></p>
@@ -41,7 +41,7 @@ export function PlayerCard({ analytics, rank }: PlayerCardProps) {
         </div>
         <div>
           <p className="metric-label"><MetricInfo metricId="confidence" label={zhTW.scores.confidence} linked={false} /></p>
-          <p className="mt-1 font-mono text-sm text-slate-100">{scores.confidence.toFixed(0)}%</p>
+          <p className="mt-1 font-mono text-sm text-slate-100">{formatScore(scores.confidence)}%</p>
         </div>
       </div>
     </Link>

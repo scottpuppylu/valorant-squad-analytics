@@ -7,9 +7,9 @@ interface Bucket {
 
 const buckets = new Map<string, Bucket>();
 const windowMs = 60_000;
-const maximumRequests = 10;
+const defaultMaximumRequests = 10;
 
-export function enforceRateLimit(key: string, now = Date.now()): void {
+export function enforceRateLimit(key: string, now = Date.now(), maximumRequests = defaultMaximumRequests): void {
   const current = buckets.get(key);
   if (!current || current.resetAt <= now) {
     buckets.set(key, { count: 1, resetAt: now + windowMs });

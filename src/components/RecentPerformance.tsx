@@ -1,5 +1,5 @@
 import type { PlayerAnalytics } from '../types/valorant';
-import { formatDate } from '../utils/format';
+import { formatAcs, formatDate } from '../utils/format';
 
 interface RecentPerformanceProps {
   analytics: PlayerAnalytics;
@@ -21,7 +21,7 @@ export function RecentPerformance({ analytics }: RecentPerformanceProps) {
           </div>
           <div className="grid grid-cols-3 gap-4 text-right font-mono text-xs sm:text-sm">
             <div><span className="block text-slate-500">K-D-A</span>{item.performance.kills}-{item.performance.deaths}-{item.performance.assists}</div>
-            <div><span className="block text-slate-500">ACS</span>{item.performance.acs}</div>
+            <div><span className="block text-slate-500">ACS</span>{formatAcs(item.performance.acs)}</div>
             <div><span className="block text-slate-500">比分</span>{item.scoreFor}-{item.scoreAgainst}</div>
           </div>
         </article>

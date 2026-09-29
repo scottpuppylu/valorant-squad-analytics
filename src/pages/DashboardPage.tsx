@@ -9,7 +9,7 @@ import { ScoreBadge } from '../components/ScoreBadge';
 import { SectionHeading } from '../components/SectionHeading';
 import { activeDataset, playerAnalytics } from '../data/analytics';
 import { zhTW } from '../i18n/zhTW';
-import { formatPercent } from '../utils/format';
+import { formatPercent, formatRatio, formatScore } from '../utils/format';
 
 const ScoreRadar = lazy(() => import('../components/ScoreRadar').then((module) => ({ default: module.ScoreRadar })));
 
@@ -49,7 +49,7 @@ export function DashboardPage() {
             <ScoreBadge value={leader.scores.overall} label={zhTW.scores.overall} />
           </div>
           <div className="relative z-10 mt-9 grid grid-cols-3 gap-3 border-t border-white/10 pt-5">
-            <div><p className="metric-label"><MetricInfo metricId="kd" /></p><p className="stat-value">{leader.stats.kd.toFixed(2)}</p></div>
+            <div><p className="metric-label"><MetricInfo metricId="kd" /></p><p className="stat-value">{formatRatio(leader.stats.kd)}</p></div>
             <div><p className="metric-label"><MetricInfo metricId="kast" /></p><p className="stat-value">{formatPercent(leader.stats.kast)}</p></div>
             <div><p className="metric-label"><MetricInfo metricId="win-rate" label="小隊勝率" /></p><p className="stat-value">{formatPercent(teamWinRate)}</p></div>
           </div>
@@ -103,7 +103,7 @@ export function DashboardPage() {
               </div>
               <div className="rounded-xl border border-emerald-300/10 bg-emerald-300/[0.04] p-4">
                 <p className="metric-label">樣本信心</p>
-                <p className="mt-2 text-2xl font-semibold text-emerald-300">{selected.scores.confidence.toFixed(0)}%</p>
+                <p className="mt-2 text-2xl font-semibold text-emerald-300">{formatScore(selected.scores.confidence)}%</p>
                 <p className="mt-1 text-xs text-slate-500">依 {selected.stats.matches} 場樣本計算；與表現分數分開。</p>
               </div>
               <Link className="text-link" to={'/players/' + selected.player.id}>開啟完整分析 →</Link>

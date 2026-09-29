@@ -1,6 +1,6 @@
 import type { AnalysisFilters, RankingMetric } from './types';
 import { zhTW } from '../i18n/zhTW';
-import { formatPercent } from '../utils/format';
+import { formatAcs, formatAdr, formatCount, formatPercent, formatRatio, formatScore } from '../utils/format';
 
 export const periodLabels = { all: '全部期間', recent10: '最近 10 場', recent30: '最近 30 場', custom: '自訂日期' } as const;
 
@@ -26,7 +26,10 @@ export function activeFilterSummary(filters: AnalysisFilters): string[] {
 }
 
 export function formatRankingValue(metric: RankingMetric, value: number): string {
-  if (['kast', 'headshotPercentage', 'clutchConversion', 'winRate'].includes(metric)) return formatPercent(value, 1);
-  if (['firstKills', 'firstDeaths'].includes(metric)) return value.toFixed(0);
-  return value.toFixed(metric === 'kd' || metric === 'kpr' || metric === 'apr' || metric === 'fkFd' ? 2 : 1);
+  if (['kast', 'headshotPercentage', 'clutchConversion', 'winRate'].includes(metric)) return formatPercent(value);
+  if (['firstKills', 'firstDeaths'].includes(metric)) return formatCount(value);
+  if (metric === 'acs') return formatAcs(value);
+  if (metric === 'adr') return formatAdr(value);
+  if (metric === 'kd' || metric === 'kpr' || metric === 'apr' || metric === 'fkFd') return formatRatio(value);
+  return formatScore(value);
 }

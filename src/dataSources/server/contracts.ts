@@ -47,11 +47,6 @@ export interface ImportResponse {
   importedAt: string;
 }
 
-export interface ProviderAuditResponse {
-  ok: true;
-  audit: unknown;
-}
-
 export interface ErrorResponse {
   ok: false;
   error: { code: ProviderPublicErrorCode; message: string };

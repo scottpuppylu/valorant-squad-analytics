@@ -2,6 +2,7 @@ import type { PlayerAnalytics, ScoreCategory } from '../types/valorant';
 import { zhTW } from '../i18n/zhTW';
 import { MetricInfo } from './MetricInfo';
 import { PlayerAvatar } from './PlayerAvatar';
+import { formatScore } from '../utils/format';
 
 const categories: Array<{ key: Exclude<ScoreCategory, 'overall'>; metricId: string; label: string; hint: string }> = [
   { key: 'firepower', metricId: 'firepower', label: zhTW.scores.firepower, hint: 'ACS、ADR、KPR 與 K/D' },
@@ -31,7 +32,7 @@ export function CategoryLeaders({ analytics }: CategoryLeadersProps) {
                   <p className="mt-1 text-xs text-slate-500">{hint}</p>
                 </div>
               </div>
-              <strong className="font-mono text-2xl text-emerald-300">{leader.scores[key].toFixed(1)}</strong>
+              <strong className="font-mono text-2xl text-emerald-300">{formatScore(leader.scores[key])}</strong>
             </div>
           </article>
         );

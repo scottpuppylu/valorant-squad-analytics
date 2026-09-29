@@ -6,7 +6,7 @@ import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
 import { PlayerAvatar } from '../components/PlayerAvatar';
 import { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } from '../data/analytics';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
-import { formatPercent } from '../utils/format';
+import { formatAcs, formatAdr, formatPercent } from '../utils/format';
 
 const pageSize = 8;
 
@@ -41,7 +41,7 @@ export function MatchesPage() {
           <span><strong>{match.scoreFor}：{match.scoreAgainst}</strong><small>對 {match.opponent} · {match.durationMinutes} 分鐘</small></span>
           <span className="match-expand">查看 {match.performances.length} 位玩家</span>
         </summary>
-        <div className="match-roster"><div className="overflow-x-auto"><table className="analysis-summary-table"><thead><tr><th>玩家</th><th>特務</th><th>K / D / A</th><th>ACS</th><th>ADR</th><th>KAST</th><th>HS%</th><th>FK / FD</th></tr></thead><tbody>{[...match.performances].sort((a, b) => b.acs - a.acs).map((performance) => { const player = playerById.get(performance.playerId); return player ? <tr key={performance.playerId}><td><Link to={`/players/${player.id}`} className="flex items-center gap-2"><PlayerAvatar player={player} /><strong>{player.handle}</strong></Link></td><td>{performance.agent}</td><td>{performance.kills} / {performance.deaths} / {performance.assists}</td><td>{performance.acs.toFixed(0)}</td><td>{performance.adr.toFixed(1)}</td><td>{formatPercent(performance.kast)}</td><td>{performance.headshotPercentage === undefined ? '—' : formatPercent(performance.headshotPercentage)}</td><td>{performance.firstKills ?? '—'} / {performance.firstDeaths ?? '—'}</td></tr> : null; })}</tbody></table></div></div>
+        <div className="match-roster"><div className="overflow-x-auto"><table className="analysis-summary-table"><thead><tr><th>玩家</th><th>特務</th><th>K / D / A</th><th>ACS</th><th>ADR</th><th>KAST</th><th>HS%</th><th>FK / FD</th></tr></thead><tbody>{[...match.performances].sort((a, b) => b.acs - a.acs).map((performance) => { const player = playerById.get(performance.playerId); return player ? <tr key={performance.playerId}><td><Link to={`/players/${player.id}`} className="flex items-center gap-2"><PlayerAvatar player={player} /><strong>{player.handle}</strong></Link></td><td>{performance.agent}</td><td>{performance.kills} / {performance.deaths} / {performance.assists}</td><td>{formatAcs(performance.acs)}</td><td>{formatAdr(performance.adr)}</td><td>{formatPercent(performance.kast)}</td><td>{performance.headshotPercentage === undefined ? '—' : formatPercent(performance.headshotPercentage)}</td><td>{performance.firstKills ?? '—'} / {performance.firstDeaths ?? '—'}</td></tr> : null; })}</tbody></table></div></div>
       </details>)}
     </section>}
     <nav className="pagination" aria-label="對戰分頁"><button type="button" disabled={page <= 1} onClick={() => goToPage(page - 1)}>上一頁</button><span>第 {page} / {pageCount} 頁</span><button type="button" disabled={page >= pageCount} onClick={() => goToPage(page + 1)}>下一頁</button></nav>
