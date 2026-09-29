@@ -25,6 +25,8 @@ export type MapName =
   | 'Split'
   | 'Sunset';
 
+export type GameMode = 'Competitive' | 'Premier' | 'Unrated' | 'Custom';
+
 export interface Player {
   id: string;
   handle: string;
@@ -57,6 +59,7 @@ export interface MatchRecord {
   id: string;
   playedAt: string;
   map: MapName;
+  gameMode: GameMode;
   opponent: string;
   scoreFor: number;
   scoreAgainst: number;

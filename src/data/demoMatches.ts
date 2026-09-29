@@ -1,5 +1,5 @@
 import { players } from './players';
-import type { MapName, MatchPerformance, MatchRecord } from '../types/valorant';
+import type { GameMode, MapName, MatchPerformance, MatchRecord } from '../types/valorant';
 
 interface PlayerBaseline {
   killsPerRound: number;
@@ -27,6 +27,7 @@ const playerBaselines: Record<string, PlayerBaseline> = {
 };
 
 const maps: MapName[] = ['Ascent', 'Bind', 'Haven', 'Lotus', 'Pearl', 'Split', 'Sunset'];
+const gameModes: GameMode[] = ['Competitive', 'Competitive', 'Competitive', 'Premier', 'Unrated', 'Custom'];
 const opponents = ['Neon Orchard', 'Late Buy Club', 'Pixel Harbor', 'Five Stack', 'Moon Circuit', 'Low Gravity', 'Paper Tigers', 'Side Quest'];
 const performanceWave = [-0.9, 0.35, 0.8, -0.25, 1.05, -0.55, 0.15, 0.62];
 
@@ -79,6 +80,7 @@ function buildMatch(index: number): MatchRecord {
     id: 'match-' + String(index + 1).padStart(2, '0'),
     playedAt,
     map: pick(maps, index * 2),
+    gameMode: pick(gameModes, index),
     opponent: pick(opponents, index),
     scoreFor,
     scoreAgainst,
