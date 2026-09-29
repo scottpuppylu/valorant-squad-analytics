@@ -1,4 +1,12 @@
-import type { AccountResolutionResult, ConnectionInput, MatchImportInput, MatchImportResult, ProviderStatus, ValorantDataProvider } from './contracts.js';
+import {
+  henrikMmrFieldPaths,
+  henrikMmrHistoryFieldPaths,
+  henrikStoredMatchFieldPaths,
+  summarizeHenrikFields,
+  summarizeHenrikV4DetailFields,
+  summarizeHenrikV4Fields,
+} from '../src/dataSources/thirdParty/henrikV4.js';
+import type { AccountResolutionResult, ConnectionInput, MatchImportInput, MatchImportResult, ProviderAuditEndpoint, ProviderEvidenceAuditResult, ProviderStatus, ValorantDataProvider } from './contracts.js';
 import { PublicApiError } from './errors.js';
 import { normalizeHenrikMatches } from './normalizeHenrik.js';
 
@@ -24,6 +32,29 @@ function sanitizedProviderError(status: number): PublicApiError {
   if (status === 404) return new PublicApiError(404, 'ACCOUNT_NOT_FOUND', '找不到這個 Riot ID 與 Tag。');
   if (status === 429) return new PublicApiError(429, 'RATE_LIMITED', '資料服務目前請求過多，請稍後再試。');
   return new PublicApiError(502, 'PROVIDER_ERROR', '資料服務暫時無法使用，請稍後再試。');
+}
+
+function recordsAt(payload: unknown, key: string): Array<Record<string, unknown>> {
+  if (!isRecord(payload) || !Array.isArray(payload[key])) return [];
+  return payload[key].filter(isRecord);
+}
+
+function matchIds(payload: unknown, source: 'history' | 'stored'): string[] {
+  return recordsAt(payload, 'data').flatMap((match) => {
+    const container = source === 'history' ? match.metadata : match.meta;
+    if (!isRecord(container)) return [];
+    const value = source === 'history' ? container.match_id : container.id;
+    return typeof value === 'string' ? [value] : [];
+  });
+}
+
+function overlapCount(left: string[], right: string[]): number {
+  const rightSet = new Set(right);
+  return new Set(left.filter((value) => rightSet.has(value))).size;
+}
+
+function endpointStatus(error: unknown): ProviderAuditEndpoint['status'] {
+  return error instanceof PublicApiError && error.status === 404 ? 'not-found' : 'unavailable';
 }
 
 export class HenrikDataProvider implements ValorantDataProvider {
@@ -115,6 +146,56 @@ export class HenrikDataProvider implements ValorantDataProvider {
     );
     const dataset = normalizeHenrikMatches(payload, input);
     return { dataset, importedMatches: dataset.matches.length, importedAt: this.now().toISOString() };
+  }
+
+  async auditEvidence(input: MatchImportInput): Promise<ProviderEvidenceAuditResult> {
+    const firstHistory = await this.request(
+      `/valorant/v4/matches/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`,
+      { size: '3', start: '0' },
+    );
+    const firstHistoryIds = matchIds(firstHistory, 'history');
+    const firstMatchId = firstHistoryIds[0];
+
+    const optional = async (path: string, query?: Record<string, string>) => {
+      try {
+        return { status: 'observed' as const, payload: await this.request(path, query) };
+      } catch (error) {
+        return { status: endpointStatus(error), payload: undefined };
+      }
+    };
+
+    const [secondHistory, storedFirst, storedSecond, mmrCurrent, mmrHistory, matchDetail] = await Promise.all([
+      optional(`/valorant/v4/matches/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`, { size: '3', start: '3' }),
+      optional(`/valorant/v1/stored-matches/${encodeURIComponent(input.affinity)}/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`, { size: '3', page: '1' }),
+      optional(`/valorant/v1/stored-matches/${encodeURIComponent(input.affinity)}/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`, { size: '3', page: '2' }),
+      optional(`/valorant/v3/mmr/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`),
+      optional(`/valorant/v2/mmr-history/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`),
+      firstMatchId ? optional(`/valorant/v4/match/${encodeURIComponent(input.affinity)}/${encodeURIComponent(firstMatchId)}`) : Promise.resolve({ status: 'not-found' as const, payload: undefined }),
+    ]);
+
+    const summarize = (endpoint: typeof secondHistory, paths: readonly string[]): ProviderAuditEndpoint => (
+      endpoint.payload
+        ? { status: endpoint.status, summary: summarizeHenrikFields([endpoint.payload], paths) }
+        : { status: endpoint.status }
+    );
+    const secondHistoryIds = secondHistory.payload ? matchIds(secondHistory.payload, 'history') : [];
+    const storedFirstIds = storedFirst.payload ? matchIds(storedFirst.payload, 'stored') : [];
+    const storedSecondIds = storedSecond.payload ? matchIds(storedSecond.payload, 'stored') : [];
+
+    return {
+      schema: { provider: 'HenrikDev', endpointVersion: 'v4', openApiVersion: '4.6.0' },
+      matchHistory: { status: 'observed', summary: summarizeHenrikV4Fields(firstHistory) },
+      matchDetail: matchDetail.payload
+        ? { status: matchDetail.status, summary: summarizeHenrikV4DetailFields(matchDetail.payload) }
+        : { status: matchDetail.status },
+      storedMatches: summarize(storedFirst, henrikStoredMatchFieldPaths),
+      mmrCurrent: summarize(mmrCurrent, henrikMmrFieldPaths),
+      mmrHistory: summarize(mmrHistory, henrikMmrHistoryFieldPaths),
+      pagination: {
+        v4: { size: 3, starts: [0, 3], returned: [firstHistoryIds.length, secondHistoryIds.length], overlapCount: overlapCount(firstHistoryIds, secondHistoryIds) },
+        stored: { size: 3, pages: [1, 2], returned: [storedFirstIds.length, storedSecondIds.length], overlapCount: overlapCount(storedFirstIds, storedSecondIds), pageParameterDocumentedInOpenApi: false },
+      },
+    };
   }
 }
 

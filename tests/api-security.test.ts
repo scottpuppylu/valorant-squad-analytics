@@ -16,6 +16,7 @@ const deployedServerModules = [
   'api/valorant/account/resolve.ts',
   'api/valorant/matches/import.ts',
   'api/valorant/provider/status.ts',
+  'api/valorant/provider/audit.ts',
   'server/contracts.ts',
   'server/henrikDataProvider.ts',
   'server/http.ts',
