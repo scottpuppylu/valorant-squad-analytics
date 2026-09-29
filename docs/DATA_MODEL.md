@@ -49,6 +49,25 @@ fictional player metadata + 32 fictional matches
   -> dashboard, leaderboard, and profile UI
 ```
 
+## Data-source boundary
+
+`src/dataSources/types.ts` defines `AnalyticsDataSource` and `NormalizedAnalyticsDataset`. `DemoDataSource` currently provides the deterministic local fixtures. `RiotDataSource` is a deliberately non-operational future adapter boundary; it contains no HTTP client or credential handling.
+
+Future official data follows this flow:
+
+```text
+Riot API DTO -> server-side Riot adapter -> normalized internal model
+  -> aggregation -> derived metrics -> scoring -> UI
+```
+
+Scoring and React components must not import Riot DTOs directly. See `docs/RIOT_API_CAPABILITY.md`.
+
+## Browser-local avatars
+
+`AvatarRepository` separates persistence from UI. `BrowserAvatarRepository` stores resized image blobs in IndexedDB database `valorant-squad-analytics`, object store `player-avatars`, keyed by internal player ID. The data is local to one browser profile and is not part of the analytics dataset, Git repository or GitHub Pages deployment.
+
+Fallback order is custom browser blob, configured `defaultAvatarUrl`, then generated initials.
+
 ## Missing data
 
 - Optional statistics remain `undefined`; they are not silently converted to observed zero.

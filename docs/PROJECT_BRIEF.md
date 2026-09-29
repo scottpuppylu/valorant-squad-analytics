@@ -17,7 +17,7 @@ This is a transparent community analytics dashboard. It is not an MMR, Elo, offi
 - npm
 - GitHub Actions and GitHub Pages
 
-V1 must not require a backend or API key. Start with realistic fictional JSON data; later add CSV and JSON import. Official Riot API integration belongs to a later phase after the static prototype is complete.
+V1 must not require a backend or API key. Start with realistic fictional JSON data; later add CSV and JSON import. TASK-002A brings official API capability research and public opt-in/privacy flow prototypes earlier, while live Riot player-data integration remains a later phase requiring Production API approval, RSO and a secure backend.
 
 ## Planned pages
 

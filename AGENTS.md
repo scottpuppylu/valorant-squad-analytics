@@ -37,5 +37,5 @@
 
 ## Current stage
 
-- The repository is initialized only. Read `docs/PROJECT_BRIEF.md` and `docs/TASKS.md` before beginning Task 001.
+- TASK-001 and TASK-002A are complete. Read `docs/PROJECT_BRIEF.md`, `docs/TASKS.md`, `docs/RIOT_API_CAPABILITY.md`, and `docs/RIOT_INTEGRATION_PLAN.md` before beginning TASK-002B.
 - Stay within the requested task. Record later ideas under the roadmap instead of silently expanding scope.

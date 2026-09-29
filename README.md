@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-001 已建立靜態前端基礎：8 位虛構玩家、32 場可重現的示範比賽、角色調整的初始計分、儀表板、排行榜、玩家頁面與 GitHub Pages 工作流程。
+TASK-002A 已在 TASK-001 靜態前端基礎上加入 zh-TW 介面、瀏覽器本機自訂頭像、可搜尋數據字典、Riot 官方 API 能力研究，以及 About／Privacy／Connect Riot 準備頁面。網站仍只使用 8 位虛構玩家與 32 場可重現示範比賽，未連接任何真實帳號。
 
 ## V1 原則
 
@@ -20,11 +20,11 @@ TASK-001 已建立靜態前端基礎：8 位虛構玩家、32 場可重現的示
 ## 開發階段
 
 1. 建立應用程式骨架、示範資料、儀表板與排行榜
-2. 實作透明、角色調整的八維計分引擎
-3. 加入交叉篩選、玩家比較與動態稱號
+2. 修正證據覆蓋與小樣本問題，實作透明、角色調整的八維計分引擎
+3. 加入交叉篩選、玩家比較、地圖／特務／對戰頁面與動態稱號
 4. 加入 Duo Synergy
 5. 完成 CSV／JSON 匯入與 GitHub Pages v1.0
-6. V1 完成後，才評估 Riot 官方 API 與 RSO
+6. 官方 API／RSO 準備研究已提前完成；真實資料整合仍須 Production API、RSO 核准與安全後端
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
 
@@ -49,7 +49,7 @@ npm run build
 
 Vite 的 production base path 是 `/valorant-squad-analytics/`，應用程式使用 hash routing，讓靜態 GitHub Pages 可以直接切換頁面。
 
-計分公式見 [docs/SCORING.md](docs/SCORING.md)，資料結構見 [docs/DATA_MODEL.md](docs/DATA_MODEL.md)。
+計分公式見 [docs/SCORING.md](docs/SCORING.md)，資料結構見 [docs/DATA_MODEL.md](docs/DATA_MODEL.md)，官方欄位能力見 [docs/RIOT_API_CAPABILITY.md](docs/RIOT_API_CAPABILITY.md)，未來整合前提見 [docs/RIOT_INTEGRATION_PLAN.md](docs/RIOT_INTEGRATION_PLAN.md)。
 
 ## 安全與商標
 

@@ -116,8 +116,16 @@ Thirty matches reaches 100% under this initial rule. TASK-001's demo players eac
 ## Limitations
 
 - Benchmarks are prototype design values, not official or global population percentiles.
+- Benchmarks are not yet versioned against a calibration dataset.
 - Match outcomes and player statistics are fictional and deterministic.
+- An entirely unavailable category currently receives the numeric fallback 50, which cannot be distinguished from genuinely measured neutral performance.
+- Optional first-kill/death and clutch observations can be summed across only available matches while current rate denominators still cover all rounds or matches.
+- Aggregates are rounded before they reach the scoring engine, losing calculation precision.
+- Score outputs do not yet include component-level traces or evidence coverage.
 - Entry does not yet measure traded deaths or space creation.
-- Teamplay does not yet measure utility timing, flash assists, or trade participation.
-- Clutch treats attempts equally and does not yet adjust for 1v2, 1v3, or economy state.
+- Teamplay does not yet measure utility timing, flash assists, or trade participation, and Win Rate currently carries 25% of its weight.
+- Clutch treats attempts equally, applies no small-sample shrinkage, and does not yet adjust for 1v2, 1v3, or economy state.
+- One observation has zero measured dispersion and can therefore produce a perfect Consistency score.
 - Economy, round impact, role value, trade, utility, and synergy scoring are deferred to later tasks.
+
+TASK-002B owns corrections to these issues. TASK-002A documents current prototype behavior without silently changing the ranking model.
