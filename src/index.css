@@ -705,6 +705,201 @@ a:focus-visible {
   width: min(100%, 58rem);
 }
 
+.analysis-filters {
+  padding: 1rem;
+}
+
+.analysis-filter-grid,
+.custom-date-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: .8rem;
+}
+
+.analysis-filter-grid label,
+.custom-date-grid label,
+.ranking-controls label {
+  display: grid;
+  gap: .35rem;
+  color: #718096;
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.analysis-filter-grid select,
+.analysis-filter-grid input,
+.custom-date-grid input,
+.ranking-controls select {
+  min-height: 2.65rem;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: .65rem;
+  background: #0a111d;
+  padding: 0 .7rem;
+  color: #d9e2ee;
+  font-size: .78rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.custom-date-grid { margin-top: .8rem; }
+
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem .75rem;
+  margin-top: 1rem;
+  color: #718096;
+  font-size: .74rem;
+}
+
+.active-filters strong { color: #cbd5e1; }
+.active-filters .text-link { margin-left: auto; }
+.filter-note, .sample-warning {
+  margin-top: .75rem;
+  color: #718096;
+  font-size: .72rem;
+  line-height: 1.6;
+}
+
+.ranking-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: .8rem;
+  padding: 1rem;
+}
+
+.empty-panel {
+  display: grid;
+  min-height: 8rem;
+  place-items: center;
+  padding: 2rem;
+  color: #718096;
+  text-align: center;
+}
+
+.summary-grid,
+.badge-grid,
+.comparison-insights,
+.profile-context-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+}
+
+.summary-card {
+  padding: 1.1rem;
+  color: inherit;
+  text-align: left;
+  transition: border-color .16s ease, transform .16s ease;
+}
+
+.summary-card:hover { transform: translateY(-2px); }
+.summary-card--active { border-color: rgba(110,231,183,.55); box-shadow: inset 0 0 0 1px rgba(110,231,183,.12); }
+.summary-card > strong { display: block; color: white; font-size: 1.15rem; }
+.summary-card > span { display: block; margin-top: .25rem; color: #718096; font-size: .7rem; }
+.summary-card dl { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-top: 1rem; }
+.summary-card dt { color: #617088; font-size: .62rem; text-transform: uppercase; }
+.summary-card dd { margin-top: .15rem; color: #cbd5e1; font-family: ui-monospace, monospace; font-size: .78rem; }
+
+.analysis-summary-table,
+.comparison-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.comparison-table { min-width: 1320px; }
+.analysis-summary-table th,
+.analysis-summary-table td,
+.comparison-table th,
+.comparison-table td {
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  padding: .8rem .9rem;
+  color: #9ba8b9;
+  font-family: ui-monospace, monospace;
+  font-size: .72rem;
+  text-align: right;
+  white-space: nowrap;
+}
+.analysis-summary-table th,
+.comparison-table th {
+  color: #617088;
+  font-size: .6rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.analysis-summary-table :is(th, td):first-child,
+.comparison-table :is(th, td):first-child { text-align: left; }
+
+.player-selector { padding: 1rem; }
+.player-selector > p { color: #94a3b8; font-size: .75rem; }
+.player-selector > div { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .8rem; }
+.player-selector label {
+  display: flex;
+  min-height: 2.8rem;
+  align-items: center;
+  gap: .5rem;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: .75rem;
+  padding: .35rem .65rem;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+.player-selector input { accent-color: #6ee7b7; }
+
+.comparison-insights h2 { color: white; font-weight: 700; }
+.comparison-insights p { color: #718096; font-size: .7rem; }
+.comparison-insights dl { display: grid; gap: .8rem; margin-top: 1rem; }
+.comparison-insights dt { color: #617088; font-size: .62rem; text-transform: uppercase; }
+.comparison-insights dd { margin-top: .15rem; color: #cbd5e1; font-size: .78rem; line-height: 1.55; }
+
+.badge-card { display: flex; gap: .9rem; padding: 1rem; }
+.badge-card__emoji { font-size: 1.8rem; }
+.badge-card h3 { color: white; font-weight: 700; }
+.badge-card p { margin-top: .2rem; color: #cbd5e1; font-size: .8rem; }
+.badge-card small { display: block; margin-top: .35rem; color: #617088; font-size: .65rem; line-height: 1.5; }
+
+.context-card { padding: 1.1rem; }
+.context-card > strong { display: block; margin-top: .55rem; color: white; font-size: 1.1rem; }
+.context-card > p:last-child { margin-top: .35rem; color: #718096; font-size: .7rem; line-height: 1.55; }
+.form-indicator--up { color: #6ee7b7 !important; }
+.form-indicator--down { color: #fda4af !important; }
+.form-indicator--flat { color: #93c5fd !important; }
+.form-indicator--insufficient { color: #94a3b8 !important; }
+
+.match-history { display: grid; gap: .8rem; }
+.match-detail { overflow: hidden; }
+.match-detail summary {
+  display: grid;
+  grid-template-columns: auto minmax(8rem, 1fr) minmax(10rem, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+.match-detail summary::-webkit-details-marker { display: none; }
+.match-detail summary > span:not(.result-pill) { display: grid; gap: .2rem; }
+.match-detail summary strong { color: #e2e8f0; }
+.match-detail summary small { color: #718096; font-size: .68rem; }
+.match-expand { color: #6ee7b7; font-size: .7rem; }
+.match-roster { border-top: 1px solid rgba(255,255,255,.06); background: rgba(0,0,0,.12); }
+
+.pagination { display: flex; align-items: center; justify-content: center; gap: 1rem; color: #718096; font-size: .72rem; }
+.pagination button {
+  min-height: 2.5rem;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: .65rem;
+  padding: 0 .9rem;
+  color: #cbd5e1;
+}
+.pagination button:disabled { cursor: not-allowed; opacity: .35; }
+
 @media (min-width: 768px) {
   .callout-grid {
     grid-template-columns: .8fr 1.2fr;
@@ -749,6 +944,10 @@ a:focus-visible {
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .active-filters .text-link { margin-left: 0; }
+  .match-detail summary { grid-template-columns: auto 1fr; }
+  .match-expand { grid-column: 2; }
 }
 
 @media (prefers-reduced-motion: reduce) {

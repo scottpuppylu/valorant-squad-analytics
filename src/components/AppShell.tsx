@@ -24,16 +24,16 @@ export function AppShell({ children }: AppShellProps) {
               <small className="block text-[10px] tracking-[0.16em] text-emerald-300/70">{zhTW.brand.subtitle}</small>
             </span>
           </NavLink>
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="主要導覽">
+          <nav className="hidden items-center gap-1 xl:flex" aria-label="主要導覽">
             {primaryNavigation.map((link) => <NavLink key={link.to} to={link.to} className={linkClass}>{link.label}</NavLink>)}
           </nav>
-          <div className="hidden items-center gap-3 lg:flex">
+          <div className="hidden items-center gap-3 xl:flex">
             <span className="data-pill"><span /> {zhTW.brand.demo}</span>
             <NavLink to="/dictionary" className="button-secondary">查看公式</NavLink>
           </div>
           <button
             type="button"
-            className="menu-button lg:hidden"
+            className="menu-button xl:hidden"
             aria-expanded={open}
             aria-controls="mobile-navigation"
             aria-label={open ? '關閉導覽選單' : '開啟導覽選單'}
@@ -43,7 +43,7 @@ export function AppShell({ children }: AppShellProps) {
           </button>
         </div>
         {open ? (
-          <nav id="mobile-navigation" className="mobile-nav lg:hidden" aria-label="行動版導覽">
+          <nav id="mobile-navigation" className="mobile-nav xl:hidden" aria-label="行動版導覽">
             {[...primaryNavigation, ...secondaryNavigation].map((link) => (
               <NavLink key={link.to} to={link.to} className={linkClass} onClick={() => setOpen(false)}>{link.label}</NavLink>
             ))}

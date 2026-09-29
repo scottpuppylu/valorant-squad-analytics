@@ -5,21 +5,30 @@ import { AboutPage } from './pages/AboutPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DictionaryPage } from './pages/DictionaryPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
+import { ComparePage } from './pages/ComparePage';
+import { MapsPage } from './pages/MapsPage';
+import { AgentsPage } from './pages/AgentsPage';
+import { MatchesPage } from './pages/MatchesPage';
 import { PlayerProfilePage } from './pages/PlayerProfilePage';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { publicRoutePaths } from './routes';
 
 export default function App() {
   return (
     <HashRouter>
       <AppShell>
         <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path={publicRoutePaths.dashboard} element={<DashboardPage />} />
+          <Route path={publicRoutePaths.leaderboard} element={<LeaderboardPage />} />
+          <Route path={publicRoutePaths.compare} element={<ComparePage />} />
+          <Route path={publicRoutePaths.maps} element={<MapsPage />} />
+          <Route path={publicRoutePaths.agents} element={<AgentsPage />} />
+          <Route path={publicRoutePaths.matches} element={<MatchesPage />} />
           <Route path="/players" element={<Navigate replace to={'/players/' + playerAnalytics[0]!.player.id} />} />
-          <Route path="/players/:playerId" element={<PlayerProfilePage />} />
-          <Route path="/dictionary" element={<DictionaryPage />} />
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path={publicRoutePaths.players} element={<PlayerProfilePage />} />
+          <Route path={publicRoutePaths.dictionary} element={<DictionaryPage />} />
+          <Route path={publicRoutePaths.about} element={<AboutPage />} />
+          <Route path={publicRoutePaths.privacy} element={<PrivacyPage />} />
           <Route path="*" element={<Navigate replace to="/" />} />
         </Routes>
       </AppShell>

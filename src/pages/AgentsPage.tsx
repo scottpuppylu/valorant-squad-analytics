@@ -1,0 +1,43 @@
+import { useMemo } from 'react';
+import { groupByAgent, groupByRole } from '../analytics/analysis';
+import { selectPerformances } from '../analytics/filters';
+import { rankPlayers } from '../analytics/rankings';
+import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
+import { PlayerRankingTable } from '../components/PlayerRankingTable';
+import { SectionHeading } from '../components/SectionHeading';
+import { ScoreProfileTable } from '../components/ScoreProfileTable';
+import { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } from '../data/analytics';
+import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
+import { zhTW } from '../i18n/zhTW';
+import type { PlayerRole } from '../types/valorant';
+import { formatPercent } from '../utils/format';
+
+export function AgentsPage() {
+  const { filters, update, reset, params, setParams } = useAnalysisFilters();
+  const view = params.get('view') === 'role' ? 'role' : 'agent';
+  const baseFilters = useMemo(() => ({ ...filters, agent: 'all' as const, role: 'all' as const }), [filters]);
+  const baseSelection = useMemo(() => selectPerformances(performanceEntries, baseFilters), [baseFilters]);
+  const summaries = useMemo(() => view === 'agent' ? groupByAgent(baseSelection.entries) : groupByRole(baseSelection.entries), [baseSelection.entries, view]);
+  const selectedId = view === 'agent' ? (filters.agent === 'all' ? summaries[0]?.id : filters.agent) : (filters.role === 'all' ? summaries[0]?.id : filters.role);
+  const selectedFilters = useMemo(() => ({ ...filters, agent: view === 'agent' ? selectedId as typeof filters.agent : 'all' as const, role: view === 'role' ? selectedId as PlayerRole : 'all' as const }), [filters, selectedId, view]);
+  const selected = useMemo(() => selectPerformances(performanceEntries, selectedFilters), [selectedFilters]);
+  const rows = useMemo(() => rankPlayers(selected, filters, 'overall'), [filters, selected]);
+
+  function changeView(nextView: string) {
+    const next = new URLSearchParams(params);
+    if (nextView === 'role') next.set('view', 'role'); else next.delete('view');
+    next.delete('agent'); next.delete('role');
+    setParams(next, { replace: true });
+  }
+
+  function selectSummary(id: string) {
+    update(view === 'agent' ? { agent: id as typeof filters.agent } : { role: id as PlayerRole });
+  }
+
+  return <div className="space-y-9"><header className="page-heading"><div><p className="metric-label">使用情境</p><h1>特務／角色分析</h1><p>以實際 player-performance 列切分，避免把同場隊友誤算成使用該特務。</p></div><label className="select-label"><span>檢視方式</span><select aria-label="檢視方式" value={view} onChange={(event) => changeView(event.target.value)}><option value="agent">特務</option><option value="role">角色</option></select></label></header>
+    <AnalysisFilterBar filters={filters} onChange={update} onReset={reset} players={activeDataset.players} maps={availableMaps} agents={availableAgents} gameModes={availableGameModes} />
+    <section><SectionHeading title={view === 'agent' ? '特務總覽' : '角色總覽'} description={view === 'agent' ? '每筆出賽只歸到玩家當場實際使用的特務。' : '目前分數使用產品內的原型角色基準，不是 Riot 官方角色標準。'} /><div className="summary-grid">{summaries.map((summary) => <button type="button" className={`surface-card summary-card ${summary.id === selectedId ? 'summary-card--active' : ''}`} key={summary.id} onClick={() => selectSummary(summary.id)}><strong>{view === 'role' ? zhTW.roles[summary.id as PlayerRole] : summary.label}</strong><span>{summary.appearances} 次出賽 · {summary.players} 位玩家</span><dl><div><dt>ACS</dt><dd>{summary.acs.toFixed(1)}</dd></div><div><dt>ADR</dt><dd>{summary.adr.toFixed(1)}</dd></div><div><dt>K/D</dt><dd>{summary.kd.toFixed(2)}</dd></div><div><dt>勝率</dt><dd>{formatPercent(summary.winRate)}</dd></div></dl></button>)}</div></section>
+    <section><SectionHeading title={`${selectedId ? (view === 'role' ? zhTW.roles[selectedId as PlayerRole] : selectedId) : ''}玩家排名`} description="只顯示目前條件下有實際出賽且符合樣本門檻的玩家。" /><PlayerRankingTable rows={rows} metric="overall" /></section>
+    <section><SectionHeading title="分數與原始指標輪廓" description={view === 'role' ? '以目前原型角色基準重算各分類；不是 Riot 官方角色標準。' : '僅使用玩家實際選用此特務的出賽樣本。'} /><ScoreProfileTable rows={rows} /></section>
+  </div>;
+}

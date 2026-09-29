@@ -10,6 +10,10 @@ export const zhTW = {
     dashboard: '總覽',
     leaderboard: '戰力排名',
     players: '玩家分析',
+    compare: '玩家比較',
+    maps: '地圖分析',
+    agents: '特務／角色分析',
+    matches: '對戰紀錄',
     dictionary: '數據字典',
     about: '關於本站',
     privacy: '隱私說明',
@@ -42,6 +46,10 @@ export const primaryNavigation = [
   { to: '/', label: zhTW.navigation.dashboard },
   { to: '/leaderboard', label: zhTW.navigation.leaderboard },
   { to: '/players/nova-hex', label: zhTW.navigation.players },
+  { to: '/compare', label: zhTW.navigation.compare },
+  { to: '/maps', label: zhTW.navigation.maps },
+  { to: '/agents', label: zhTW.navigation.agents },
+  { to: '/matches', label: zhTW.navigation.matches },
   { to: '/dictionary', label: zhTW.navigation.dictionary },
 ] as const;
 

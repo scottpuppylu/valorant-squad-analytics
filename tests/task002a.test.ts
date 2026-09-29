@@ -115,6 +115,10 @@ describe('zh-TW localization', () => {
       zhTW.navigation.dashboard,
       zhTW.navigation.leaderboard,
       zhTW.navigation.players,
+      zhTW.navigation.compare,
+      zhTW.navigation.maps,
+      zhTW.navigation.agents,
+      zhTW.navigation.matches,
       zhTW.navigation.dictionary,
     ]);
     expect(primaryNavigation.every(({ label }) => /[\u3400-\u9fff]/u.test(label))).toBe(true);
