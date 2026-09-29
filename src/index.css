@@ -695,13 +695,13 @@ a:focus-visible {
   border-radius: inherit;
 }
 
-.placeholder-page {
+.empty-state-page {
   display: grid;
   min-height: calc(100vh - 15rem);
   place-items: center;
 }
 
-.placeholder-page > div {
+.empty-state-page > div {
   width: min(100%, 58rem);
 }
 

@@ -10,7 +10,7 @@ export function AboutPage() {
       <p>網站用公開公式呈現火力、開戰、團隊貢獻、殘局與穩定度，避免只用 K/D 判斷所有角色。現階段所有對戰與玩家都是虛構示範資料。</p>
       <h2>我們不是什麼</h2>
       <p>本產品不是對手偵察、即時戰術輔助、官方排名、MMR、Elo 或配對系統替代品，也不隸屬或代表 Riot Games。</p>
-      <div className="mt-8 flex flex-wrap gap-3"><Link className="button-primary" to="/dictionary">查看數據字典</Link><Link className="button-secondary" to="/connect-riot">了解未來帳號連結</Link></div>
+      <div className="mt-8 flex flex-wrap gap-3"><Link className="button-primary" to="/dictionary">查看數據字典</Link></div>
     </article>
   );
 }

@@ -1,7 +1,7 @@
 import type { AvatarRepository, PlayerEmoji, StoredAvatar } from '../../types/avatar';
 import { isPlayerEmoji } from '../../utils/avatar';
 
-const STORAGE_KEY = 'valorant-squad-analytics:emoji-avatars:v1';
+export const PLAYER_EMOJI_STORAGE_KEY = 'valorant-squad-analytics:emoji-avatars:v1';
 
 interface PersistedAvatarState {
   version: 1;
@@ -20,15 +20,27 @@ export class BrowserAvatarRepository implements AvatarRepository {
   }
 
   private read(): PersistedAvatarState {
-    const raw = this.storage.getItem(STORAGE_KEY);
+    const raw = this.storage.getItem(PLAYER_EMOJI_STORAGE_KEY);
     if (!raw) return emptyState();
-    const candidate = JSON.parse(raw) as Partial<PersistedAvatarState>;
+    let candidate: Partial<PersistedAvatarState>;
+    try {
+      candidate = JSON.parse(raw) as Partial<PersistedAvatarState>;
+    } catch {
+      return emptyState();
+    }
     if (candidate.version !== 1 || !candidate.overrides || typeof candidate.overrides !== 'object') return emptyState();
 
     const overrides = Object.fromEntries(
       Object.entries(candidate.overrides).filter((entry): entry is [string, StoredAvatar] => {
+        const [playerId] = entry;
         const record = entry[1];
-        return Boolean(record && typeof record === 'object' && isPlayerEmoji(record.emoji));
+        return Boolean(
+          record
+          && typeof record === 'object'
+          && record.playerId === playerId
+          && isPlayerEmoji(record.emoji)
+          && typeof record.updatedAt === 'string',
+        );
       }),
     );
     return { version: 1, overrides };
@@ -42,14 +54,14 @@ export class BrowserAvatarRepository implements AvatarRepository {
     const state = this.read();
     const record: StoredAvatar = { playerId, emoji, updatedAt: new Date().toISOString() };
     state.overrides[playerId] = record;
-    this.storage.setItem(STORAGE_KEY, JSON.stringify(state));
+    this.storage.setItem(PLAYER_EMOJI_STORAGE_KEY, JSON.stringify(state));
     return record;
   }
 
   async remove(playerId: string): Promise<void> {
     const state = this.read();
     delete state.overrides[playerId];
-    this.storage.setItem(STORAGE_KEY, JSON.stringify(state));
+    this.storage.setItem(PLAYER_EMOJI_STORAGE_KEY, JSON.stringify(state));
   }
 }
 

@@ -25,7 +25,7 @@ export function PlayerProfilePage() {
 
   if (!analytics) {
     return (
-      <div className="placeholder-page">
+      <div className="empty-state-page">
         <div className="surface-card p-8 text-center">
           <p className="metric-label">找不到玩家</p>
           <h1 className="mt-4 text-3xl font-semibold text-white">這個玩家連結不存在</h1>

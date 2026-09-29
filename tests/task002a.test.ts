@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { metricDefinitions, metricDefinitionById } from '../src/data/metricDefinitions';
-import { BrowserAvatarRepository, MemoryAvatarRepository } from '../src/dataSources/avatars/BrowserAvatarRepository';
+import { BrowserAvatarRepository, MemoryAvatarRepository, PLAYER_EMOJI_STORAGE_KEY } from '../src/dataSources/avatars/BrowserAvatarRepository';
 import { primaryNavigation, scoreMetricIds, zhTW } from '../src/i18n/zhTW';
 import { categoryMetricWeights, overallWeights } from '../src/scoring/weights';
 import { players } from '../src/data/players';
@@ -82,6 +82,31 @@ describe('avatar behavior', () => {
     await new BrowserAvatarRepository(storage).save(player.id, '😎');
     expect((await new BrowserAvatarRepository(storage).get(player.id))?.emoji).toBe('😎');
   });
+
+  it('falls back safely when browser storage is malformed', async () => {
+    const records = new Map([[PLAYER_EMOJI_STORAGE_KEY, '{not valid json']]);
+    const storage = {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => { records.set(key, value); },
+    };
+
+    const repository = new BrowserAvatarRepository(storage);
+    expect(await repository.get(player.id)).toBeNull();
+    expect(resolvePlayerEmoji(player, (await repository.get(player.id))?.emoji)).toBe(player.defaultEmoji);
+  });
+
+  it('ignores invalid stored emoji records', async () => {
+    const records = new Map([[PLAYER_EMOJI_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      overrides: { [player.id]: { playerId: player.id, emoji: 'not-an-emoji', updatedAt: '2026-09-29T00:00:00.000Z' } },
+    })]]);
+    const storage = {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => { records.set(key, value); },
+    };
+
+    expect(await new BrowserAvatarRepository(storage).get(player.id)).toBeNull();
+  });
 });
 
 describe('zh-TW localization', () => {
@@ -91,7 +116,6 @@ describe('zh-TW localization', () => {
       zhTW.navigation.leaderboard,
       zhTW.navigation.players,
       zhTW.navigation.dictionary,
-      zhTW.navigation.matches,
     ]);
     expect(primaryNavigation.every(({ label }) => /[\u3400-\u9fff]/u.test(label))).toBe(true);
   });

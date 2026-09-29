@@ -10,17 +10,9 @@ export const zhTW = {
     dashboard: '總覽',
     leaderboard: '戰力排名',
     players: '玩家分析',
-    maps: '地圖分析',
-    matches: '對戰紀錄',
-    compare: '玩家比較',
-    agents: '特務／角色分析',
-    synergy: '隊友搭配',
-    import: '資料匯入',
-    scoring: '評分設定',
     dictionary: '數據字典',
     about: '關於本站',
     privacy: '隱私說明',
-    connectRiot: '連結 Riot',
   },
   scores: {
     overall: '綜合表現',
@@ -51,19 +43,11 @@ export const primaryNavigation = [
   { to: '/leaderboard', label: zhTW.navigation.leaderboard },
   { to: '/players/nova-hex', label: zhTW.navigation.players },
   { to: '/dictionary', label: zhTW.navigation.dictionary },
-  { to: '/matches', label: zhTW.navigation.matches },
 ] as const;
 
 export const secondaryNavigation = [
-  { to: '/compare', label: zhTW.navigation.compare },
-  { to: '/maps', label: zhTW.navigation.maps },
-  { to: '/agents', label: zhTW.navigation.agents },
-  { to: '/synergy', label: zhTW.navigation.synergy },
-  { to: '/import', label: zhTW.navigation.import },
-  { to: '/scoring', label: zhTW.navigation.scoring },
   { to: '/about', label: zhTW.navigation.about },
   { to: '/privacy', label: zhTW.navigation.privacy },
-  { to: '/connect-riot', label: zhTW.navigation.connectRiot },
 ] as const;
 
 export const scoreMetricIds = {
