@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
-import type { NormalizedAnalyticsDataset } from '../src/dataSources/types';
-import type { AgentName, GameMode, MatchPerformance, MatchRecord, Player, PlayerRole } from '../src/types/valorant';
-import type { MatchImportInput } from './contracts';
-import { PublicApiError } from './errors';
+import type { NormalizedAnalyticsDataset } from '../src/dataSources/types.js';
+import type { AgentName, GameMode, MatchPerformance, MatchRecord, Player, PlayerRole } from '../src/types/valorant.js';
+import type { MatchImportInput } from './contracts.js';
+import { PublicApiError } from './errors.js';
 
 type JsonRecord = Record<string, unknown>;
 

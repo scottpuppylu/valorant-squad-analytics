@@ -1,6 +1,6 @@
-import type { AccountResolutionResult, ConnectionInput, MatchImportInput, MatchImportResult, ProviderStatus, ValorantDataProvider } from './contracts';
-import { PublicApiError } from './errors';
-import { normalizeHenrikMatches } from './normalizeHenrik';
+import type { AccountResolutionResult, ConnectionInput, MatchImportInput, MatchImportResult, ProviderStatus, ValorantDataProvider } from './contracts.js';
+import { PublicApiError } from './errors.js';
+import { normalizeHenrikMatches } from './normalizeHenrik.js';
 
 type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
 

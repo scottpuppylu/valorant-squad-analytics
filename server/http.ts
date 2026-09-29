@@ -1,5 +1,5 @@
-import type { ApiRequest, ApiResponse } from './contracts';
-import { PublicApiError, toPublicApiError } from './errors';
+import type { ApiRequest, ApiResponse } from './contracts.js';
+import { PublicApiError, toPublicApiError } from './errors.js';
 
 export function requireMethod(request: ApiRequest, method: 'GET' | 'POST'): void {
   if (request.method !== method) {

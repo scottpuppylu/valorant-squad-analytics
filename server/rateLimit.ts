@@ -1,4 +1,4 @@
-import { PublicApiError } from './errors';
+import { PublicApiError } from './errors.js';
 
 interface Bucket {
   count: number;

@@ -1,4 +1,4 @@
-import { PublicApiError } from './errors';
+import { PublicApiError } from './errors.js';
 
 const activeImports = new Set<string>();
 

@@ -1,8 +1,8 @@
-import type { ApiRequest, ApiResponse } from '../../../server/contracts';
-import { createHenrikDataProvider } from '../../../server/henrikDataProvider';
-import { clientKey, readJsonBody, requireMethod, secureJson, sendError } from '../../../server/http';
-import { enforceRateLimit } from '../../../server/rateLimit';
-import { parseConnectionInput } from '../../../server/validation';
+import type { ApiRequest, ApiResponse } from '../../../server/contracts.js';
+import { createHenrikDataProvider } from '../../../server/henrikDataProvider.js';
+import { clientKey, readJsonBody, requireMethod, secureJson, sendError } from '../../../server/http.js';
+import { enforceRateLimit } from '../../../server/rateLimit.js';
+import { parseConnectionInput } from '../../../server/validation.js';
 
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   secureJson(response);

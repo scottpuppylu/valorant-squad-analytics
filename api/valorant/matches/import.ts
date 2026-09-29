@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
-import type { ApiRequest, ApiResponse } from '../../../server/contracts';
-import { createHenrikDataProvider } from '../../../server/henrikDataProvider';
-import { clientKey, readJsonBody, requireMethod, secureJson, sendError } from '../../../server/http';
-import { withImportLock } from '../../../server/importLock';
-import { enforceRateLimit } from '../../../server/rateLimit';
-import { parseMatchImportInput } from '../../../server/validation';
+import type { ApiRequest, ApiResponse } from '../../../server/contracts.js';
+import { createHenrikDataProvider } from '../../../server/henrikDataProvider.js';
+import { clientKey, readJsonBody, requireMethod, secureJson, sendError } from '../../../server/http.js';
+import { withImportLock } from '../../../server/importLock.js';
+import { enforceRateLimit } from '../../../server/rateLimit.js';
+import { parseMatchImportInput } from '../../../server/validation.js';
 
 function lockKey(client: string, gameName: string, tag: string): string {
   return createHash('sha256').update(`${client}|${gameName.toLowerCase()}|${tag.toLowerCase()}`).digest('hex');

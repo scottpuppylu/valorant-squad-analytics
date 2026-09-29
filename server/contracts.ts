@@ -1,4 +1,4 @@
-import type { NormalizedAnalyticsDataset } from '../src/dataSources/types';
+import type { NormalizedAnalyticsDataset } from '../src/dataSources/types.js';
 
 export const supportedAffinities = ['ap', 'eu', 'na', 'kr', 'latam', 'br'] as const;
 export type ValorantAffinity = (typeof supportedAffinities)[number];

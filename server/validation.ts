@@ -1,5 +1,5 @@
-import { PublicApiError } from './errors';
-import { supportedAffinities, type ConnectionInput, type ImportLimit, type MatchImportInput, type ValorantAffinity } from './contracts';
+import { PublicApiError } from './errors.js';
+import { supportedAffinities, type ConnectionInput, type ImportLimit, type MatchImportInput, type ValorantAffinity } from './contracts.js';
 
 const allowedLimits = new Set<number>([3, 10, 20, 30]);
 
