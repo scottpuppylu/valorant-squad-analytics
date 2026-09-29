@@ -1,56 +1,55 @@
-import type { AvatarRepository, StoredAvatar } from '../../types/avatar';
+import type { AvatarRepository, PlayerEmoji, StoredAvatar } from '../../types/avatar';
+import { isPlayerEmoji } from '../../utils/avatar';
 
-const DATABASE_NAME = 'valorant-squad-analytics';
-const STORE_NAME = 'player-avatars';
-const DATABASE_VERSION = 1;
+const STORAGE_KEY = 'valorant-squad-analytics:emoji-avatars:v1';
+
+interface PersistedAvatarState {
+  version: 1;
+  overrides: Record<string, StoredAvatar>;
+}
+
+function emptyState(): PersistedAvatarState {
+  return { version: 1, overrides: {} };
+}
 
 export class BrowserAvatarRepository implements AvatarRepository {
-  private readonly indexedDb: IDBFactory;
+  private readonly storage: Pick<Storage, 'getItem' | 'setItem'>;
 
-  constructor(indexedDb: IDBFactory = window.indexedDB) {
-    this.indexedDb = indexedDb;
+  constructor(storage: Pick<Storage, 'getItem' | 'setItem'> = window.localStorage) {
+    this.storage = storage;
   }
 
-  private open(): Promise<IDBDatabase> {
-    return new Promise<IDBDatabase>((resolve, reject) => {
-      const request = this.indexedDb.open(DATABASE_NAME, DATABASE_VERSION);
-      request.onupgradeneeded = () => {
-        if (!request.result.objectStoreNames.contains(STORE_NAME)) {
-          request.result.createObjectStore(STORE_NAME, { keyPath: 'playerId' });
-        }
-      };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error ?? new Error('無法開啟瀏覽器頭像資料庫。'));
-    });
+  private read(): PersistedAvatarState {
+    const raw = this.storage.getItem(STORAGE_KEY);
+    if (!raw) return emptyState();
+    const candidate = JSON.parse(raw) as Partial<PersistedAvatarState>;
+    if (candidate.version !== 1 || !candidate.overrides || typeof candidate.overrides !== 'object') return emptyState();
+
+    const overrides = Object.fromEntries(
+      Object.entries(candidate.overrides).filter((entry): entry is [string, StoredAvatar] => {
+        const record = entry[1];
+        return Boolean(record && typeof record === 'object' && isPlayerEmoji(record.emoji));
+      }),
+    );
+    return { version: 1, overrides };
   }
 
   async get(playerId: string): Promise<StoredAvatar | null> {
-    const database = await this.open();
-    return new Promise<StoredAvatar | null>((resolve, reject) => {
-      const request = database.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(playerId);
-      request.onsuccess = () => resolve((request.result as StoredAvatar | undefined) ?? null);
-      request.onerror = () => reject(request.error ?? new Error('無法讀取自訂頭像。'));
-    }).finally(() => database.close());
+    return this.read().overrides[playerId] ?? null;
   }
 
-  async save(playerId: string, blob: Blob): Promise<StoredAvatar> {
-    const database = await this.open();
-    const record: StoredAvatar = { playerId, blob, updatedAt: new Date().toISOString() };
-    await new Promise<void>((resolve, reject) => {
-      const request = database.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(record);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error ?? new Error('無法儲存自訂頭像。'));
-    }).finally(() => database.close());
+  async save(playerId: string, emoji: PlayerEmoji): Promise<StoredAvatar> {
+    const state = this.read();
+    const record: StoredAvatar = { playerId, emoji, updatedAt: new Date().toISOString() };
+    state.overrides[playerId] = record;
+    this.storage.setItem(STORAGE_KEY, JSON.stringify(state));
     return record;
   }
 
   async remove(playerId: string): Promise<void> {
-    const database = await this.open();
-    await new Promise<void>((resolve, reject) => {
-      const request = database.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete(playerId);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error ?? new Error('無法重設自訂頭像。'));
-    }).finally(() => database.close());
+    const state = this.read();
+    delete state.overrides[playerId];
+    this.storage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
 }
 
@@ -61,8 +60,8 @@ export class MemoryAvatarRepository implements AvatarRepository {
     return this.records.get(playerId) ?? null;
   }
 
-  async save(playerId: string, blob: Blob): Promise<StoredAvatar> {
-    const record = { playerId, blob, updatedAt: new Date().toISOString() };
+  async save(playerId: string, emoji: PlayerEmoji): Promise<StoredAvatar> {
+    const record = { playerId, emoji, updatedAt: new Date().toISOString() };
     this.records.set(playerId, record);
     return record;
   }

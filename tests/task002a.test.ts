@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { metricDefinitions, metricDefinitionById } from '../src/data/metricDefinitions';
-import { MemoryAvatarRepository } from '../src/dataSources/avatars/BrowserAvatarRepository';
+import { BrowserAvatarRepository, MemoryAvatarRepository } from '../src/dataSources/avatars/BrowserAvatarRepository';
 import { primaryNavigation, scoreMetricIds, zhTW } from '../src/i18n/zhTW';
 import { categoryMetricWeights, overallWeights } from '../src/scoring/weights';
 import { players } from '../src/data/players';
-import { maxAvatarFileBytes, resolveAvatarFallback, validateAvatarFile } from '../src/utils/avatar';
+import { playerEmojiOptions } from '../src/types/avatar';
+import { isPlayerEmoji, resolvePlayerEmoji } from '../src/utils/avatar';
 
 describe('metric dictionary', () => {
   it('uses unique stable IDs and complete required fields', () => {
@@ -53,26 +54,33 @@ describe('metric dictionary', () => {
 describe('avatar behavior', () => {
   const player = players[0]!;
 
-  it('uses custom, configured default and initials fallbacks in order', () => {
-    expect(resolveAvatarFallback(player, 'blob:custom')).toEqual({ kind: 'custom', source: 'blob:custom' });
-    expect(resolveAvatarFallback({ ...player, defaultAvatarUrl: '/avatar.webp' })).toEqual({ kind: 'default', source: '/avatar.webp' });
-    expect(resolveAvatarFallback(player)).toEqual({ kind: 'initials', source: 'NO' });
+  it('gives every player a valid default emoji', () => {
+    expect(new Set(players.map(({ defaultEmoji }) => defaultEmoji)).size).toBe(players.length);
+    expect(players.every(({ defaultEmoji }) => isPlayerEmoji(defaultEmoji))).toBe(true);
+    expect(playerEmojiOptions.length).toBeGreaterThanOrEqual(11);
   });
 
-  it('persists and removes avatar blobs through the repository contract', async () => {
+  it('uses an override before the player default emoji', () => {
+    expect(resolvePlayerEmoji(player, '👽')).toBe('👽');
+    expect(resolvePlayerEmoji(player)).toBe(player.defaultEmoji);
+  });
+
+  it('persists and removes emoji overrides through the repository contract', async () => {
     const repository = new MemoryAvatarRepository();
-    const blob = new Blob(['avatar'], { type: 'image/webp' });
-    await repository.save(player.id, blob);
-    expect((await repository.get(player.id))?.blob.type).toBe('image/webp');
+    await repository.save(player.id, '🤖');
+    expect((await repository.get(player.id))?.emoji).toBe('🤖');
     await repository.remove(player.id);
     expect(await repository.get(player.id)).toBeNull();
   });
 
-  it('rejects unsupported, empty and oversized avatar files', () => {
-    expect(validateAvatarFile({ type: 'image/gif', size: 20 })).toContain('JPEG');
-    expect(validateAvatarFile({ type: 'image/png', size: 0 })).toContain('空');
-    expect(validateAvatarFile({ type: 'image/jpeg', size: maxAvatarFileBytes + 1 })).toContain('8 MB');
-    expect(validateAvatarFile({ type: 'image/webp', size: 1024 })).toBeNull();
+  it('keeps overrides after a browser storage repository is recreated', async () => {
+    const records = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => records.get(key) ?? null,
+      setItem: (key: string, value: string) => { records.set(key, value); },
+    };
+    await new BrowserAvatarRepository(storage).save(player.id, '😎');
+    expect((await new BrowserAvatarRepository(storage).get(player.id))?.emoji).toBe('😎');
   });
 });
 

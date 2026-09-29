@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CategoryLeaders } from '../components/CategoryLeaders';
 import { MetricInfo } from '../components/MetricInfo';
 import { PlayerCard } from '../components/PlayerCard';
+import { PlayerAvatar } from '../components/PlayerAvatar';
 import { RecentPerformance } from '../components/RecentPerformance';
 import { ScoreBadge } from '../components/ScoreBadge';
 import { SectionHeading } from '../components/SectionHeading';
@@ -36,10 +37,13 @@ export function DashboardPage() {
         </div>
         <article className="hero-leader surface-card">
           <div className="relative z-10 flex items-start justify-between gap-4">
-            <div>
+            <div className="flex items-center gap-3">
+              <PlayerAvatar player={leader.player} />
+              <div>
               <p className="metric-label">目前綜合領先</p>
               <h2 className="mt-3 text-3xl font-semibold text-white">{leader.player.handle}</h2>
               <p className="mt-1 text-sm text-slate-400">{zhTW.roles[leader.player.role]} · {leader.player.tagline}</p>
+              </div>
             </div>
             <ScoreBadge value={leader.scores.overall} label={zhTW.scores.overall} />
           </div>
@@ -90,7 +94,10 @@ export function DashboardPage() {
             <div className="space-y-4">
               <div>
                 <p className="metric-label">特點摘要</p>
-                <h3 className="mt-2 text-2xl font-semibold text-white">{selected.player.tagline}</h3>
+                <div className="mt-2 flex items-center gap-3">
+                  <PlayerAvatar player={selected.player} />
+                  <h3 className="text-2xl font-semibold text-white">{selected.player.tagline}</h3>
+                </div>
                 <p className="mt-3 text-sm leading-6 text-slate-400">{selected.player.playstyle}</p>
               </div>
               <div className="rounded-xl border border-emerald-300/10 bg-emerald-300/[0.04] p-4">

@@ -1,6 +1,7 @@
 import type { PlayerAnalytics, ScoreCategory } from '../types/valorant';
 import { zhTW } from '../i18n/zhTW';
 import { MetricInfo } from './MetricInfo';
+import { PlayerAvatar } from './PlayerAvatar';
 
 const categories: Array<{ key: Exclude<ScoreCategory, 'overall'>; metricId: string; label: string; hint: string }> = [
   { key: 'firepower', metricId: 'firepower', label: zhTW.scores.firepower, hint: 'ACS、ADR、KPR 與 K/D' },
@@ -23,9 +24,12 @@ export function CategoryLeaders({ analytics }: CategoryLeadersProps) {
           <article className="surface-card p-4" key={key}>
             <p className="metric-label"><MetricInfo metricId={metricId} label={label} /></p>
             <div className="mt-4 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-base font-semibold text-white">{leader.player.handle}</p>
-                <p className="mt-1 text-xs text-slate-500">{hint}</p>
+              <div className="flex min-w-0 items-center gap-3">
+                <PlayerAvatar player={leader.player} />
+                <div>
+                  <p className="text-base font-semibold text-white">{leader.player.handle}</p>
+                  <p className="mt-1 text-xs text-slate-500">{hint}</p>
+                </div>
               </div>
               <strong className="font-mono text-2xl text-emerald-300">{leader.scores[key].toFixed(1)}</strong>
             </div>

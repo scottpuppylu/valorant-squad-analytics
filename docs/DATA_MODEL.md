@@ -62,11 +62,15 @@ Riot API DTO -> server-side Riot adapter -> normalized internal model
 
 Scoring and React components must not import Riot DTOs directly. See `docs/RIOT_API_CAPABILITY.md`.
 
-## Browser-local avatars
+## Browser-local emoji identity
 
-`AvatarRepository` separates persistence from UI. `BrowserAvatarRepository` stores resized image blobs in IndexedDB database `valorant-squad-analytics`, object store `player-avatars`, keyed by internal player ID. The data is local to one browser profile and is not part of the analytics dataset, Git repository or GitHub Pages deployment.
+Every `Player` has a required `defaultEmoji`. `AvatarRepository` stores only an optional allow-listed emoji override keyed by internal player ID. `BrowserAvatarRepository` serializes the versioned override map under `valorant-squad-analytics:emoji-avatars:v1` in localStorage. The setting is local to one browser profile and is not part of the analytics dataset, Git repository or GitHub Pages deployment.
 
-Fallback order is custom browser blob, configured `defaultAvatarUrl`, then generated initials.
+Resolution order is browser override, then the player's committed default emoji. The previous uploaded-image blob path is no longer read. Legacy IndexedDB records are left untouched rather than deleted automatically.
+
+## Third-party spike boundary
+
+`src/dataSources/thirdParty/henrikV4.ts` validates and summarizes provider-shaped v4 match envelopes without importing them into scoring or React components. `scripts/probe-henrik-api.mjs` is a local diagnostic only: it requires an API key, an explicitly consented Riot ID and a consent flag, prints a non-identifying coverage summary, and retains no raw response. The deployed application does not call the provider.
 
 ## Missing data
 

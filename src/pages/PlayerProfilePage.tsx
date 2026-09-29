@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { AvatarEditor } from '../components/AvatarEditor';
+import { EmojiAvatarPicker } from '../components/EmojiAvatarPicker';
 import { MetricInfo } from '../components/MetricInfo';
 import { RecentPerformance } from '../components/RecentPerformance';
 import { ScoreBadge } from '../components/ScoreBadge';
@@ -64,7 +64,7 @@ export function PlayerProfilePage() {
         <div className="relative z-10"><ScoreBadge value={scores.overall} label={zhTW.scores.overall} /></div>
       </section>
 
-      <AvatarEditor key={player.id} player={player} />
+      <EmojiAvatarPicker key={player.id} player={player} />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map(([metricId, label, value]) => (

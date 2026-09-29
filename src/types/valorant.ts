@@ -1,3 +1,5 @@
+import type { PlayerEmoji } from './avatar';
+
 export type PlayerRole = 'Duelist' | 'Initiator' | 'Controller' | 'Sentinel';
 
 export type AgentName =
@@ -32,7 +34,7 @@ export interface Player {
   accent: string;
   tagline: string;
   playstyle: string;
-  defaultAvatarUrl?: string;
+  defaultEmoji: PlayerEmoji;
 }
 
 export interface MatchPerformance {

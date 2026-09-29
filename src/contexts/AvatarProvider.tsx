@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { players } from '../data/players';
 import { BrowserAvatarRepository } from '../dataSources/avatars/BrowserAvatarRepository';
-import type { AvatarRepository, StoredAvatar } from '../types/avatar';
+import type { AvatarRepository, PlayerEmoji, StoredAvatar } from '../types/avatar';
 import { AvatarContext } from './AvatarContext';
 
 interface AvatarProviderProps {
@@ -21,15 +21,15 @@ export function AvatarProvider({ children, repository }: AvatarProviderProps) {
         if (!active) return;
         setAvatars(new Map(records.filter((entry): entry is readonly [string, StoredAvatar] => entry[1] !== null)));
       })
-      .catch(() => active && setStorageError('無法讀取瀏覽器內的自訂頭像。'));
+      .catch(() => active && setStorageError('無法讀取瀏覽器內的 emoji 頭像。'));
     return () => { active = false; };
   }, [activeRepository]);
 
   const value = useMemo(() => ({
     avatars,
     storageError,
-    async saveAvatar(playerId: string, blob: Blob) {
-      const record = await activeRepository.save(playerId, blob);
+    async saveAvatar(playerId: string, emoji: PlayerEmoji) {
+      const record = await activeRepository.save(playerId, emoji);
       setAvatars((current) => new Map(current).set(playerId, record));
       setStorageError(null);
     },
