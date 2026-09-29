@@ -1,0 +1,9 @@
+# Project-scoped Codex defaults. Codex loads this file only after the project is trusted.
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+model_reasoning_effort = "medium"
+
+[features]
+apps = true
+goals = true
