@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { metricDefinitions, metricDefinitionById } from '../src/data/metricDefinitions';
 import { BrowserAvatarRepository, MemoryAvatarRepository, PLAYER_EMOJI_STORAGE_KEY } from '../src/dataSources/avatars/BrowserAvatarRepository';
 import { primaryNavigation, scoreMetricIds, zhTW } from '../src/i18n/zhTW';
@@ -110,6 +111,13 @@ describe('avatar behavior', () => {
 });
 
 describe('zh-TW localization', () => {
+  it('uses the public 哥布林大調查 brand without changing the technical repository identifier', () => {
+    const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    expect(zhTW.brand.name).toBe('哥布林大調查');
+    expect(html).toContain('<title>哥布林大調查</title>');
+    expect(html).toContain('哥布林大調查是一個朋友群 VALORANT 表現分析網站');
+  });
+
   it('exposes Chinese primary navigation labels', () => {
     expect(primaryNavigation.map(({ label }) => label)).toEqual([
       zhTW.navigation.dashboard,

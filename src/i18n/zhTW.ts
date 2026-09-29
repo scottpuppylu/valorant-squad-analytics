@@ -2,7 +2,7 @@ import type { PlayerRole, ScoreCategory } from '../types/valorant';
 
 export const zhTW = {
   brand: {
-    name: '小隊分析',
+    name: '哥布林大調查',
     subtitle: '社群透明指標',
     demo: '示範資料',
   },

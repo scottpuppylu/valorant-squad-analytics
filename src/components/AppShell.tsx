@@ -18,7 +18,7 @@ export function AppShell({ children }: AppShellProps) {
       <header className="app-header">
         <div className="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-4 sm:px-6 lg:px-8">
           <NavLink to="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
-            <span className="brand-mark" aria-hidden="true">SA</span>
+            <span className="brand-mark" aria-hidden="true">哥</span>
             <span>
               <strong className="block text-sm tracking-[0.18em] text-white">{zhTW.brand.name}</strong>
               <small className="block text-[10px] tracking-[0.16em] text-emerald-300/70">{zhTW.brand.subtitle}</small>
