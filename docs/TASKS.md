@@ -48,7 +48,7 @@ Status: **PARTIALLY COMPLETE / CLOSED FOR NOW**
 - [x] Prepare the provider/proxy boundary without connecting it to the deployed application.
 - [x] Record provider policy, documented schema possibilities and privacy limits without treating them as live verification.
 
-Real account validation, match retrieval, field auditing and capability comparison are deferred to `TASK-API-01`. This closure is intentional and is not a failed task. The deployed GitHub Pages application remains on deterministic fictional data.
+Real account validation, match retrieval, field auditing and capability comparison moved forward into `TASK-API-02`. The deployed GitHub Pages application remains on deterministic fictional data while the Vercel production path is being established.
 
 ## Task API-01 — real third-party data validation
 
@@ -68,11 +68,11 @@ Status: **IN PROGRESS — SDD STRICT**
 
 - [x] Select Vercel full deployment and document alternatives, rollback, privacy and secret boundaries.
 - [x] Create and push the `checkpoint-pages-before-api-02` rollback tag.
-- [ ] Add same-origin provider status, account resolution and bounded match-import server routes.
-- [ ] Add Taiwan Traditional Chinese `#/connect` UX with explicit consent and no credential fields.
-- [ ] Normalize provider responses without returning PUUIDs, raw match IDs or raw payloads.
-- [ ] Keep demo and real datasets explicitly separate and removable.
-- [ ] Add security, API, normalization and storage tests using mocks only.
+- [x] Add same-origin provider status, account resolution and bounded match-import server routes.
+- [x] Add Taiwan Traditional Chinese `#/connect` UX with explicit consent and no credential fields.
+- [x] Normalize provider responses without returning PUUIDs, raw match IDs or raw payloads.
+- [x] Keep demo and real datasets explicitly separate and removable.
+- [x] Add security, API, normalization and storage tests using mocks only.
 - [ ] Deploy the full application to Vercel while retaining GitHub Pages.
 - [ ] Configure a rotated server-only production credential through Vercel environment settings.
 - [ ] Resolve one consenting account and import exactly three matches.

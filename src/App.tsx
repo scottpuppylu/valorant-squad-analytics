@@ -11,6 +11,7 @@ import { AgentsPage } from './pages/AgentsPage';
 import { MatchesPage } from './pages/MatchesPage';
 import { PlayerProfilePage } from './pages/PlayerProfilePage';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { ConnectPage } from './pages/ConnectPage';
 import { publicRoutePaths } from './routes';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
           <Route path={publicRoutePaths.maps} element={<MapsPage />} />
           <Route path={publicRoutePaths.agents} element={<AgentsPage />} />
           <Route path={publicRoutePaths.matches} element={<MatchesPage />} />
+          <Route path={publicRoutePaths.connect} element={<ConnectPage />} />
           <Route path="/players" element={<Navigate replace to={'/players/' + playerAnalytics[0]!.player.id} />} />
           <Route path={publicRoutePaths.players} element={<PlayerProfilePage />} />
           <Route path={publicRoutePaths.dictionary} element={<DictionaryPage />} />

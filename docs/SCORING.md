@@ -147,4 +147,17 @@ Badge rules use the current selected population:
 - One observation has zero measured dispersion and can therefore produce a perfect Consistency score.
 - Economy, round impact, role value, trade, utility, and synergy scoring are deferred to later tasks.
 
-TASK-002B owns corrections to these issues and may proceed using the deterministic demo evidence. Live third-party validation is deferred to TASK-API-01; until it is performed, real-provider evidence coverage remains **NOT VERIFIED** and must not be used to justify a score or benchmark.
+TASK-002B owns corrections to these issues and may proceed using the deterministic demo evidence. TASK-API-02 now owns production third-party validation; until its controlled live import is performed, real-provider evidence coverage remains **NOT VERIFIED** and must not be used to justify a score or benchmark.
+
+## TASK-API-02 preliminary normalization
+
+The scoring formulas above are unchanged. When a sanitized real dataset is imported, the server adapter currently prepares compatible match-level inputs as follows:
+
+- `ACS = provider total score / team rounds played`
+- `ADR = provider damage dealt / team rounds played`
+- first kill/death = killer/victim of the earliest `time_in_round_in_ms` event in each round
+- `KAST = rounds with kill OR assist OR survival OR reconstructed traded death / observed rounds`
+- reconstructed traded death = a teammate kills the original killer within 5,000 ms after the player's death in the same round
+- `HS% = headshots / (headshots + bodyshots + legshots)`
+
+The five-second trade rule is a transparent product rule, not an official provider label. Clutch, economy, Impact Kill and Frag Quality remain unavailable in the normalized model. These transformations are covered by mock tests but have not passed a real three-match field audit, so provider capability remains **NOT VERIFIED** until `docs/REAL_DATA_FIELD_AUDIT.md` is created from consenting production evidence.

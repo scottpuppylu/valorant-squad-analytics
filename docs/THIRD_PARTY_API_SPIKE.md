@@ -13,7 +13,7 @@ Completed:
 - a dormant consent/key-gated probe script;
 - provider, normalization and proxy boundary preparation.
 
-Deferred to `TASK-API-01`:
+Moved to the production architecture task `TASK-API-02`:
 
 - a Henrik API key and consenting real account;
 - latest-match retrieval;
@@ -21,7 +21,7 @@ Deferred to `TASK-API-01`:
 - a real-data field and nullability audit;
 - comparison of documented and observed analytics capability.
 
-No live player-data capability has been verified. This is an intentional deferral, not a task failure. The public application does not require `.env.local`, credentials, consent configuration, a real Riot ID, or network access to HenrikDev.
+No live player-data capability has been verified. TASK-API-02 now provides a public consent flow and server-only provider boundary; normal players do not need `.env.local`, developer credentials or HenrikDev accounts. Until the operator configures Vercel and a controlled test succeeds, the public GitHub Pages deployment remains Demo-only.
 
 ## Architecture decision
 
@@ -39,9 +39,9 @@ Published schemas establish candidates only. They do not verify field presence, 
 ## Prepared code boundary
 
 - `src/dataSources/thirdParty/henrikV4.ts` validates provider-shaped envelopes and emits only non-identifying field-coverage counts.
-- `scripts/probe-henrik-api.mjs` is a dormant local diagnostic scaffold. It is not imported by the application, is not executed by normal development/build commands, and does not write raw responses.
+- The retired local probe is no longer part of the active workflow. `server/HenrikDataProvider` is the only live provider client and is reachable only through same-origin Vercel API routes.
 - Scoring and React components do not import provider DTOs.
-- The deployed GitHub Pages application uses only deterministic fictional fixtures.
+- GitHub Pages uses only deterministic fictional fixtures because it has no server functions. The selected Vercel architecture will host both frontend and backend.
 
 The repository contains no API key, real Riot ID, consent value, raw response archive, or normalized real-player record.
 
@@ -62,8 +62,8 @@ The repository contains no API key, real Riot ID, consent value, raw response ar
 
 The historical credential-free reachability check only returned HTTP 401 for a fictional identifier. It did not retrieve real match data and is not evidence that any analytics field is usable.
 
-## Future TASK-API-01 gate
+## TASK-API-02 production gate
 
-Only when TASK-API-01 is explicitly started should the team obtain a provider key, use an explicitly consenting player, retrieve a small latest-match sample and record a non-identifying capability audit. That future task must still avoid committing secrets, identifiers or raw private payloads.
+The site operator obtains one provider key externally and configures it only in Vercel. A player then explicitly consents in `#/connect`; the first controlled test resolves one account and imports exactly three matches. Only sanitized evidence may enter `docs/REAL_DATA_FIELD_AUDIT.md`; secrets, Riot IDs, PUUIDs, provider match IDs and raw payloads remain uncommitted.
 
 TASK-002B does not wait for this gate. It may proceed using demo evidence while marking unavailable evidence explicitly and keeping every formula transparent.

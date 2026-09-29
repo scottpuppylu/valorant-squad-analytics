@@ -23,16 +23,17 @@ export function DashboardPage() {
     <div className="space-y-14">
       <section className="hero-grid">
         <div className="max-w-3xl">
-          <span className="data-pill mb-5 inline-flex"><span /> 32 場虛構對戰 · 8 位玩家</span>
+          <span className="data-pill mb-5 inline-flex"><span /> {activeDataset.matches.length} 場{activeDataset.mode === 'REAL' ? '真實' : '虛構'}對戰 · {activeDataset.players.length} 位玩家</span>
           <h1 className="font-display text-4xl font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-6xl lg:text-7xl">
             看見完整回合，<br /><span className="text-gradient">不只看擊殺資訊。</span>
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">
-            為虛構朋友小隊打造的透明、角色感知社群表現指標。每個分數都能回溯到示範對戰資料與公開公式。
+            {activeDataset.mode === 'REAL' ? '目前顯示這個瀏覽器已匯入的真實戰績；Demo 資料不會混入排名。' : '為虛構朋友小隊打造的透明、角色感知社群表現指標。每個分數都能回溯到示範對戰資料與公開公式。'}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link className="button-primary" to="/leaderboard">查看戰力排名</Link>
             <Link className="button-secondary" to="/dictionary">了解評分方式</Link>
+            <Link className="button-secondary" to="/connect">{activeDataset.mode === 'REAL' ? '管理連接' : '加入調查'}</Link>
           </div>
         </div>
         <article className="hero-leader surface-card">
@@ -111,12 +112,12 @@ export function DashboardPage() {
         </article>
 
         <article className="surface-card p-5 sm:p-7">
-          <SectionHeading eyebrow="近期表現" title={selected.player.handle + ' · 最近六場'} description="最新虛構對戰資料；不含即時或官方玩家資料。" />
+          <SectionHeading eyebrow="近期表現" title={selected.player.handle + ' · 最近六場'} description={activeDataset.mode === 'REAL' ? '目前瀏覽器最近匯入的正規化戰績；不是即時資料。' : '最新虛構對戰資料；不含即時或官方玩家資料。'} />
           <RecentPerformance analytics={selected} />
         </article>
       </section>
 
-      <section className="surface-card callout-grid p-6 sm:p-8">
+      {activeDataset.mode === 'DEMO' ? <section className="surface-card callout-grid p-6 sm:p-8">
         <div>
           <p className="metric-label">為什麼重要</p>
           <h2 className="mt-3 max-w-xl text-2xl font-semibold text-white sm:text-3xl">K/D 是證據，不是全部結論。</h2>
@@ -124,7 +125,7 @@ export function DashboardPage() {
         <p className="max-w-2xl text-sm leading-7 text-slate-400">
           NovaHex 帶領原始火力，Quartz 擅長完成艱難殘局，EchoVale 以助攻與 KAST 提升團隊貢獻，AnchorMint 則靠低波動建立穩定度。初始模型保留這些不同故事，而不是只剩單一擊殺數字。
         </p>
-      </section>
+      </section> : null}
     </div>
   );
 }

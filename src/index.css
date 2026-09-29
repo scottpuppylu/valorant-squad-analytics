@@ -900,6 +900,41 @@ a:focus-visible {
 }
 .pagination button:disabled { cursor: not-allowed; opacity: .35; }
 
+.connect-layout { display: grid; gap: 2rem; }
+.connect-grid { display: grid; gap: 1.25rem; }
+.connect-panel { display: grid; gap: 1rem; padding: clamp(1.25rem, 3vw, 2rem); }
+.connect-panel h2 { color: white; font-size: 1.35rem; font-weight: 700; }
+.connect-panel p { color: #94a3b8; font-size: .84rem; line-height: 1.7; }
+.connect-panel > label:not(.consent-row) { display: grid; gap: .45rem; color: #94a3b8; font-size: .72rem; font-weight: 700; letter-spacing: .06em; }
+.connect-panel input:not([type="checkbox"]),
+.connect-panel select {
+  min-height: 2.85rem;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: .7rem;
+  background: #0a111d;
+  padding: 0 .8rem;
+  color: #e2e8f0;
+  font-size: .85rem;
+  letter-spacing: 0;
+}
+.consent-row { display: flex; align-items: flex-start; gap: .7rem; color: #cbd5e1; font-size: .8rem; line-height: 1.6; cursor: pointer; }
+.consent-row input { width: 1rem; height: 1rem; margin-top: .2rem; flex: none; accent-color: #6ee7b7; }
+.consent-row a { color: #6ee7b7; text-decoration: underline; text-underline-offset: 2px; }
+.security-panel ul { display: grid; gap: .55rem; color: #cbd5e1; font-size: .82rem; }
+.security-panel li { padding-left: 1.25rem; position: relative; }
+.security-panel li::before { position: absolute; left: 0; color: #6ee7b7; content: "✓"; }
+.provider-status { align-self: flex-start; border: 1px solid rgba(251,191,36,.22); border-radius: 999px; padding: .45rem .7rem; color: #fde68a; font-size: .72rem; font-weight: 700; }
+.provider-status[data-status="ready"] { border-color: rgba(110,231,183,.24); color: #6ee7b7; }
+.connect-notice { border-left: 2px solid #fbbf24; padding-left: .8rem; color: #fde68a !important; }
+.connect-actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.connect-message { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; color: #cbd5e1; }
+.connect-message[data-state="IMPORT_COMPLETE"] { border-color: rgba(110,231,183,.32); color: #a7f3d0; }
+
+@media (min-width: 900px) {
+  .connect-grid { grid-template-columns: minmax(0, 1.2fr) minmax(18rem, .8fr); }
+}
+
 @media (min-width: 768px) {
   .callout-grid {
     grid-template-columns: .8fr 1.2fr;

@@ -14,6 +14,7 @@ export const zhTW = {
     maps: '地圖分析',
     agents: '特務／角色分析',
     matches: '對戰紀錄',
+    connect: '加入調查',
     dictionary: '數據字典',
     about: '關於本站',
     privacy: '隱私說明',
@@ -50,6 +51,7 @@ export const primaryNavigation = [
   { to: '/maps', label: zhTW.navigation.maps },
   { to: '/agents', label: zhTW.navigation.agents },
   { to: '/matches', label: zhTW.navigation.matches },
+  { to: '/connect', label: zhTW.navigation.connect },
   { to: '/dictionary', label: zhTW.navigation.dictionary },
 ] as const;
 

@@ -51,7 +51,7 @@ fictional player metadata + 32 fictional matches
 
 ## Data-source boundary
 
-`src/dataSources/types.ts` defines `AnalyticsDataSource` and `NormalizedAnalyticsDataset`. `DemoDataSource` currently provides the deterministic local fixtures. `RiotDataSource` is a deliberately non-operational future adapter boundary; it contains no HTTP client or credential handling.
+`src/dataSources/types.ts` defines `AnalyticsDataSource` and `NormalizedAnalyticsDataset`. Every dataset declares `mode: DEMO | REAL`; the two modes are never merged. `DemoDataSource` provides deterministic local fixtures. `RiotDataSource` remains a deliberately non-operational official-provider boundary.
 
 Future official data follows this flow:
 
@@ -96,9 +96,23 @@ Resolution order is browser override, then the player's committed default emoji.
 
 Malformed JSON, an unknown storage version, or a record with an emoji outside the allow-list is ignored and resolves to the player's default emoji. Selecting the default emoji or pressing `重設頭像` removes that player's override from the versioned map. Legacy image-avatar IndexedDB data is safely retired: active application code neither reads nor writes it, and automatic destructive deletion is intentionally avoided.
 
-## Third-party spike boundary
+## Production third-party boundary
 
-`src/dataSources/thirdParty/henrikV4.ts` validates and summarizes provider-shaped v4 match envelopes without importing them into scoring or React components. `scripts/probe-henrik-api.mjs` is a dormant local diagnostic scaffold for the future TASK-API-01. It is not required by the application and was not used for real-account or real-match validation. The deployed application does not call the provider.
+TASK-API-02 replaces the local probe as the intended product flow:
+
+```text
+React #/connect -> same-origin Vercel API -> HenrikDataProvider
+  -> normalizeHenrikMatches -> sanitized NormalizedAnalyticsDataset
+  -> browser-local REAL dataset -> existing TASK-003 analytics
+```
+
+Server routes validate explicit consent and keep `HENRIK_API_KEY` outside the browser. The adapter uses PUUID and provider match ID only while processing one response; the returned player and match keys are one-way opaque SHA-256 prefixes. PUUIDs, raw provider match IDs and raw payloads are not returned or persisted.
+
+Phase 1 stores the sanitized envelope under `goblin-survey:real-dataset:v1` in localStorage. The value has schema version 1, import timestamp and exactly one normalized `REAL` dataset. Malformed, wrong-mode or identifier-bearing values are removed and the app falls back to Demo. Removing the dataset from `#/connect` immediately returns the app to Demo after reload.
+
+No database or server-side player persistence exists. Cross-device shared rankings and scheduled synchronization require a later persistence/privacy design.
+
+`src/dataSources/thirdParty/henrikV4.ts` remains only as the historical schema-summary helper. No successful live import has occurred, so real provider field coverage is still **NOT VERIFIED**.
 
 ## Missing data
 

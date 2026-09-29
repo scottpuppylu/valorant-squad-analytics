@@ -72,4 +72,4 @@ GitHub Pages can remain the static presentation tier, but it cannot safely perfo
 
 Live work remains blocked by official approval, Production API access and RSO. It must not begin as a frontend-only shortcut.
 
-The TASK-002A.1 HenrikDev scaffold is not a replacement for this plan. Live use is deferred to TASK-API-01; it must not become the deployed player-data path or weaken RSO opt-in requirements.
+TASK-API-02 is an explicitly consent-gated, unofficial-provider production experiment and is not a replacement for this official plan. It must not weaken future RSO requirements or be described as Riot authentication. The browser never sends Riot credentials; the operator-held HenrikDev key stays server-side.

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { primaryNavigation, secondaryNavigation, zhTW } from '../i18n/zhTW';
+import { activeDataset } from '../data/analytics';
 
 interface AppShellProps {
   children: ReactNode;
@@ -28,7 +29,7 @@ export function AppShell({ children }: AppShellProps) {
             {primaryNavigation.map((link) => <NavLink key={link.to} to={link.to} className={linkClass}>{link.label}</NavLink>)}
           </nav>
           <div className="hidden items-center gap-3 xl:flex">
-            <span className="data-pill"><span /> {zhTW.brand.demo}</span>
+            <span className="data-pill"><span /> 資料來源：{activeDataset.mode === 'REAL' ? '真實戰績' : zhTW.brand.demo}</span>
             <NavLink to="/dictionary" className="button-secondary">查看公式</NavLink>
           </div>
           <button
@@ -53,7 +54,7 @@ export function AppShell({ children }: AppShellProps) {
       <main className="relative z-10 mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">{children}</main>
       <footer className="relative z-10 border-t border-white/5 py-8">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-3 px-4 text-xs text-slate-500 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-          <p>非官方社群分析工具 · 全站使用虛構示範資料</p>
+          <p>非官方社群分析工具 · 資料來源：{activeDataset.mode === 'REAL' ? '目前瀏覽器的真實戰績' : '虛構示範資料'}</p>
           <div className="flex flex-wrap gap-4">
             {secondaryNavigation.map((link) => <NavLink key={link.to} to={link.to} className="hover:text-slate-300">{link.label}</NavLink>)}
           </div>

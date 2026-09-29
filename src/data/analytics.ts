@@ -1,8 +1,9 @@
 import { demoDataSource } from '../dataSources/demo/DemoDataSource';
+import { loadBrowserRealDataset } from '../dataSources/real/BrowserRealDatasetRepository';
 import { buildPlayerAnalytics } from '../scoring/calculateScores';
 import { createPerformanceEntries } from '../analytics/filters';
 
-export const activeDataset = demoDataSource.snapshot();
+export const activeDataset = loadBrowserRealDataset()?.dataset ?? demoDataSource.snapshot();
 export const playerAnalytics = buildPlayerAnalytics(activeDataset.players, activeDataset.matches);
 export const performanceEntries = createPerformanceEntries(activeDataset);
 export const availableMaps = [...new Set(activeDataset.matches.map((match) => match.map))].sort();
