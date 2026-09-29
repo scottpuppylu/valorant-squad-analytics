@@ -4,8 +4,8 @@
 
 - Build VALORANT Squad Analytics as a transparent community performance dashboard for a private friend group.
 - Never describe the score as MMR, Elo, official rank, or a replacement for Riot's ranked system.
-- Keep V1 static and compatible with GitHub Pages. Do not add a backend, commit API keys, or call unofficial VALORANT APIs from the deployed frontend.
-- Third-party live-data validation is deferred to `TASK-API-01`. Until that task is explicitly started, do not request credentials, real Riot IDs, consent configuration, or make live provider requests. The existing provider/probe scaffold must not become a production data source.
+- Preserve the GitHub Pages demo during TASK-API-02 migration. Production may use a thin Vercel backend, but no API key or Henrik DTO may enter the deployed frontend.
+- TASK-API-02 is the active architecture task. Normal players provide only Riot Game Name, Tag, affinity and explicit consent. The site operator holds one `HENRIK_API_KEY` server-side; never ask players for provider credentials or Riot authentication secrets.
 - Do not copy Riot, VALORANT, VLR, or third-party visual assets or page designs.
 
 ## Technology
@@ -33,10 +33,10 @@
 
 - Use small, focused commits and preserve unrelated user changes.
 - Never commit secrets, credentials, API keys, `.env` files, generated logs, or private player identifiers.
-- Keep deployment compatible with a repository subpath on GitHub Pages.
+- Keep the rollback deployment compatible with the repository subpath on GitHub Pages while making the selected Vercel deployment work at `/`.
 - Do not rewrite history or force-push unless the user explicitly asks.
 
 ## Current stage
 
-- TASK-001, TASK-002A and TASK-003 are complete. TASK-002A.1 is partially complete and closed for now: emoji identity and provider boundaries are implemented; live validation is deferred. TASK-003 was intentionally completed before TASK-002B and its pages consume the current prototype score model through the reusable analytics layer. TASK-002B remains incomplete and may proceed from transparent demo evidence without waiting for live API access. Read `docs/PROJECT_BRIEF.md`, `docs/TASKS.md`, `docs/RIOT_API_CAPABILITY.md`, `docs/RIOT_INTEGRATION_PLAN.md`, and `docs/THIRD_PARTY_API_SPIKE.md` before changing data or scoring boundaries.
+- TASK-001, TASK-002A and TASK-003 are complete. TASK-API-02 is active under SDD STRICT and supersedes the local-only TASK-API-01 probe as the intended product architecture. TASK-002B remains incomplete and must not start during this task. Read `docs/TASK_API_02_SPEC.md`, `docs/PRODUCTION_ARCHITECTURE.md`, `docs/PROJECT_BRIEF.md`, `docs/TASKS.md`, `docs/RIOT_API_CAPABILITY.md`, and `docs/THIRD_PARTY_API_SPIKE.md` before changing data or provider boundaries.
 - Stay within the requested task. Record later ideas under the roadmap instead of silently expanding scope.

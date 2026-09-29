@@ -52,7 +52,7 @@ Real account validation, match retrieval, field auditing and capability comparis
 
 ## Task API-01 — real third-party data validation
 
-Status: **DEFERRED**
+Status: **SUPERSEDED BY TASK-API-02**
 
 - [ ] Obtain a Henrik API key through the provider's approved process.
 - [ ] Use one explicitly consenting account and retrieve a small latest-match sample.
@@ -60,7 +60,25 @@ Status: **DEFERRED**
 - [ ] Audit observed field coverage, nullability, queues, incomplete matches and reconstruction limits.
 - [ ] Compare documented capability with observed capability and record unsupported analytics honestly.
 
-This future task is separate from TASK-002B. Nothing in the current application requires its credentials or live access.
+The local `.env` probe remains useful only as historical diagnostic scaffolding. It is not the intended player experience and does not satisfy production integration.
+
+## Task API-02 — production data connection architecture
+
+Status: **IN PROGRESS — SDD STRICT**
+
+- [x] Select Vercel full deployment and document alternatives, rollback, privacy and secret boundaries.
+- [x] Create and push the `checkpoint-pages-before-api-02` rollback tag.
+- [ ] Add same-origin provider status, account resolution and bounded match-import server routes.
+- [ ] Add Taiwan Traditional Chinese `#/connect` UX with explicit consent and no credential fields.
+- [ ] Normalize provider responses without returning PUUIDs, raw match IDs or raw payloads.
+- [ ] Keep demo and real datasets explicitly separate and removable.
+- [ ] Add security, API, normalization and storage tests using mocks only.
+- [ ] Deploy the full application to Vercel while retaining GitHub Pages.
+- [ ] Configure a rotated server-only production credential through Vercel environment settings.
+- [ ] Resolve one consenting account and import exactly three matches.
+- [ ] Create `docs/REAL_DATA_FIELD_AUDIT.md` from observed sanitized evidence.
+
+TASK-API-02 does not include TASK-002B, Synergy, a scoring rewrite, a database, or provider credential issuance.
 
 ## Task 002B — evidence-aware scoring correctness
 

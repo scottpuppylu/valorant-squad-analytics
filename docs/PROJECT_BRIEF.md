@@ -2,7 +2,7 @@
 
 ## Goal
 
-Create a static web application for a private group of friends who play VALORANT together. It should explain player performance from several perspectives instead of reducing players to kills or K/D.
+Create a privacy-conscious web application for a private group of friends who play VALORANT together. It should explain player performance from several perspectives instead of reducing players to kills or K/D.
 
 This is a transparent community analytics dashboard. It is not an MMR, Elo, official rank, or replacement for Riot's ranked system.
 
@@ -17,7 +17,7 @@ This is a transparent community analytics dashboard. It is not an MMR, Elo, offi
 - npm
 - GitHub Actions and GitHub Pages
 
-V1 must not require a backend or API key. Start with realistic fictional JSON data; later add CSV and JSON import. TASK-002A brought official API capability research and privacy documentation earlier. TASK-002A.1 prepared a third-party provider boundary but closed without real-account validation. Live third-party validation is deferred to TASK-API-01; live production integration remains a later phase requiring Production API approval, RSO and a secure backend.
+The demo remains static and needs no credential. TASK-API-02 adds a thin Vercel backend so the operator can hold one HenrikDev credential server-side while consenting players submit only Riot Game Name and Tag. GitHub Pages remains the demo rollback deployment until the Vercel production path and a controlled three-match import are verified.
 
 ## Planned pages
 
