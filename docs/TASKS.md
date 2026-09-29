@@ -73,7 +73,7 @@ Status: **IN PROGRESS — SDD STRICT**
 - [x] Normalize provider responses without returning PUUIDs, raw match IDs or raw payloads.
 - [x] Keep demo and real datasets explicitly separate and removable.
 - [x] Add security, API, normalization and storage tests using mocks only.
-- [ ] Deploy the full application to Vercel while retaining GitHub Pages.
+- [x] Deploy the full application to Vercel while retaining GitHub Pages.
 - [ ] Configure a rotated server-only production credential through Vercel environment settings.
 - [ ] Resolve one consenting account and import exactly three matches.
 - [ ] Create `docs/REAL_DATA_FIELD_AUDIT.md` from observed sanitized evidence.

@@ -1,6 +1,6 @@
 # TASK-API-02 specification
 
-Status: **IMPLEMENTATION IN PROGRESS**
+Status: **PRODUCTION SCAFFOLD DEPLOYED — LIVE VALIDATION BLOCKED ON OPERATOR CREDENTIAL**
 
 Governance: **SDD STRICT**
 
@@ -52,6 +52,8 @@ The selected production target is Vercel full deployment. GitHub Pages remains a
 - desktop/mobile browser checks and console checks pass.
 
 Without an operator credential, the architecture may be shipped in an honest `API 尚未設定` state, but TASK-API-02 is not complete and live capability remains **NOT VERIFIED**.
+
+Current production evidence: the Vercel frontend, current analytical routes, mobile layout, same-origin function boundary, safe `unconfigured` status, and zero-error browser load have been verified at <https://valorant-squad-analytics.vercel.app/>. The credential, consenting account lookup, three-match import, and `docs/REAL_DATA_FIELD_AUDIT.md` remain outstanding and must not be inferred from the deployed scaffold.
 
 ## Non-goals
 

@@ -2,6 +2,13 @@
 
 Decision date: 2026-09-29
 
+## Deployment status
+
+- Production application: <https://valorant-squad-analytics.vercel.app/>
+- Same-origin provider status endpoint: deployed and verified; it safely reports `unconfigured` while no production credential exists.
+- GitHub Pages rollback: still active in Demo mode.
+- Live account resolution, three-match import, and real-data field coverage: **NOT VERIFIED** until the operator configures the server-only credential and supplies one explicitly consenting test account.
+
 ## Decision
 
 Use **Vercel full deployment** for the production application while retaining GitHub Pages as a temporary demo-only rollback deployment.
@@ -55,4 +62,4 @@ A database becomes necessary only when the product intentionally supports shared
 
 ## Rollback
 
-The pre-migration state is tagged `checkpoint-pages-before-api-02`. GitHub Pages remains deployed from `main` during migration and continues in demo mode when `/api` is unavailable. Do not disable Pages or redirect it until the Vercel production checks and the controlled three-match test pass.
+The pre-migration state is tagged `checkpoint-pages-before-api-02`. GitHub Pages remains deployed from `main` during migration and continues in demo mode when `/api` is unavailable. The Vercel frontend, routes, and unconfigured provider-status path are confirmed working, but Pages must not be disabled or redirected until the controlled three-match test passes.

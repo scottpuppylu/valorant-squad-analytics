@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import resolveHandler from '../api/valorant/account/resolve';
 import type { ApiRequest, ApiResponse, MatchImportInput } from '../server/contracts';
@@ -10,6 +11,19 @@ import { parseConnectionInput, parseMatchImportInput } from '../server/validatio
 
 const connection = { gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true } as const;
 const importInput: MatchImportInput = { ...connection, limit: 3 };
+
+const deployedServerModules = [
+  'api/valorant/account/resolve.ts',
+  'api/valorant/matches/import.ts',
+  'api/valorant/provider/status.ts',
+  'server/contracts.ts',
+  'server/henrikDataProvider.ts',
+  'server/http.ts',
+  'server/importLock.ts',
+  'server/normalizeHenrik.ts',
+  'server/rateLimit.ts',
+  'server/validation.ts',
+];
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -39,6 +53,14 @@ function providerMatch() {
 }
 
 describe('production connection validation', () => {
+  it('uses Node ESM-compatible extensions throughout the deployed function graph', () => {
+    for (const modulePath of deployedServerModules) {
+      const source = readFileSync(modulePath, 'utf8');
+      const relativeSpecifiers = [...source.matchAll(/from\s+['"](\.{1,2}\/[^'"]+)['"]/g)].map((match) => match[1]);
+      for (const specifier of relativeSpecifiers) expect(specifier, modulePath).toMatch(/\.js$/);
+    }
+  });
+
   it('requires explicit consent and rejects invalid input', () => {
     expect(() => parseConnectionInput({ ...connection, consent: false })).toThrowError(expect.objectContaining({ code: 'CONSENT_REQUIRED' }));
     expect(() => parseConnectionInput({ ...connection, gameName: '../bad' })).toThrowError(expect.objectContaining({ code: 'BAD_REQUEST' }));

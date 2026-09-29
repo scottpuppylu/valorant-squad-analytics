@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-003 已完成；TASK-API-02 正在把資料連接改為 Vercel 同源後端。網站保留 8 位虛構玩家與 32 場可重現 Demo，並新增「加入調查」流程：一般玩家只輸入 Riot ID、Tag、區域並明確同意，永遠不需要 HenrikDev key、`.env`、Riot 密碼、Cookie 或 MFA。站台管理員在 Vercel 設定一組 server-only `HENRIK_API_KEY`。TASK-002B 尚未開始。
+TASK-003 已完成；TASK-API-02 已把資料連接改為 Vercel 同源後端並部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。網站保留 8 位虛構玩家與 32 場可重現 Demo，並新增「加入調查」流程：一般玩家只輸入 Riot ID、Tag、區域並明確同意，永遠不需要 HenrikDev key、`.env`、Riot 密碼、Cookie 或 MFA。正式部署目前誠實顯示「API 尚未設定」；站台管理員仍須在 Vercel 設定一組 server-only `HENRIK_API_KEY`，之後才能執行同意帳號的三場驗證。TASK-002B 尚未開始。
 
 ## V1 原則
 
@@ -49,7 +49,7 @@ npm run build
 
 `npm test` 與 CI 只使用 mock／fixture，不會呼叫真實 provider。`npm run build` 也會掃描 browser source 與 bundle，防止 server secret 名稱進入前端。
 
-Vite 在 Vercel 使用 `/` base path，在 GitHub Pages rollback 使用 `/valorant-squad-analytics/`。應用程式保留 hash routing，讓兩種部署都能直接切換頁面。
+Vite 在 Vercel 使用 `/` base path，在 GitHub Pages rollback 使用 `/valorant-squad-analytics/`。應用程式保留 hash routing，讓兩種部署都能直接切換頁面。Vercel 同源狀態端點已部署並在未設定憑證時安全回傳 `unconfigured`；GitHub Pages 仍維持 Demo-only rollback。
 
 分析頁的條件會以簡短 query parameters 保留在 hash route 後方，可分享目前的指標、期間、地圖、特務、角色、模式與樣本門檻。「最近 10／30 場」是每位玩家在其他條件套用後各自最新的合格出賽，不是小隊全域最新場次。
 
