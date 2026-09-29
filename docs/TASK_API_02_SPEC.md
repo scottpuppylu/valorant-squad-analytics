@@ -51,9 +51,9 @@ The selected production target is Vercel full deployment. GitHub Pages remains a
 - three recent matches import and normalize successfully;
 - desktop/mobile browser checks and console checks pass.
 
-Without an operator credential, the architecture may be shipped in an honest `API 尚未設定` state, but TASK-API-02 is not complete and live capability remains **NOT VERIFIED**.
+Without an operator credential, the architecture may be shipped in an honest `API 尚未設定` state. The current production deployment is configured and completed the later bounded audit; this paragraph remains the original rollout rule, not current status.
 
-Current production evidence: the Vercel frontend, current analytical routes, mobile layout, same-origin function boundary, safe `unconfigured` status, and zero-error browser load have been verified at <https://valorant-squad-analytics.vercel.app/>. The credential, consenting account lookup, three-match import, and `docs/REAL_DATA_FIELD_AUDIT.md` remain outstanding and must not be inferred from the deployed scaffold.
+Current production evidence: the Vercel frontend, analytical routes, mobile layout, same-origin function boundary, configured status and consenting bounded import have been verified at <https://valorant-squad-analytics.vercel.app/>. Sanitized provider evidence is recorded in `docs/REAL_DATA_FIELD_AUDIT.md`; lifetime completeness, a durable database and scheduled synchronization remain unverified or unimplemented.
 
 ## Non-goals
 

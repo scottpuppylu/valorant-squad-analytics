@@ -17,7 +17,7 @@ This is a transparent community analytics dashboard. It is not an MMR, Elo, offi
 - npm
 - GitHub Actions and GitHub Pages
 
-The demo remains static and needs no credential. TASK-API-02 adds a thin Vercel backend so the operator can hold one HenrikDev credential server-side while consenting players submit only Riot Game Name and Tag. GitHub Pages remains the demo rollback deployment until the Vercel production path and a controlled three-match import are verified.
+The demo remains static and needs no credential. TASK-API-02 added a thin Vercel backend so the operator holds one HenrikDev credential server-side while consenting players submit only Riot Game Name and Tag. The production path and bounded sanitized evidence audit are verified; GitHub Pages remains the Demo rollback while the durable shared dataset is still unimplemented.
 
 ## Planned pages
 

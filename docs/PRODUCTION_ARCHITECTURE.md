@@ -5,9 +5,10 @@ Decision date: 2026-09-29
 ## Deployment status
 
 - Production application: <https://valorant-squad-analytics.vercel.app/>
-- Same-origin provider status endpoint: deployed and verified; it safely reports `unconfigured` while no production credential exists.
+- Same-origin provider status endpoint: deployed and verified in configured mode; the credential remains server-only.
 - GitHub Pages rollback: still active in Demo mode.
-- Live account resolution, three-match import, and real-data field coverage: **NOT VERIFIED** until the operator configures the server-only credential and supplies one explicitly consenting test account.
+- Live account resolution and bounded import: verified with one explicitly consenting account.
+- Real-data field coverage: verified only for the bounded, sanitized 2026-09-30 sample documented in `REAL_DATA_FIELD_AUDIT.md`; lifetime completeness is **NOT VERIFIED**.
 
 ## Decision
 
@@ -52,14 +53,53 @@ The backend does not calculate UI scores, persist player data, issue provider cr
 
 HenrikDev's current OpenAPI advertises API-key authentication through the `Authorization` header and documents account v2 and match-history v4 endpoints. Its project documentation directs operators to its external dashboard/support process for key management. No documented key-issuance or player OAuth API was found, so 哥布林大調查 does not implement or claim one.
 
-HenrikDev is an unofficial provider. Its documented capability is not equivalent to verified live field coverage. `docs/REAL_DATA_FIELD_AUDIT.md` must be created only after a successful consenting three-match production import.
+HenrikDev is an unofficial provider. A controlled structural audit observed match, round, kill, economy and MMR field families, but this evidence is sample-bound and version-bound. It does not upgrade unofficial provider data into Riot-official truth. See `docs/REAL_DATA_FIELD_AUDIT.md`.
 
 ## Phase 1 storage
 
 No database is introduced. The server is stateless. The browser stores only the sanitized normalized dataset under a versioned key. This is sufficient for one player to review imported data on one browser and avoids creating a shared identity database before retention and deletion operations are mature.
 
-A database becomes necessary only when the product intentionally supports shared rankings across devices or scheduled synchronization. That later design must add an explicit identity/consent record, retention period, deletion workflow, access control, and encryption strategy.
+A database is now the next intentional architecture step because the product requires shared rankings, historical evidence and incremental synchronization. TASK-DATA-01 owns that implementation; this task only defines it.
+
+## Current architecture limitations
+
+- `src/data/analytics.ts` chooses the dataset at module load, so replacement requires a reload.
+- One browser-local envelope is the only real-data store; it is not shared, durable or independently backed up.
+- Import limits are fixed to 10/20/30 matches and the normalizer discards most round, kill and economy evidence after computing a few match-level values.
+- No server consent ledger, sync cursor, deletion job, retention process or cross-device authorization exists.
+- Serverless in-memory rate limits and import locks are per-instance safeguards, not distributed coordination.
+- The public score runtime cannot identify a durable snapshot version because no dataset API exists.
+
+## Target persistence architecture (design only)
+
+```text
+consent + membership
+  -> bounded provider synchronization
+  -> Neon transaction: source evidence + coverage + sync audit
+  -> versioned event reconstruction
+  -> versioned metric/score views
+  -> sanitized read-only dataset API
+  -> React dataset provider and existing analysis pages
+```
+
+Neon stores normalized evidence, not UI-formatted strings. Provider identifiers stay behind the server boundary as keyed or encrypted join values. Raw payload retention is off by default; if later approved for debugging, it must be encrypted, access-controlled and automatically expired.
+
+## Initial backfill
+
+Backfill runs newest-to-oldest with bounded v4 `size/start` windows, a request/time budget and an unchanged cursor until each page commits. It stops on an empty or short page, a known boundary, or the configured horizon. Every match upsert is idempotent. Coverage start/end and incompleteness are product-visible; stored matches never establish lifetime completeness.
+
+## Incremental sync
+
+Incremental sync re-fetches a small newest overlap, deduplicates by a keyed match fingerprint, updates changed completed matches and queues only affected derivations. A durable per-player lock, provider-aware rate budget, retry state and schema/normalizer versions replace the current in-memory-only coordination.
+
+## Revocation
+
+Revocation disables provider access immediately, records the policy/consent transition and starts an idempotent deletion job. The job removes private identity links, participant evidence, derived metrics and caches; shared match facts may remain only when they cannot identify the revoked player. Completion counts and cache invalidation are auditable without logging deleted identifiers.
+
+## Dataset runtime rebase
+
+The frontend should move from module-load localStorage to a `DatasetProvider` with explicit loading, ready, stale, empty and error states. A read-only versioned API returns application IDs, evidence availability, calculation versions, coverage dates and last-sync status. Demo remains a deliberate fallback and GitHub Pages rollback; it is never merged with the real squad dataset.
 
 ## Rollback
 
-The pre-migration state is tagged `checkpoint-pages-before-api-02`. GitHub Pages remains deployed from `main` during migration and continues in demo mode when `/api` is unavailable. The Vercel frontend, routes, and unconfigured provider-status path are confirmed working, but Pages must not be disabled or redirected until the controlled three-match test passes.
+The pre-migration state is tagged `checkpoint-pages-before-api-02`; the evidence-audit checkpoint is tagged `checkpoint-before-api-02-1-audit`. GitHub Pages remains deployed from `main` and continues in Demo mode when `/api` is unavailable. The Vercel frontend, configured provider-status path and bounded consenting audit are confirmed working. Pages remains a rollback until the durable dataset runtime has its own rollback and deletion evidence.

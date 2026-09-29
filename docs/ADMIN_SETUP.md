@@ -22,4 +22,4 @@ HenrikDev controls credential issuance. 哥布林大調查 cannot issue, rotate,
 
 ## Controlled first validation
 
-After the production secret is configured, use one consenting account. Resolve it through `#/connect`, then request exactly three matches through the controlled backend option. Record only sanitized capability results in `docs/REAL_DATA_FIELD_AUDIT.md`; do not commit the Riot ID, PUUID, provider match IDs, or raw payload.
+The first production setup completed a bounded consenting import and sanitized structural audit. Future re-validation must follow the same rule: record only field-level capability evidence in `docs/REAL_DATA_FIELD_AUDIT.md`; never commit the Riot ID, PUUID, provider match IDs, raw payload or credential.

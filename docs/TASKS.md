@@ -64,7 +64,7 @@ The local `.env` probe remains useful only as historical diagnostic scaffolding.
 
 ## Task API-02 — production data connection architecture
 
-Status: **IN PROGRESS — SDD STRICT**
+Status: **COMPLETE**
 
 - [x] Select Vercel full deployment and document alternatives, rollback, privacy and secret boundaries.
 - [x] Create and push the `checkpoint-pages-before-api-02` rollback tag.
@@ -74,15 +74,42 @@ Status: **IN PROGRESS — SDD STRICT**
 - [x] Keep demo and real datasets explicitly separate and removable.
 - [x] Add security, API, normalization and storage tests using mocks only.
 - [x] Deploy the full application to Vercel while retaining GitHub Pages.
-- [ ] Configure a rotated server-only production credential through Vercel environment settings.
-- [ ] Resolve one consenting account and import exactly three matches.
-- [ ] Create `docs/REAL_DATA_FIELD_AUDIT.md` from observed sanitized evidence.
+- [x] Configure a server-only production credential through Vercel environment settings.
+- [x] Resolve one consenting account and complete a bounded real-data import.
+- [x] Keep provider credentials, PUUIDs, raw match IDs and raw payloads out of browser responses and Git.
 
 TASK-API-02 does not include TASK-002B, Synergy, a scoring rewrite, a database, or provider credential issuance.
 
+## Task API-02.1 — live evidence audit, presentation fix and architecture rebase
+
+Status: **COMPLETE — SDD STRICT**
+
+- [x] Create and push `checkpoint-before-api-02-1-audit` before implementation.
+- [x] Run one consent-gated, bounded and sanitized provider audit without retaining player or match identifiers.
+- [x] Observe v4 history, match detail, stored matches, current MMR, MMR history and adjacent history windows.
+- [x] Classify direct, derivable, reconstructable, partial and unavailable analytics in `docs/REAL_DATA_FIELD_AUDIT.md`.
+- [x] Record the stored-match and lifetime-completeness limitations.
+- [x] Centralize display rounding for scores, ACS, ADR, ratios, percentages, counts and credits without changing internal precision.
+- [x] Add missing/null, sanitized summarizer and numeric-presentation tests.
+- [x] Document the current runtime, future Neon schema, backfill, incremental sync, revocation and dataset-runtime boundaries.
+
+TASK-API-02.1 does not implement a database, scheduled sync, new scoring formulas, TASK-002B or Synergy.
+
+## Task DATA-01 — durable normalized evidence store
+
+Status: **RECOMMENDED NEXT / NOT STARTED**
+
+- [ ] Add Neon Postgres migrations for squad, player, membership, consent, sync, match, participant, round, event, economy and rank evidence.
+- [ ] Implement idempotent initial backfill and incremental sync with explicit coverage windows.
+- [ ] Add revocation, deletion, retention and server-side identifier protection.
+- [ ] Preserve raw/normalized/derived/versioned-score separation.
+- [ ] Keep Demo fallback and do not expose provider secrets or raw private identifiers.
+
+TASK-DATA-01 must complete before a shared cross-device production dataset can replace the current browser-local REAL envelope. It does not include TASK-002B scoring changes.
+
 ## Task 002B — evidence-aware scoring correctness
 
-Status: **READY TO START FROM DEMO EVIDENCE**
+Status: **DEFERRED UNTIL AFTER TASK-DATA-01 / NOT STARTED**
 
 TASK-002B does not depend on live API completion. It may use the current deterministic demo evidence while keeping formulas transparent, representing unavailable evidence explicitly and avoiding claims about unverified real-provider coverage.
 

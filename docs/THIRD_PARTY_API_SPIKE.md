@@ -2,7 +2,7 @@
 
 Decision date: 2026-09-29
 
-## Current status
+## Historical spike status
 
 TASK-002A.1 is **PARTIALLY COMPLETE / CLOSED FOR NOW**.
 
@@ -21,7 +21,7 @@ Moved to the production architecture task `TASK-API-02`:
 - a real-data field and nullability audit;
 - comparison of documented and observed analytics capability.
 
-No live player-data capability has been verified. TASK-API-02 now provides a public consent flow and server-only provider boundary; normal players do not need `.env.local`, developer credentials or HenrikDev accounts. Until the operator configures Vercel and a controlled test succeeds, the public GitHub Pages deployment remains Demo-only.
+This section records the pre-live TASK-002A.1 conclusion. TASK-API-02.1 later completed a bounded consenting structural audit; current observed evidence and limitations now live in `docs/REAL_DATA_FIELD_AUDIT.md`. Normal players still do not need `.env.local`, developer credentials or HenrikDev accounts, and GitHub Pages remains Demo-only.
 
 ## Architecture decision
 
@@ -45,7 +45,9 @@ Published schemas establish candidates only. They do not verify field presence, 
 
 The repository contains no API key, real Riot ID, consent value, raw response archive, or normalized real-player record.
 
-## Capability status
+## Capability status at spike time
+
+The `NOT VERIFIED` labels below are retained as historical evidence of what had not yet been tested during this spike. They are superseded for the observed HenrikDev 4.6.0 sample by `docs/REAL_DATA_FIELD_AUDIT.md` and must not be read as current repository status.
 
 | Evidence | Published schema suggests | Current validation status |
 |---|---|---|

@@ -5,7 +5,7 @@
 - Build VALORANT Squad Analytics as a transparent community performance dashboard for a private friend group.
 - Never describe the score as MMR, Elo, official rank, or a replacement for Riot's ranked system.
 - Preserve the GitHub Pages demo during TASK-API-02 migration. Production may use a thin Vercel backend, but no API key or Henrik DTO may enter the deployed frontend.
-- TASK-API-02 is the active architecture task. Normal players provide only Riot Game Name, Tag, affinity and explicit consent. The site operator holds one `HENRIK_API_KEY` server-side; never ask players for provider credentials or Riot authentication secrets.
+- TASK-API-02.1 is the completed evidence checkpoint. Normal players provide only Riot Game Name, Tag, affinity and explicit consent. The site operator holds one `HENRIK_API_KEY` server-side; never ask players for provider credentials or Riot authentication secrets.
 - Do not copy Riot, VALORANT, VLR, or third-party visual assets or page designs.
 
 ## Technology
@@ -38,5 +38,7 @@
 
 ## Current stage
 
-- TASK-001, TASK-002A and TASK-003 are complete. TASK-API-02 is active under SDD STRICT and supersedes the local-only TASK-API-01 probe as the intended product architecture. TASK-002B remains incomplete and must not start during this task. Read `docs/TASK_API_02_SPEC.md`, `docs/PRODUCTION_ARCHITECTURE.md`, `docs/PROJECT_BRIEF.md`, `docs/TASKS.md`, `docs/RIOT_API_CAPABILITY.md`, and `docs/THIRD_PARTY_API_SPIKE.md` before changing data or provider boundaries.
+- TASK-001, TASK-002A, TASK-003, TASK-API-02 and TASK-API-02.1 are complete. The next recommended task is TASK-DATA-01; TASK-002B and Synergy remain incomplete and must not start implicitly. Read `docs/REAL_DATA_FIELD_AUDIT.md`, `docs/CODE_MAP.md`, `docs/PRODUCTION_ARCHITECTURE.md`, `docs/DATA_MODEL.md`, and `docs/TASKS.md` before changing data, synchronization, provider or scoring boundaries.
+- Never treat stored-match results as complete lifetime history. Persist coverage windows, evidence availability and derivation versions explicitly.
+- Keep display rounding in `src/utils/format.ts` and `src/analytics/presentation.ts`; do not reduce calculation precision to format UI values.
 - Stay within the requested task. Record later ideas under the roadmap instead of silently expanding scope.

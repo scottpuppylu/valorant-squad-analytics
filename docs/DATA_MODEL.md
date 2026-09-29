@@ -110,9 +110,63 @@ Server routes validate explicit consent and keep `HENRIK_API_KEY` outside the br
 
 Phase 1 stores the sanitized envelope under `goblin-survey:real-dataset:v1` in localStorage. The value has schema version 1, import timestamp and exactly one normalized `REAL` dataset. Malformed, wrong-mode or identifier-bearing values are removed and the app falls back to Demo. Removing the dataset from `#/connect` immediately returns the app to Demo after reload.
 
-No database or server-side player persistence exists. Cross-device shared rankings and scheduled synchronization require a later persistence/privacy design.
+No database or server-side player persistence exists. Cross-device shared rankings and scheduled synchronization require TASK-DATA-01.
 
-`src/dataSources/thirdParty/henrikV4.ts` remains only as the historical schema-summary helper. No successful live import has occurred, so real provider field coverage is still **NOT VERIFIED**.
+`src/dataSources/thirdParty/henrikV4.ts` now contains a sanitized structural summarizer. A bounded consenting audit observed the field families documented in `docs/REAL_DATA_FIELD_AUDIT.md`; it did not store raw payloads or identifier values and does not prove lifetime completeness.
+
+## Proposed Neon schema (design only)
+
+TASK-DATA-01 should use UUID primary keys, UTC timestamps, foreign keys, row-level access boundaries and explicit schema/derivation versions. This schema is not implemented in the current repository.
+
+| Table | Required purpose and key fields |
+|---|---|
+| `squads` | private group, display name, created/archived timestamps |
+| `players` | internal UUID, public display label, emoji default; no provider secret |
+| `squad_memberships` | squad/player role, joined/left timestamps, visibility state |
+| `provider_identities` | player/provider/affinity plus keyed or encrypted provider identifier; never returned publicly |
+| `consents` | player, scope, policy version, granted/revoked timestamps, actor and provenance |
+| `sync_runs` | provider, player, trigger, status, started/finished, request counts, error class and coverage window |
+| `sync_cursors` | player/queue endpoint, newest/oldest observed time, boundary match fingerprint, last success |
+| `source_matches` | internal UUID, keyed provider-match fingerprint, queue/map/start/duration/version/completion, source schema version |
+| `match_teams` | match/team key, won, rounds won/lost |
+| `match_participants` | match/player/team/agent, K/D/A, score, damage, shots, aggregate ability and economy evidence |
+| `rounds` | match/round index, winner/result, plant/defuse actor and timing when observed |
+| `round_participants` | round/player kills, score, loadout, remaining credits, weapon/armor, evidence flags |
+| `kill_events` | match/round/sequence, time, killer/victim internal player keys, weapon and location |
+| `kill_assistants` | kill event and assistant player key |
+| `event_player_locations` | kill event, observed player key and coordinates; optional high-volume retention |
+| `rank_observations` | player, observed timestamp, season, tier/RR/Elo, match fingerprint when present |
+| `metric_evidence` | entity/grain, metric key, availability class, source and reconstruction version |
+| `metric_values` | versioned derived value, numerator/denominator, sample size and calculation trace reference |
+| `deletion_jobs` | consent/player scope, requested/completed timestamps, status and audit result |
+
+Provider match IDs and PUUIDs must be converted to keyed server identifiers for deduplication and joins. Public APIs expose only application UUIDs. Scores do not belong in ingestion tables; they are derived from versioned evidence.
+
+## Initial backfill design
+
+1. Require active consent and membership, then open a `sync_runs` row.
+2. Fetch bounded v4 history windows newest-to-oldest with `size` and `start`.
+3. Stop on an empty/short page, an already committed boundary fingerprint, a configured time horizon or a request budget.
+4. Normalize one response in memory, upsert match/team/participant/round/event evidence in one transaction, and never log raw identifiers or payload bodies.
+5. Persist the oldest/newest covered timestamps and an explicit `coverage_incomplete` flag. Stored matches may supplement diagnostics but never establish lifetime completeness.
+6. Recompute versioned derived metrics only for changed matches and affected players.
+
+Backfill is idempotent by keyed provider-match fingerprint plus source schema version. A failed page leaves the previous cursor unchanged and records a retryable sync result.
+
+## Incremental sync design
+
+- Start from `start=0`, move backward until reaching the latest committed boundary, and deduplicate every match.
+- Re-fetch a small overlap window so late corrections can update completed matches.
+- Store provider/OpenAPI version, normalizer version and response observation time.
+- Use a per-player distributed lock, request budget, exponential backoff and provider-aware rate limits.
+- Separate ingestion from metric reconstruction; queue changed internal match IDs rather than recalculating the whole dataset synchronously.
+- Expose `lastSuccessfulSyncAt`, coverage dates, stale/error status and source limitations through a sanitized read API.
+
+## Revocation and deletion design
+
+Revocation immediately blocks new provider calls and creates an idempotent deletion job. In one auditable workflow it removes or anonymizes provider identity, match participation, derived metrics, rank observations and caches belonging only to the revoked player. Shared match facts needed by other consenting members may remain only after unlinking the revoked identity and proving that no public or operator-facing path can re-identify it. The job invalidates dataset caches and records counts, completion time and policy version without copying deleted identifiers into logs.
+
+Retention jobs must handle orphaned rounds/events, expired raw quarantine data and revoked consent. Re-consent creates a new consent record; it does not silently revive deleted history.
 
 ## Missing data
 

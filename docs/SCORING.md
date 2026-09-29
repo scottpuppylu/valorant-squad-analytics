@@ -147,7 +147,19 @@ Badge rules use the current selected population:
 - One observation has zero measured dispersion and can therefore produce a perfect Consistency score.
 - Economy, round impact, role value, trade, utility, and synergy scoring are deferred to later tasks.
 
-TASK-002B owns corrections to these issues and may proceed using the deterministic demo evidence. TASK-API-02 now owns production third-party validation; until its controlled live import is performed, real-provider evidence coverage remains **NOT VERIFIED** and must not be used to justify a score or benchmark.
+TASK-002B owns corrections to these issues and remains unstarted. The bounded real-provider audit in `docs/REAL_DATA_FIELD_AUDIT.md` may guide evidence availability, but one sample does not justify a benchmark, population range or lifetime-completeness claim.
+
+## Numeric presentation
+
+Calculation values stay numeric and retain their existing internal precision. The UI applies rounding only at the presentation boundary through `src/utils/format.ts` and `src/analytics/presentation.ts`:
+
+- category and overall scores: 1 decimal;
+- ACS and ADR: 1 decimal;
+- ratios such as K/D, KPR, APR and FK/FD: 2 decimals;
+- percentages: 1 decimal;
+- credits and event counts: integer formatting.
+
+This display fix does not correct the documented pre-scoring aggregate rounding; that remains owned by TASK-002B.
 
 ## TASK-API-02 preliminary normalization
 
@@ -160,4 +172,4 @@ The scoring formulas above are unchanged. When a sanitized real dataset is impor
 - reconstructed traded death = a teammate kills the original killer within 5,000 ms after the player's death in the same round
 - `HS% = headshots / (headshots + bodyshots + legshots)`
 
-The five-second trade rule is a transparent product rule, not an official provider label. Clutch, economy, Impact Kill and Frag Quality remain unavailable in the normalized model. These transformations are covered by mock tests but have not passed a real three-match field audit, so provider capability remains **NOT VERIFIED** until `docs/REAL_DATA_FIELD_AUDIT.md` is created from consenting production evidence.
+The five-second trade rule is a transparent product rule, not an official provider label. The controlled audit observed the event fields needed to reconstruct opening kills, trades and KAST, but the current normalized model still discards most event and economy evidence. Clutch, economy, Impact Kill and Role Value therefore remain unavailable or partial in the product until TASK-DATA-01 and later metric work preserve and derive them. See `docs/REAL_DATA_FIELD_AUDIT.md` for exact classifications.
