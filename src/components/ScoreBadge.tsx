@@ -10,7 +10,7 @@ export function ScoreBadge({ value, label, compact = false }: ScoreBadgeProps) {
     <div
       className={compact ? 'score-badge score-badge--compact' : 'score-badge'}
       style={{ '--score-hue': hue } as React.CSSProperties}
-      aria-label={(label ?? 'Score') + ' ' + value.toFixed(1)}
+      aria-label={(label ?? '分數') + ' ' + value.toFixed(1)}
     >
       <strong>{value.toFixed(1)}</strong>
       {label ? <span>{label}</span> : null}

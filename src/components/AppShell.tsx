@@ -1,21 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-
-const primaryLinks = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/leaderboard', label: 'Leaderboard' },
-  { to: '/players/nova-hex', label: 'Players' },
-  { to: '/maps', label: 'Maps' },
-  { to: '/matches', label: 'Matches' },
-];
-
-const secondaryLinks = [
-  { to: '/compare', label: 'Compare' },
-  { to: '/agents', label: 'Agents & roles' },
-  { to: '/synergy', label: 'Duo synergy' },
-  { to: '/import', label: 'Data import' },
-  { to: '/scoring', label: 'Scoring' },
-];
+import { primaryNavigation, secondaryNavigation, zhTW } from '../i18n/zhTW';
 
 interface AppShellProps {
   children: ReactNode;
@@ -35,31 +20,31 @@ export function AppShell({ children }: AppShellProps) {
           <NavLink to="/" className="flex items-center gap-3" onClick={() => setOpen(false)}>
             <span className="brand-mark" aria-hidden="true">SA</span>
             <span>
-              <strong className="block text-sm tracking-[0.18em] text-white">SQUAD ANALYTICS</strong>
-              <small className="block text-[10px] uppercase tracking-[0.16em] text-emerald-300/70">Community metrics</small>
+              <strong className="block text-sm tracking-[0.18em] text-white">{zhTW.brand.name}</strong>
+              <small className="block text-[10px] tracking-[0.16em] text-emerald-300/70">{zhTW.brand.subtitle}</small>
             </span>
           </NavLink>
-          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
-            {primaryLinks.map((link) => <NavLink key={link.to} to={link.to} className={linkClass}>{link.label}</NavLink>)}
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="主要導覽">
+            {primaryNavigation.map((link) => <NavLink key={link.to} to={link.to} className={linkClass}>{link.label}</NavLink>)}
           </nav>
           <div className="hidden items-center gap-3 lg:flex">
-            <span className="data-pill"><span /> DEMO DATA</span>
-            <NavLink to="/scoring" className="button-secondary">View formulas</NavLink>
+            <span className="data-pill"><span /> {zhTW.brand.demo}</span>
+            <NavLink to="/dictionary" className="button-secondary">查看公式</NavLink>
           </div>
           <button
             type="button"
             className="menu-button lg:hidden"
             aria-expanded={open}
             aria-controls="mobile-navigation"
-            aria-label="Toggle navigation"
+            aria-label={open ? '關閉導覽選單' : '開啟導覽選單'}
             onClick={() => setOpen((value) => !value)}
           >
             <span /><span /><span />
           </button>
         </div>
         {open ? (
-          <nav id="mobile-navigation" className="mobile-nav lg:hidden" aria-label="Mobile navigation">
-            {[...primaryLinks, ...secondaryLinks].map((link) => (
+          <nav id="mobile-navigation" className="mobile-nav lg:hidden" aria-label="行動版導覽">
+            {[...primaryNavigation, ...secondaryNavigation].map((link) => (
               <NavLink key={link.to} to={link.to} className={linkClass} onClick={() => setOpen(false)}>{link.label}</NavLink>
             ))}
           </nav>
@@ -68,9 +53,9 @@ export function AppShell({ children }: AppShellProps) {
       <main className="relative z-10 mx-auto max-w-[1500px] px-4 py-8 sm:px-6 lg:px-8 lg:py-12">{children}</main>
       <footer className="relative z-10 border-t border-white/5 py-8">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-3 px-4 text-xs text-slate-500 sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
-          <p>Unofficial community analytics · Fictional demo data</p>
+          <p>非官方社群分析工具 · 全站使用虛構示範資料</p>
           <div className="flex flex-wrap gap-4">
-            {secondaryLinks.map((link) => <NavLink key={link.to} to={link.to} className="hover:text-slate-300">{link.label}</NavLink>)}
+            {secondaryNavigation.map((link) => <NavLink key={link.to} to={link.to} className="hover:text-slate-300">{link.label}</NavLink>)}
           </div>
         </div>
       </footer>

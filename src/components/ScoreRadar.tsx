@@ -1,5 +1,6 @@
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart, ResponsiveContainer, Tooltip } from 'recharts';
 import type { PlayerAnalytics } from '../types/valorant';
+import { zhTW } from '../i18n/zhTW';
 
 interface ScoreRadarProps {
   analytics: PlayerAnalytics;
@@ -8,15 +9,15 @@ interface ScoreRadarProps {
 export function ScoreRadar({ analytics }: ScoreRadarProps) {
   const { player, scores } = analytics;
   const data = [
-    { category: 'Firepower', score: scores.firepower },
-    { category: 'Entry', score: scores.entry },
-    { category: 'Teamplay', score: scores.teamplay },
-    { category: 'Clutch', score: scores.clutch },
-    { category: 'Consistency', score: scores.consistency },
+    { category: zhTW.scores.firepower, score: scores.firepower },
+    { category: zhTW.scores.entry, score: scores.entry },
+    { category: zhTW.scores.teamplay, score: scores.teamplay },
+    { category: zhTW.scores.clutch, score: scores.clutch },
+    { category: zhTW.scores.consistency, score: scores.consistency },
   ];
 
   return (
-    <div className="h-[320px] w-full" role="img" aria-label={player.handle + ' category score radar chart'}>
+    <div className="h-[320px] w-full" role="img" aria-label={player.handle + ' 的分類分數雷達圖'}>
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data} outerRadius="70%">
           <PolarGrid stroke="rgba(148, 163, 184, 0.16)" />
@@ -30,7 +31,7 @@ export function ScoreRadar({ analytics }: ScoreRadarProps) {
             strokeWidth={2}
           />
           <Tooltip
-            formatter={(value) => [Number(value).toFixed(1), 'Score']}
+            formatter={(value) => [Number(value).toFixed(1), '分數']}
             contentStyle={{ background: '#0d1422', border: '1px solid rgba(148,163,184,.18)', borderRadius: 12 }}
             itemStyle={{ color: '#f8fafc' }}
           />

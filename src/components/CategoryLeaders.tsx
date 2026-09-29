@@ -1,11 +1,13 @@
 import type { PlayerAnalytics, ScoreCategory } from '../types/valorant';
+import { zhTW } from '../i18n/zhTW';
+import { MetricInfo } from './MetricInfo';
 
-const categories: Array<{ key: Exclude<ScoreCategory, 'overall'>; label: string; hint: string }> = [
-  { key: 'firepower', label: 'Firepower', hint: 'ACS, ADR, KPR and K/D' },
-  { key: 'entry', label: 'Entry', hint: 'Opening impact, role-aware' },
-  { key: 'teamplay', label: 'Teamplay', hint: 'KAST, assists and wins' },
-  { key: 'clutch', label: 'Clutch', hint: 'Conversion, not volume alone' },
-  { key: 'consistency', label: 'Consistency', hint: 'Match-to-match stability' },
+const categories: Array<{ key: Exclude<ScoreCategory, 'overall'>; metricId: string; label: string; hint: string }> = [
+  { key: 'firepower', metricId: 'firepower', label: zhTW.scores.firepower, hint: 'ACS、ADR、KPR 與 K/D' },
+  { key: 'entry', metricId: 'entry', label: zhTW.scores.entry, hint: '角色調整後的開局影響' },
+  { key: 'teamplay', metricId: 'teamplay', label: zhTW.scores.teamplay, hint: 'KAST、助攻與共同勝率' },
+  { key: 'clutch', metricId: 'clutch-score', label: zhTW.scores.clutch, hint: '轉換率與殘局勝場' },
+  { key: 'consistency', metricId: 'consistency', label: zhTW.scores.consistency, hint: '場與場之間的穩定性' },
 ];
 
 interface CategoryLeadersProps {
@@ -15,11 +17,11 @@ interface CategoryLeadersProps {
 export function CategoryLeaders({ analytics }: CategoryLeadersProps) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-      {categories.map(({ key, label, hint }) => {
+      {categories.map(({ key, metricId, label, hint }) => {
         const leader = [...analytics].sort((a, b) => b.scores[key] - a.scores[key])[0]!;
         return (
           <article className="surface-card p-4" key={key}>
-            <p className="metric-label">{label}</p>
+            <p className="metric-label"><MetricInfo metricId={metricId} label={label} /></p>
             <div className="mt-4 flex items-end justify-between gap-3">
               <div>
                 <p className="text-base font-semibold text-white">{leader.player.handle}</p>

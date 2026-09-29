@@ -32,6 +32,7 @@ export interface Player {
   accent: string;
   tagline: string;
   playstyle: string;
+  defaultAvatarUrl?: string;
 }
 
 export interface MatchPerformance {
