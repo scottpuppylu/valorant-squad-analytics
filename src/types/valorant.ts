@@ -2,30 +2,11 @@ import type { PlayerEmoji } from './avatar';
 
 export type PlayerRole = 'Duelist' | 'Initiator' | 'Controller' | 'Sentinel';
 
-export type AgentName =
-  | 'Jett'
-  | 'Raze'
-  | 'Phoenix'
-  | 'Sova'
-  | 'Fade'
-  | 'Breach'
-  | 'Omen'
-  | 'Viper'
-  | 'Brimstone'
-  | 'Killjoy'
-  | 'Cypher'
-  | 'Sage';
+export type AgentName = string;
 
-export type MapName =
-  | 'Ascent'
-  | 'Bind'
-  | 'Haven'
-  | 'Lotus'
-  | 'Pearl'
-  | 'Split'
-  | 'Sunset';
+export type MapName = string;
 
-export type GameMode = 'Competitive' | 'Premier' | 'Unrated' | 'Custom';
+export type GameMode = string;
 
 export interface Player {
   id: string;

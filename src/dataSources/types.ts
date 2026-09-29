@@ -5,6 +5,7 @@ export interface NormalizedAnalyticsDataset {
   matches: MatchRecord[];
   sourceId: string;
   isDemo: boolean;
+  mode: 'DEMO' | 'REAL';
 }
 
 export interface AnalyticsDataSource {

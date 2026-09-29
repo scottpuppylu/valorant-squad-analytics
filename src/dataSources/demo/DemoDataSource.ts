@@ -6,7 +6,7 @@ export class DemoDataSource implements AnalyticsDataSource {
   readonly id = 'fictional-demo-v1';
 
   snapshot(): NormalizedAnalyticsDataset {
-    return { players, matches: demoMatches, sourceId: this.id, isDemo: true };
+    return { players, matches: demoMatches, sourceId: this.id, isDemo: true, mode: 'DEMO' };
   }
 
   async load(): Promise<NormalizedAnalyticsDataset> {
