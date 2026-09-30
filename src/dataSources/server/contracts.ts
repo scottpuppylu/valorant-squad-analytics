@@ -14,7 +14,7 @@ export type ProviderPublicErrorCode =
   | 'MALFORMED_PROVIDER_RESPONSE';
 
 export type Affinity = 'ap' | 'eu' | 'na' | 'kr' | 'latam' | 'br';
-export type ImportSize = 10 | 20 | 30;
+export type ImportSize = 1 | 10 | 20 | 30;
 
 export interface ConnectionRequest {
   gameName: string;

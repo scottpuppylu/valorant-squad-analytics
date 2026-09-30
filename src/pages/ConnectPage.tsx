@@ -132,7 +132,7 @@ export function ConnectPage() {
       {account ? (
         <section className="surface-card connect-panel">
           <p className="metric-label">帳號已確認</p><h2>{account.gameName}#{account.tag}</h2><p>區域：{account.affinity}{account.accountLevel === undefined ? '' : ` · 帳號等級 ${account.accountLevel}`}</p>
-          <label>匯入最近戰績<select value={limit} disabled={busy} onChange={(event) => setLimit(Number(event.target.value) as ImportSize)}><option value={10}>10 場</option><option value={20}>20 場</option><option value={30}>30 場</option></select></label>
+          <label>匯入最近戰績<select value={limit} disabled={busy} onChange={(event) => setLimit(Number(event.target.value) as ImportSize)}><option value={1}>1 場（最小資料）</option><option value={10}>10 場</option><option value={20}>20 場</option><option value={30}>30 場</option></select></label>
           <button className="button-primary" type="button" disabled={busy || !form.consent} onClick={importMatches}>{flow === 'IMPORTING' ? '匯入中…' : '匯入最近戰績'}</button>
         </section>
       ) : null}
