@@ -187,6 +187,9 @@ describe('consent revocation and durable deletion', () => {
     const before = await database.query<{ participant_lookup_hmac: string }>(
       'SELECT participant_lookup_hmac FROM match_participants WHERE source_match_id=$1 AND player_id=$2', [sourceId, playerId],
     );
+    const eventBefore = await database.query<{ event_lookup_hmac: string }>(
+      'SELECT event_lookup_hmac FROM kill_events WHERE source_match_id=$1', [sourceId],
+    );
     const pending = await service.revoke(publicPlayerId, managementCredential);
     const complete = await service.continue(pending.jobId, managementCredential);
     expect(complete).toMatchObject({ status: 'complete', progress: { sharedMatchesAnonymized: 1, participantsAnonymized: 1 } });
@@ -198,8 +201,15 @@ describe('consent revocation and durable deletion', () => {
     expect(target.rows[0]).toMatchObject({ player_id: null, agent_name: null, kills: null });
     expect(target.rows[0]?.participant_lookup_hmac).not.toBe(before.rows[0]?.participant_lookup_hmac);
     expect(await count(database, 'event_player_locations')).toBe(0);
-    const event = await database.query<{ weapon_name: string | null; location_x: number | null }>('SELECT weapon_name,location_x FROM kill_events WHERE source_match_id=$1', [sourceId]);
+    const event = await database.query<{ event_lookup_hmac: string; weapon_name: string | null; location_x: number | null }>('SELECT event_lookup_hmac,weapon_name,location_x FROM kill_events WHERE source_match_id=$1', [sourceId]);
     expect(event.rows[0]).toMatchObject({ weapon_name: null, location_x: null });
+    expect(event.rows[0]?.event_lookup_hmac).toMatch(/^[0-9a-f]{64}$/);
+    expect(event.rows[0]?.event_lookup_hmac).not.toBe(eventBefore.rows[0]?.event_lookup_hmac);
+    await expect(service.continue(pending.jobId, managementCredential)).resolves.toMatchObject({ status: 'complete' });
+    const eventAfterRetry = await database.query<{ event_lookup_hmac: string }>(
+      'SELECT event_lookup_hmac FROM kill_events WHERE source_match_id=$1', [sourceId],
+    );
+    expect(eventAfterRetry.rows[0]?.event_lookup_hmac).toBe(event.rows[0]?.event_lookup_hmac);
   });
 
   it('is resumable after a bounded pause, recovers a stale lease, and is idempotent after completion', async () => {

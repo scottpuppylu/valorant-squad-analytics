@@ -203,6 +203,18 @@ export class RevocationDeletionService {
           'SELECT id FROM match_participants WHERE source_match_id=$1 AND player_id=$2', [match.id, job.player_id],
         );
         for (const participant of targets.rows) {
+          const identityDerivedEvents = await transaction.query<{ id: string }>(
+            `SELECT id FROM kill_events
+             WHERE source_match_id=$1 AND (killer_participant_id=$2 OR victim_participant_id=$2)
+             ORDER BY id`, [match.id, participant.id],
+          );
+          for (const event of identityDerivedEvents.rows) {
+            await transaction.query(
+              `UPDATE kill_events SET event_lookup_hmac=$2, weapon_id=NULL, weapon_name=NULL,
+                 location_x=NULL, location_y=NULL WHERE id=$1`,
+              [event.id, randomBytes(32).toString('hex')],
+            );
+          }
           await transaction.query(
             `UPDATE match_participants SET player_id=NULL, participant_lookup_hmac=$2,
                agent_id=NULL, agent_name=NULL, stats_evidence_status='unavailable', kills=NULL, deaths=NULL,
@@ -220,10 +232,6 @@ export class RevocationDeletionService {
             [participant.id],
           );
           await transaction.query('DELETE FROM event_player_locations WHERE match_participant_id=$1', [participant.id]);
-          await transaction.query(
-            `UPDATE kill_events SET weapon_id=NULL, weapon_name=NULL, location_x=NULL, location_y=NULL
-             WHERE killer_participant_id=$1 OR victim_participant_id=$1`, [participant.id],
-          );
           participants += 1;
         }
         shared += 1;
