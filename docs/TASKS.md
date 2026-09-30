@@ -131,9 +131,23 @@ Rank/MMR history synchronization is **NOT IMPLEMENTED**. The observed provider s
 
 ## Task DATA-01C — revocation and deletion execution
 
-Status: **NOT STARTED**
+Status: **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**
 
-Implement consent revocation, sync blocking, idempotent deletion jobs, unlinking/anonymization, retention enforcement and auditable completion counts.
+- [x] Add immutable migration `0003_consent_revocation_deletion.sql` without changing `0001` or `0002`.
+- [x] Issue a one-time, high-entropy browser management credential for new consent and persist only its domain-separated HMAC.
+- [x] Require constant-time credential verification for revoke, continue and status; public UUIDs alone do not authorize deletion.
+- [x] Atomically revoke consent, deactivate membership, cancel active/paused sync, release cursor leases and create/reuse the deletion job.
+- [x] Block manual import, historical/incremental sync and reconnect while a revoked deletion is open, before provider access.
+- [x] Add bounded, leased, idempotent and resumable deletion stages with safe aggregate progress.
+- [x] Delete exclusive matches; unlink and minimize the revoked participant while retaining anonymous event topology in shared matches.
+- [x] Remove rank rows, provider identity, membership, consent and sync cursor; anonymize safe sync-run aggregates and player PII.
+- [x] Add Chinese two-step revocation UX and clear the browser REAL dataset plus separately stored management credential after acceptance.
+- [x] Add disposable PGlite tests for authorization, race behavior, exclusive/shared data, rank, crash rollback, stale lease, retries, re-consent and local cleanup.
+- [ ] Apply `0003` to production and perform non-destructive schema/API validation.
+- [ ] Obtain explicit human confirmation immediately before revoking the current production test player.
+- [ ] Execute and record the first production destructive revocation/deletion validation.
+
+Until the final three items are completed, DATA-01C must not be reported as complete. See `docs/REVOCATION_AND_DELETION.md`.
 
 ## Task DATA-02 — dataset runtime rebase
 

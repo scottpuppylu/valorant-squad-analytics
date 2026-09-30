@@ -35,7 +35,7 @@ Current limitations:
 - one browser owns one imported real dataset;
 - dataset selection occurs at module load and requires reload after replacement;
 - imported normalized rows discard most round, kill and economy evidence;
-- durable backfill/incremental sync exists, but DATA-01C deletion execution and DATA-02 reads do not;
+- durable backfill/incremental sync and DATA-01C deletion execution exist; DATA-01C production destructive validation and DATA-02 reads do not;
 - the provider audit endpoint emits only structural evidence outside production and is disabled in production.
 
 ## Current ownership
@@ -89,7 +89,14 @@ scheduled/manual sync command
 
 ### TASK-DATA-01C — revocation execution
 
-- Not started: revocation blocking, idempotent deletion cascade, retention enforcement and cache invalidation.
+- `server/consentManagementCredential.ts`: one-time random credential generation, domain-separated HMAC and constant-time verification.
+- `server/deletion/`: atomic revocation, deletion lease/state machine, exclusive deletion, shared-match anonymization and privacy-safe progress.
+- `api/valorant/consent/revoke.ts` and `api/valorant/deletion/*`: authenticated POST-only public boundaries.
+- `src/dataSources/real/BrowserConsentCredentialRepository.ts`: sensitive browser credential storage, separate from analytics data.
+- `src/pages/ConnectPage.tsx`: Chinese two-step confirmation and browser cleanup.
+- `scripts/provision-consent-management.ts`: explicit operator-only legacy provisioning to a new file outside the repository; never a public route.
+- `server/deletion/retentionService.ts` and `scripts/purge-expired-deletion-audits.ts`: bounded expiry of 90-day aggregate audit and orphan-free tombstone cleanup.
+- Production destructive validation remains gated and pending.
 
 ### TASK-DATA-02 — dataset runtime rebase
 

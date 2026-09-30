@@ -6,7 +6,7 @@ TASK-DATA-01A adds the first server-side evidence store without changing the pub
 
 Production uses `@neondatabase/serverless` and the server-only variables `DATABASE_URL` and `IDENTIFIER_HMAC_KEY`. Neither name may use a `VITE_` prefix or appear in `src/` or the browser build. CI uses in-memory PGlite and does not require production credentials.
 
-Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migrations`, applies each unapplied version in a transaction, and records its filename. Migration `0001_durable_evidence_foundation.sql` is the immutable initial schema; migration `0002_bounded_historical_sync.sql` adds executable run/cursor metrics, coverage and expiring lease state. Production migrations are run from a trusted server/operator environment, never from React or a public endpoint.
+Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migrations`, applies each unapplied version in a transaction, and records its filename. Migration `0001_durable_evidence_foundation.sql` is the immutable initial schema; migration `0002_bounded_historical_sync.sql` adds executable run/cursor metrics, coverage and expiring lease state; migration `0003_consent_revocation_deletion.sql` adds consent-management HMAC, tombstone and deletion state. Production migrations are run from a trusted server/operator environment, never from React or a public endpoint. `0003` production validation is pending.
 
 ## Identity classes
 
@@ -20,7 +20,7 @@ Non-consenting participants receive a match-scoped HMAC. The same provider parti
 
 The current connection is unofficial HenrikDev data access, not Riot RSO ownership verification. Consent is stored as `self_asserted`; the schema separately allows a future `riot_rso_verified` method. An active record includes policy version and `consented_at`; revoked records require `revoked_at`.
 
-Normalized evidence may be persisted while consent is active, subject to product retention/deletion policy. `deletion_jobs` can represent pending, running, complete, and failed work. TASK-DATA-01C will implement the actual revocation cascade; its execution is not part of this foundation.
+Normalized evidence may be persisted only while consent is active. `deletion_jobs` represents pending, running, paused, complete and failed work with a 45-second lease, explicit stage, safe aggregate counters and 90-day audit-retention target. TASK-DATA-01C implements the cascade; production destructive validation remains gated.
 
 ## Evidence and transaction boundary
 

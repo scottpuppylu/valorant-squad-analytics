@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-003、TASK-API-02、TASK-DATA-01A 與 TASK-DATA-01B 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。Production Neon 已套用 migrations `0001` 與 `0002`。一個明確同意的帳號已完成 54 個安全區塊的正式歷史回填與一次 newest-overlap 增量同步；涵蓋的是「目前資料供應商可取得的歷史紀錄」，不是 Riot 完整生涯。TASK-DATA-01C、DATA-02、TASK-METRICS-01 與 TASK-002B 均未開始。
+TASK-003、TASK-API-02、TASK-DATA-01A 與 TASK-DATA-01B 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。Production Neon 目前已套用 migrations `0001` 與 `0002`。DATA-01C 撤回、匿名化與可續跑刪除已完成實作及 disposable Postgres 驗證，但 production migration `0003` 與真實測試玩家的不可逆撤回尚未執行，因此狀態是 **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**。DATA-02、TASK-METRICS-01 與 TASK-002B 均未開始。
 
 ## V1 原則
 
@@ -23,7 +23,7 @@ TASK-003、TASK-API-02、TASK-DATA-01A 與 TASK-DATA-01B 已完成；Vercel 同�
 2. 已先完成交叉篩選、玩家比較、地圖／特務／對戰頁面與動態稱號
 3. 已完成 Vercel production deploy、受控真實 provider 稽核與欄位能力分類
 4. 已以 TASK-DATA-01A 建立持久化證據底層，並以 DATA-01B 完成有界、可續跑的歷史與增量同步
-5. 下一個資料治理工作是 DATA-01C 撤回同意與刪除執行；DATA-02 前端資料源切換仍延後
+5. DATA-01C 已完成實作與非破壞性驗證，等待明確人工核准後才會對 production 測試玩家執行不可逆撤回；DATA-02 前端資料源切換仍延後
 6. TASK-METRICS-01、TASK-002B 與 Synergy 繼續保留為後續工作
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
@@ -50,7 +50,7 @@ npm run db:validate
 
 `npm test` 與 CI 只使用 mock／fixture，不會呼叫真實 provider 或 production Neon。`npm run build` 也會掃描 browser source 與 bundle，防止 server secret 名稱進入前端。
 
-資料庫 migration 位於 `migrations/`；`npm run db:migrate` 僅可在受信任、具 server-only `DATABASE_URL` 的環境執行。`IDENTIFIER_HMAC_KEY`、`DATABASE_URL` 與 `HENRIK_API_KEY` 都不得進入 React 或 browser bundle。完整 schema、身分類型、同意與 retention 語意見 [docs/DATABASE.md](docs/DATABASE.md)。現行前端仍使用 browser-local REAL dataset；Neon 在 DATA-02 前不會取代公開分析資料源。
+資料庫 migration 位於 `migrations/`；`npm run db:migrate` 僅可在受信任、具 server-only `DATABASE_URL` 的環境執行。`IDENTIFIER_HMAC_KEY`、`DATABASE_URL` 與 `HENRIK_API_KEY` 都不得進入 React 或 browser bundle。完整 schema、身分類型、同意與 retention 語意見 [docs/DATABASE.md](docs/DATABASE.md)，撤回與刪除契約見 [docs/REVOCATION_AND_DELETION.md](docs/REVOCATION_AND_DELETION.md)。現行前端仍使用 browser-local REAL dataset；Neon 在 DATA-02 前不會取代公開分析資料源。
 
 Vite 在 Vercel 使用 `/` base path，在 GitHub Pages rollback 使用 `/valorant-squad-analytics/`。應用程式保留 hash routing，讓兩種部署都能直接切換頁面。Vercel 同源狀態端點已部署；provider secret 只存在 server runtime，真實資料稽核與測試輸出都不包含私密識別值。GitHub Pages 仍維持 Demo-only rollback。
 
