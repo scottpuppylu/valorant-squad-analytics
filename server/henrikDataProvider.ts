@@ -130,6 +130,7 @@ export class HenrikDataProvider implements ValorantDataProvider {
   }
 
   async resolveAccount(input: ConnectionInput): Promise<AccountResolutionResult> {
+    if (this.durableWriter) await this.durableWriter.assertConnectionAllowed(input);
     const payload = await this.request(`/valorant/v2/account/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`);
     if (!isRecord(payload) || !isRecord(payload.data)) {
       throw new PublicApiError(502, 'MALFORMED_PROVIDER_RESPONSE', '資料服務回應缺少可用的帳號資料。');
@@ -139,12 +140,14 @@ export class HenrikDataProvider implements ValorantDataProvider {
       throw new PublicApiError(502, 'MALFORMED_PROVIDER_RESPONSE', '資料服務回應缺少可用的帳號資料。');
     }
     let publicPlayerId: string | undefined;
+    let managementCredential: string | undefined;
     if (this.durableWriter) {
       if (typeof data.puuid !== 'string' || data.puuid.length === 0) {
         throw new PublicApiError(502, 'MALFORMED_PROVIDER_RESPONSE', '資料服務回應缺少可用的帳號資料。');
       }
       const durable = await this.durableWriter.persistConnection(input, data.puuid, this.now().toISOString());
       publicPlayerId = durable.publicPlayerId;
+      managementCredential = durable.managementCredential;
     }
     return {
       account: {
@@ -154,10 +157,12 @@ export class HenrikDataProvider implements ValorantDataProvider {
         affinity: input.affinity,
         accountLevel: typeof data.account_level === 'number' ? data.account_level : undefined,
       },
+      ...(managementCredential ? { managementCredential } : {}),
     };
   }
 
   async importMatches(input: MatchImportInput): Promise<MatchImportResult> {
+    if (this.durableWriter) await this.durableWriter.assertImportAllowed(input);
     const totalStarted = performance.now();
     const providerStarted = performance.now();
     const payload = await this.request(

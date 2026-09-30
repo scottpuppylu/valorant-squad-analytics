@@ -13,6 +13,7 @@ export interface ConnectionInput {
 }
 
 export interface MatchImportInput extends ConnectionInput {
+  playerId: string;
   limit: ImportLimit;
 }
 
@@ -31,6 +32,7 @@ export interface ProviderStatus {
 
 export interface AccountResolutionResult {
   account: SanitizedAccount;
+  managementCredential?: string;
 }
 
 export interface MatchImportResult {

@@ -9,6 +9,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:migrate:vercel": "tsx scripts/migrate-vercel.ts",
     "db:validate": "vitest run tests/databaseFoundation.test.ts",
+    "consent:provision": "tsx scripts/provision-consent-management.ts",
+    "deletion:retention": "tsx scripts/purge-expired-deletion-audits.ts",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run && node scripts/assert-secret-boundary.mjs",

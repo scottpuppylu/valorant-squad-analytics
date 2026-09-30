@@ -10,7 +10,10 @@ import { assertProviderAuditAllowed } from '../server/providerAuditAccess';
 import type { MatchImportInput } from '../server/contracts';
 
 const hmacKey = 'test-only-key-material-with-at-least-thirty-two-bytes';
-const input: MatchImportInput = { gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true, limit: 3 };
+const input: MatchImportInput = {
+  playerId: '11111111-1111-4111-8111-111111111111',
+  gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true, limit: 3,
+};
 
 class PGliteDatabase implements SqlDatabase {
   constructor(private readonly database: PGlite) {}
@@ -106,6 +109,7 @@ describe('durable database and consent foundation', () => {
     expect(versions.rows).toEqual([
       { version: '0001', applied: '1' },
       { version: '0002', applied: '1' },
+      { version: '0003', applied: '1' },
     ]);
     const cursorColumns = await database.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name='sync_cursors'`,
@@ -124,15 +128,17 @@ describe('durable database and consent foundation', () => {
 
   it('writes one consenting player, one active consent and one match idempotently', async () => {
     const service = new DurableEvidenceService(database, hmacKey);
-    const summary = await service.persistMatches(input, rawPayload(), '2026-09-30T00:00:00.000Z');
+    const connected = await service.persistConnection(input, 'consenting-puuid', '2026-09-30T00:00:00.000Z');
+    const authorizedInput = { ...input, playerId: connected.publicPlayerId! };
+    const summary = await service.persistMatches(authorizedInput, rawPayload(), '2026-09-30T00:00:00.000Z');
     const tables = ['players', 'consents', 'source_matches', 'match_teams', 'match_participants', 'rounds', 'round_participants', 'kill_events', 'kill_assistants', 'event_player_locations'];
     const first = await Promise.all(tables.map((table) => scalar(database, table)));
-    await service.persistMatches(input, rawPayload(), '2026-09-30T00:01:00.000Z');
+    await service.persistMatches(authorizedInput, rawPayload(), '2026-09-30T00:01:00.000Z');
     const second = await Promise.all(tables.map((table) => scalar(database, table)));
     expect(first).toEqual([1, 1, 1, 2, 3, 1, 3, 1, 1, 2]);
     expect(second).toEqual(first);
     expect(summary.performance).toMatchObject({
-      sqlQueryCount: 18,
+      sqlQueryCount: 12,
       evidenceCounts: { participants: 3, teams: 2, rounds: 1, roundParticipants: 3, kills: 1, assistants: 1, locations: 2 },
     });
     const orphaned = await database.query<{ count: string }>(`
@@ -153,15 +159,19 @@ describe('durable database and consent foundation', () => {
     expect(evidence.rounds[0]?.participants[2]).toMatchObject({ loadoutValue: 0, weaponStatus: 'missing', armorStatus: 'missing' });
     expect(evidence.participants[2]?.providerIdentityHmac).toBeUndefined();
     const service = new DurableEvidenceService(database, hmacKey);
-    await service.persistMatches(input, rawPayload());
+    const connected = await service.persistConnection(input, 'consenting-puuid');
+    await service.persistMatches({ ...input, playerId: connected.publicPlayerId! }, rawPayload());
     expect(await scalar(database, 'players')).toBe(1);
     expect(await scalar(database, 'match_participants')).toBe(3);
   });
 
   it('rolls back the full match when a batched child write fails', async () => {
     const service = new DurableEvidenceService(new KillWriteFailureDatabase(database), hmacKey);
-    await expect(service.persistMatches(input, rawPayload())).rejects.toThrow('forced evidence write failure');
-    for (const table of ['players', 'consents', 'source_matches', 'match_participants', 'rounds', 'kill_events']) {
+    const connected = await service.persistConnection(input, 'consenting-puuid');
+    await expect(service.persistMatches({ ...input, playerId: connected.publicPlayerId! }, rawPayload())).rejects.toThrow('forced evidence write failure');
+    expect(await scalar(database, 'players')).toBe(1);
+    expect(await scalar(database, 'consents')).toBe(1);
+    for (const table of ['source_matches', 'match_participants', 'rounds', 'kill_events']) {
       expect(await scalar(database, table), table).toBe(0);
     }
   });

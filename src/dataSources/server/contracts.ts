@@ -11,6 +11,9 @@ export type ProviderPublicErrorCode =
   | 'IMPORT_IN_PROGRESS'
   | 'LOCK_BUSY'
   | 'CONSENT_REVOKED'
+  | 'MANAGEMENT_CREDENTIAL_REQUIRED'
+  | 'REVOCATION_FORBIDDEN'
+  | 'DELETION_NOT_FOUND'
   | 'SYNC_NOT_FOUND'
   | 'SYNC_BACKOFF'
   | 'DATABASE_ERROR'
@@ -44,6 +47,7 @@ export interface ProviderStatusResponse {
 export interface AccountResponse {
   ok: true;
   account: PublicAccount;
+  managementCredential?: string;
 }
 
 export interface ImportResponse {
@@ -52,6 +56,39 @@ export interface ImportResponse {
   importedMatches: number;
   importedAt: string;
 }
+
+export type DeletionStatus = 'pending' | 'running' | 'paused' | 'complete' | 'failed';
+export type DeletionStage =
+  | 'cancel_sync'
+  | 'remove_rank_observations'
+  | 'process_matches'
+  | 'remove_provider_identity'
+  | 'remove_membership'
+  | 'clear_sync_metadata'
+  | 'purge_player_profile_identity'
+  | 'finalize_job';
+
+export interface PublicDeletionProgress {
+  jobId: string;
+  status: DeletionStatus;
+  stage: DeletionStage;
+  requestedAt: string;
+  completedAt?: string;
+  progress: {
+    rankRowsRemoved: number;
+    exclusiveMatchesRemoved: number;
+    sharedMatchesAnonymized: number;
+    participantsAnonymized: number;
+    providerIdentitiesRemoved: number;
+    membershipsRemoved: number;
+    syncCursorsRemoved: number;
+    syncRunsAnonymized: number;
+    attempts: number;
+  };
+}
+
+export interface RevocationResponse { ok: true; deletion: PublicDeletionProgress }
+export interface DeletionResponse { ok: true; deletion: PublicDeletionProgress }
 
 export type SyncKind = 'backfill' | 'incremental';
 export type SyncStatus = 'pending' | 'running' | 'paused' | 'complete' | 'failed' | 'cancelled';

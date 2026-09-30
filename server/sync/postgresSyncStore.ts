@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { SqlDatabase, SqlExecutor } from '../db/types.js';
+import { PublicApiError } from '../errors.js';
 import type {
   PublicSyncStatus,
   SyncChunkMetrics,
@@ -158,6 +159,13 @@ export class PostgresSyncStore {
     resetCompletedIncremental = false,
   ): Promise<{ cursor: SyncCursorRecord; leaseToken: string } | undefined> {
     return this.database.transaction(async (transaction) => {
+      const consent = await transaction.query<{ id: string }>(
+        `SELECT id FROM consents WHERE player_id=$1 AND status='active' FOR SHARE`,
+        [subject.playerId],
+      );
+      if (!consent.rows[0]) {
+        throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家同意目前不是有效狀態，未建立同步租約。');
+      }
       const cursorId = await this.ensureCursor(transaction, subject, kind);
       if (kind === 'incremental' && resetCompletedIncremental) {
         await transaction.query(
@@ -278,6 +286,14 @@ export class PostgresSyncStore {
     metrics: SyncChunkMetrics;
   }): Promise<void> {
     await this.database.transaction(async (transaction) => {
+      const consent = await transaction.query<{ id: string }>(
+        `SELECT id FROM consents WHERE player_id=(SELECT player_id FROM sync_runs WHERE id=$1)
+         AND status='active' FOR SHARE`,
+        [input.runId],
+      );
+      if (!consent.rows[0]) {
+        throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家已撤回同意，同步游標未前進。');
+      }
       const cursor = await transaction.query(
         `UPDATE sync_cursors SET next_start=$3, coverage_from=CASE
              WHEN $4::timestamptz IS NULL THEN coverage_from
@@ -300,7 +316,7 @@ export class PostgresSyncStore {
       );
       if (cursor.rowCount !== 1) throw new Error('Sync lease was lost before cursor commit.');
       const terminal = input.terminationReason !== undefined;
-      await transaction.query(
+      const run = await transaction.query(
         `UPDATE sync_runs SET status=$2, completed_at=CASE WHEN $2='complete' THEN $3::timestamptz ELSE NULL END,
            coverage_from=CASE
              WHEN $4::timestamptz IS NULL THEN coverage_from
@@ -317,13 +333,14 @@ export class PostgresSyncStore {
            normalization_ms=normalization_ms+$11, database_ms=database_ms+$12,
            total_ms=total_ms+$13, sql_query_count=sql_query_count+$14,
            termination_reason=$15, error_category=NULL, last_error_at=NULL, cursor_start=$16
-         WHERE id=$1`,
+         WHERE id=$1 AND status <> 'cancelled'`,
         [input.runId, terminal ? 'complete' : 'paused', input.at, input.coverageFrom ?? null, input.coverageTo ?? null,
           input.boundaryHmac ?? null, input.metrics.returnedMatches, input.metrics.persistedMatches,
           input.metrics.overlapMatches, input.metrics.providerFetchMs, input.metrics.normalizationMs,
           input.metrics.databaseMs, input.metrics.totalMs, input.metrics.sqlQueryCount,
           input.terminationReason ?? null, input.nextStart],
       );
+      if (run.rowCount !== 1) throw new PublicApiError(409, 'CONSENT_REVOKED', '同步工作已被撤回程序取消。');
     });
   }
 
@@ -346,7 +363,7 @@ export class PostgresSyncStore {
       await transaction.query(
         `UPDATE sync_runs SET status=$2, error_category=$3, last_error_at=$4,
            retry_count=retry_count+1, completed_at=CASE WHEN $2 IN ('failed','cancelled') THEN $4::timestamptz ELSE NULL END
-         WHERE id=$1`,
+         WHERE id=$1 AND status <> 'cancelled'`,
         [input.runId, input.status, input.category, input.at],
       );
     });

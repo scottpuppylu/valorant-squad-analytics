@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { BrowserRealDatasetRepository, realDatasetStorageKey } from '../src/dataSources/real/BrowserRealDatasetRepository';
 import type { NormalizedAnalyticsDataset } from '../src/dataSources/types';
+import {
+  BrowserConsentCredentialRepository,
+  consentCredentialStorageKey,
+} from '../src/dataSources/real/BrowserConsentCredentialRepository';
 
 function memoryStorage() {
   const values = new Map<string, string>();
@@ -38,5 +42,28 @@ describe('browser-local real dataset repository', () => {
     storage.setItem(realDatasetStorageKey, JSON.stringify({ schemaVersion: 1, importedAt: 'now', dataset: { ...realDataset(), puuid: 'not-allowed' } }));
     expect(repository.load()).toBeNull();
     expect(storage.values.has(realDatasetStorageKey)).toBe(false);
+  });
+});
+
+describe('browser-local consent management credential repository', () => {
+  const playerId = '11111111-1111-4111-8111-111111111111';
+  const managementCredential = 'A'.repeat(43);
+
+  it('stores the sensitive credential separately and removes it on revocation cleanup', () => {
+    const storage = memoryStorage();
+    const repository = new BrowserConsentCredentialRepository(storage);
+    repository.save(playerId, managementCredential, '2026-09-30T00:00:00.000Z');
+    expect(repository.load()).toMatchObject({ playerId, managementCredential });
+    expect(storage.values.has(realDatasetStorageKey)).toBe(false);
+    repository.remove();
+    expect(storage.values.has(consentCredentialStorageKey)).toBe(false);
+  });
+
+  it('deletes malformed credential state instead of trusting it', () => {
+    const storage = memoryStorage();
+    const repository = new BrowserConsentCredentialRepository(storage);
+    storage.setItem(consentCredentialStorageKey, JSON.stringify({ schemaVersion: 1, playerId, managementCredential: 'short', savedAt: 'never' }));
+    expect(repository.load()).toBeNull();
+    expect(storage.values.has(consentCredentialStorageKey)).toBe(false);
   });
 });

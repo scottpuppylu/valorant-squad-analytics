@@ -19,7 +19,13 @@ export interface PlayerRepository {
 }
 
 export interface ConsentRepository {
-  recordActiveSelfAssertedConsent(transaction: SqlExecutor, playerId: string, privacyVersion: string, consentedAt: string): Promise<string>;
+  recordActiveSelfAssertedConsent(
+    transaction: SqlExecutor,
+    playerId: string,
+    privacyVersion: string,
+    consentedAt: string,
+    credential?: { hmac: string; version: string; issuedAt: string },
+  ): Promise<{ id: string; credentialIssued: boolean }>;
 }
 
 export interface MatchEvidenceRepository {

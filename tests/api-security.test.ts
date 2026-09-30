@@ -9,10 +9,17 @@ import { normalizeHenrikMatches } from '../server/normalizeHenrik';
 import { enforceRateLimit, resetRateLimitsForTests } from '../server/rateLimit';
 import { parseConnectionInput, parseMatchImportInput } from '../server/validation';
 import { parseSyncContinueInput, parseSyncStartInput, parseSyncStatusQuery } from '../server/validation';
+import { parseDeletionInput, parseRevocationInput } from '../server/validation';
+import {
+  consentManagementCredentialHmac,
+  createConsentManagementCredential,
+  verifyConsentManagementCredential,
+} from '../server/consentManagementCredential';
 import { ValorantBackendClient } from '../src/dataSources/server/ValorantBackendClient';
 
 const connection = { gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true } as const;
-const importInput: MatchImportInput = { ...connection, limit: 3 };
+const publicPlayerId = '11111111-1111-4111-8111-111111111111';
+const importInput: MatchImportInput = { ...connection, playerId: publicPlayerId, limit: 3 };
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -24,6 +31,9 @@ const deployedServerModules = [
   'api/valorant/sync/start.ts',
   'api/valorant/sync/continue.ts',
   'api/valorant/sync/status.ts',
+  'api/valorant/consent/revoke.ts',
+  'api/valorant/deletion/continue.ts',
+  'api/valorant/deletion/status.ts',
   'server/contracts.ts',
   'server/henrikDataProvider.ts',
   'server/http.ts',
@@ -34,6 +44,11 @@ const deployedServerModules = [
   'server/sync/postgresSyncStore.ts',
   'server/sync/runtime.ts',
   'server/sync/types.ts',
+  'server/consentManagementCredential.ts',
+  'server/deletion/revocationDeletionService.ts',
+  'server/deletion/retentionService.ts',
+  'server/deletion/runtime.ts',
+  'server/deletion/types.ts',
   'server/validation.ts',
 ];
 
@@ -88,7 +103,7 @@ describe('production connection validation', () => {
   });
 
   it('accepts the single-match production validation limit', () => {
-    expect(parseMatchImportInput({ ...connection, limit: 1 }).limit).toBe(1);
+    expect(parseMatchImportInput({ ...connection, playerId: publicPlayerId, limit: 1 }).limit).toBe(1);
   });
 
   it('accepts only opaque public application UUIDs at the sync boundary', () => {
@@ -101,9 +116,22 @@ describe('production connection validation', () => {
     expect(() => parseSyncContinueInput({ runId: 'provider-match-id' })).toThrowError(expect.objectContaining({ code: 'BAD_REQUEST' }));
   });
 
+  it('requires a fixed high-entropy credential at every destructive boundary', () => {
+    const managementCredential = createConsentManagementCredential();
+    const jobId = '22222222-2222-4222-8222-222222222222';
+    expect(parseRevocationInput({ playerId: publicPlayerId, managementCredential })).toEqual({ playerId: publicPlayerId, managementCredential });
+    expect(parseDeletionInput({ jobId, managementCredential })).toEqual({ jobId, managementCredential });
+    expect(() => parseRevocationInput({ playerId: publicPlayerId })).toThrowError(expect.objectContaining({ code: 'BAD_REQUEST' }));
+    expect(() => parseDeletionInput({ jobId, managementCredential: 'short' })).toThrowError(expect.objectContaining({ code: 'BAD_REQUEST' }));
+    const stored = consentManagementCredentialHmac(managementCredential, 'test-credential-hmac-key-at-least-thirty-two-bytes');
+    expect(verifyConsentManagementCredential(managementCredential, stored, 'test-credential-hmac-key-at-least-thirty-two-bytes')).toBe(true);
+    expect(verifyConsentManagementCredential('A'.repeat(43), stored, 'test-credential-hmac-key-at-least-thirty-two-bytes')).toBe(false);
+    expect(stored).not.toContain(managementCredential);
+  });
+
   it('distinguishes a platform timeout from an unavailable provider', async () => {
     vi.stubGlobal('fetch', async () => new Response('Gateway Timeout', { status: 504 }));
-    await expect(new ValorantBackendClient().importMatches(connection, 1)).rejects.toMatchObject({
+    await expect(new ValorantBackendClient().importMatches(connection, publicPlayerId, 1)).rejects.toMatchObject({
       code: 'PROVIDER_TIMEOUT',
       message: '戰績儲存逾時，資料未寫入，請稍後重試。',
     });

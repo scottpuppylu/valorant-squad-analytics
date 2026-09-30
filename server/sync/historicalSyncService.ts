@@ -177,6 +177,7 @@ export class HistoricalSyncService {
       }
 
       const input: MatchImportInput = {
+        playerId: run.subject.publicPlayerId,
         gameName: run.subject.gameName,
         tag: run.subject.tag,
         affinity: run.subject.affinity as ValorantAffinity,

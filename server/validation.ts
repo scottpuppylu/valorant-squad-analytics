@@ -1,6 +1,7 @@
 import { PublicApiError } from './errors.js';
 import { supportedAffinities, type ConnectionInput, type ImportLimit, type MatchImportInput, type ValorantAffinity } from './contracts.js';
 import type { SyncKind } from './sync/types.js';
+import { isConsentManagementCredential } from './consentManagementCredential.js';
 
 const allowedLimits = new Set<number>([1, 3, 10, 20, 30]);
 
@@ -56,7 +57,7 @@ export function parseMatchImportInput(value: unknown): MatchImportInput {
   if (typeof body.limit !== 'number' || !Number.isInteger(body.limit) || !allowedLimits.has(body.limit)) {
     throw new PublicApiError(400, 'BAD_REQUEST', '匯入場數只接受 10、20 或 30；受控驗證可使用 1 或 3。');
   }
-  return { ...connection, limit: body.limit as ImportLimit };
+  return { ...connection, playerId: publicUuid(body.playerId, '玩家識別碼'), limit: body.limit as ImportLimit };
 }
 
 function publicUuid(value: unknown, label: string): string {
@@ -80,4 +81,27 @@ export function parseSyncContinueInput(value: unknown): { runId: string } {
 
 export function parseSyncStatusQuery(value: string | string[] | undefined): string {
   return publicUuid(Array.isArray(value) ? value[0] : value, '同步識別碼');
+}
+
+function managementCredential(value: unknown): string {
+  if (!isConsentManagementCredential(value)) {
+    throw new PublicApiError(400, 'BAD_REQUEST', '同意管理憑證格式不正確。');
+  }
+  return value;
+}
+
+export function parseRevocationInput(value: unknown): { playerId: string; managementCredential: string } {
+  const body = asRecord(value);
+  return {
+    playerId: publicUuid(body.playerId, '玩家識別碼'),
+    managementCredential: managementCredential(body.managementCredential),
+  };
+}
+
+export function parseDeletionInput(value: unknown): { jobId: string; managementCredential: string } {
+  const body = asRecord(value);
+  return {
+    jobId: publicUuid(body.jobId, '刪除工作識別碼'),
+    managementCredential: managementCredential(body.managementCredential),
+  };
 }

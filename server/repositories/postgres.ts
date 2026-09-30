@@ -61,19 +61,28 @@ export class PostgresPlayerRepository implements PlayerRepository {
 }
 
 export class PostgresConsentRepository implements ConsentRepository {
-  async recordActiveSelfAssertedConsent(transaction: SqlExecutor, playerId: string, privacyVersion: string, consentedAt: string): Promise<string> {
-    const existing = await transaction.query<IdRow>(
-      `SELECT id FROM consents WHERE player_id = $1 AND consent_method = 'self_asserted' AND privacy_version = $2 AND status = 'active'`,
+  async recordActiveSelfAssertedConsent(
+    transaction: SqlExecutor,
+    playerId: string,
+    privacyVersion: string,
+    consentedAt: string,
+    credential?: { hmac: string; version: string; issuedAt: string },
+  ): Promise<{ id: string; credentialIssued: boolean }> {
+    const existing = await transaction.query<IdRow & { management_credential_hmac: string | null }>(
+      `SELECT id, management_credential_hmac FROM consents
+       WHERE player_id = $1 AND consent_method = 'self_asserted' AND privacy_version = $2 AND status = 'active'`,
       [playerId, privacyVersion],
     );
-    if (existing.rows[0]) return existing.rows[0].id;
+    if (existing.rows[0]) return { id: existing.rows[0].id, credentialIssued: false };
     const id = randomUUID();
     await transaction.query(
-      `INSERT INTO consents (id, player_id, status, consent_method, privacy_version, consented_at)
-       VALUES ($1, $2, 'active', 'self_asserted', $3, $4)`,
-      [id, playerId, privacyVersion, consentedAt],
+      `INSERT INTO consents (
+         id, player_id, status, consent_method, privacy_version, consented_at,
+         management_credential_hmac, management_credential_version, management_credential_issued_at
+       ) VALUES ($1, $2, 'active', 'self_asserted', $3, $4, $5, $6, $7)`,
+      [id, playerId, privacyVersion, consentedAt, credential?.hmac ?? null, credential?.version ?? null, credential?.issuedAt ?? null],
     );
-    return id;
+    return { id, credentialIssued: credential !== undefined };
   }
 }
 

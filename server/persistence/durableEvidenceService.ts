@@ -2,6 +2,12 @@ import type { ConnectionInput, MatchImportInput } from '../contracts.js';
 import type { SqlDatabase, SqlExecutor } from '../db/types.js';
 import { normalizeHenrikEvidence } from '../evidence/normalizeHenrikEvidence.js';
 import { providerIdentityHmac } from '../identityProtection.js';
+import {
+  consentCredentialVersion,
+  consentManagementCredentialHmac,
+  createConsentManagementCredential,
+} from '../consentManagementCredential.js';
+import { PublicApiError } from '../errors.js';
 import { DEFAULT_SQUAD_ID, PostgresConsentRepository, PostgresMatchEvidenceRepository, PostgresPlayerRepository } from '../repositories/postgres.js';
 
 export interface DurableWriteSummary {
@@ -9,6 +15,7 @@ export interface DurableWriteSummary {
   consentWrites: number;
   matchWrites: number;
   publicPlayerId?: string;
+  managementCredential?: string;
   performance?: DurablePersistencePerformance;
 }
 
@@ -28,8 +35,10 @@ export interface DurablePersistencePerformance {
 }
 
 export interface DurableEvidenceWriter {
+  assertConnectionAllowed(input: ConnectionInput): Promise<void>;
   persistConnection(input: ConnectionInput, providerIdentifier: string, at?: string): Promise<DurableWriteSummary>;
   persistMatches(input: MatchImportInput, payload: unknown, at?: string): Promise<DurableWriteSummary>;
+  assertImportAllowed(input: MatchImportInput): Promise<void>;
 }
 
 export interface DurableSyncPageSummary {
@@ -46,8 +55,24 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
 
   constructor(private readonly database: SqlDatabase, private readonly hmacKey: string) {}
 
+  async assertConnectionAllowed(input: ConnectionInput): Promise<void> {
+    const result = await this.database.query<{ blocked: boolean }>(
+      `SELECT EXISTS(
+         SELECT 1 FROM players p
+         JOIN provider_identities pi ON pi.player_id=p.id AND pi.provider='HenrikDev' AND pi.affinity=$3
+         JOIN deletion_jobs dj ON dj.player_id=p.id AND dj.status <> 'complete'
+         WHERE lower(p.display_name)=lower($1) AND lower(p.display_tag)=lower($2)
+       ) AS blocked`,
+      [input.gameName, input.tag, input.affinity],
+    );
+    if (result.rows[0]?.blocked === true) {
+      throw new PublicApiError(409, 'CONSENT_REVOKED', '撤回刪除工作尚未完成，未呼叫資料來源。');
+    }
+  }
+
   async persistConnection(input: ConnectionInput, providerIdentifier: string, at = new Date().toISOString()): Promise<DurableWriteSummary> {
     let publicPlayerId: string | undefined;
+    let managementCredential: string | undefined;
     await this.database.transaction(async (transaction) => {
       const player = await this.players.upsertConnectedPlayer(transaction, {
         provider: 'HenrikDev', affinity: input.affinity,
@@ -55,9 +80,33 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
         displayName: input.gameName, displayTag: input.tag,
       });
       publicPlayerId = player.publicId;
-      await this.consents.recordActiveSelfAssertedConsent(transaction, player.id, '2026-09-30-v1', at);
+      const candidate = createConsentManagementCredential();
+      const consent = await this.consents.recordActiveSelfAssertedConsent(
+        transaction,
+        player.id,
+        '2026-09-30-v1',
+        at,
+        { hmac: consentManagementCredentialHmac(candidate, this.hmacKey), version: consentCredentialVersion, issuedAt: at },
+      );
+      if (consent.credentialIssued) managementCredential = candidate;
     });
-    return { playerWrites: 1, consentWrites: 1, matchWrites: 0, publicPlayerId };
+    return { playerWrites: 1, consentWrites: 1, matchWrites: 0, publicPlayerId, managementCredential };
+  }
+
+  async assertImportAllowed(input: MatchImportInput): Promise<void> {
+    const result = await this.database.query<{ active: boolean }>(
+      `SELECT EXISTS(
+         SELECT 1 FROM players p
+         JOIN provider_identities pi ON pi.player_id=p.id AND pi.provider='HenrikDev' AND pi.affinity=$2
+         JOIN squad_memberships sm ON sm.player_id=p.id AND sm.status='active'
+         JOIN consents c ON c.player_id=p.id AND c.status='active'
+         WHERE p.public_id=$1 AND p.display_name=$3 AND p.display_tag=$4 AND p.anonymized_at IS NULL
+       ) AS active`,
+      [input.playerId, input.affinity, input.gameName, input.tag],
+    );
+    if (result.rows[0]?.active !== true) {
+      throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家同意目前不是有效狀態，未呼叫資料來源。');
+    }
   }
 
   async persistMatches(input: MatchImportInput, payload: unknown, at = new Date().toISOString()): Promise<DurableWriteSummary> {
@@ -81,10 +130,10 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
     let matchWrites = 0;
     let dbTransactionMs = 0;
     let sqlQueryCount = 0;
+    await this.assertImportAllowed(input);
     for (const match of evidence) {
       const consenting = match.participants.find((participant) => participant.providerIdentityHmac);
       if (!consenting?.providerIdentityHmac) throw new Error('Consenting participant is absent from provider evidence.');
-      const identityLookupHmac = consenting.providerIdentityHmac;
       const transactionStarted = performance.now();
       await this.database.transaction(async (transaction) => {
         const measuredTransaction: SqlExecutor = {
@@ -93,12 +142,13 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
             return transaction.query<Row>(sql, params);
           },
         };
-        const player = await this.players.upsertConnectedPlayer(measuredTransaction, {
-          provider: match.provider, affinity: input.affinity, identityLookupHmac,
-          displayName: input.gameName, displayTag: input.tag,
-        });
-        await this.consents.recordActiveSelfAssertedConsent(measuredTransaction, player.id, '2026-09-30-v1', at);
-        await this.matches.upsertMatch(measuredTransaction, DEFAULT_SQUAD_ID, player.id, match, at);
+        const player = await measuredTransaction.query<{ id: string }>(
+          `SELECT p.id FROM players p JOIN consents c ON c.player_id=p.id AND c.status='active'
+           WHERE p.public_id=$1 AND p.anonymized_at IS NULL FOR UPDATE OF c`,
+          [input.playerId],
+        );
+        if (!player.rows[0]) throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家已撤回同意，未寫入戰績。');
+        await this.matches.upsertMatch(measuredTransaction, DEFAULT_SQUAD_ID, player.rows[0].id, match, at);
       });
       sqlQueryCount += 2;
       dbTransactionMs += Math.round(performance.now() - transactionStarted);
@@ -106,7 +156,7 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
     }
     return {
       playerWrites: evidence.length > 0 ? 1 : 0,
-      consentWrites: evidence.length > 0 ? 1 : 0,
+      consentWrites: 0,
       matchWrites,
       performance: { normalizationMs, dbTransactionMs, sqlQueryCount, evidenceCounts },
     };
@@ -149,6 +199,11 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
             return transaction.query<Row>(sql, params);
           },
         };
+        const consent = await measuredTransaction.query<{ id: string }>(
+          `SELECT id FROM consents WHERE player_id=$1 AND status='active' FOR UPDATE`,
+          [playerId],
+        );
+        if (!consent.rows[0]) throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家已撤回同意，未寫入戰績。');
         await this.matches.upsertMatch(measuredTransaction, DEFAULT_SQUAD_ID, playerId, match, at);
       });
       sqlQueryCount += 2;
