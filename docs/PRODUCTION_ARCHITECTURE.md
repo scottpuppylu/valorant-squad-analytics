@@ -47,7 +47,7 @@ Vite uses `/` as its base in Vercel builds and retains `/valorant-squad-analytic
 - Convert provider data to the internal normalized model and remove PUUIDs and raw match IDs before responding.
 - Return stable error codes and Chinese user-safe messages.
 
-The backend does not calculate UI scores, persist player data, issue provider credentials, or accept Riot authentication secrets.
+The backend does not calculate UI scores, issue provider credentials, or accept Riot authentication secrets. TASK-DATA-01A adds optional server-side persistence when both database settings are present; without them, the current provider/browser flow remains unchanged.
 
 ## Provider evidence
 
@@ -55,11 +55,11 @@ HenrikDev's current OpenAPI advertises API-key authentication through the `Autho
 
 HenrikDev is an unofficial provider. A controlled structural audit observed match, round, kill, economy and MMR field families, but this evidence is sample-bound and version-bound. It does not upgrade unofficial provider data into Riot-official truth. See `docs/REAL_DATA_FIELD_AUDIT.md`.
 
-## Phase 1 storage
+## Browser runtime and durable foundation
 
-No database is introduced. The server is stateless. The browser stores only the sanitized normalized dataset under a versioned key. This is sufficient for one player to review imported data on one browser and avoids creating a shared identity database before retention and deletion operations are mature.
+The public analytics runtime still stores the sanitized normalized dataset under a versioned browser key. This remains sufficient for one player to review imported data on one browser and is deliberately not replaced in TASK-DATA-01A.
 
-A database is now the next intentional architecture step because the product requires shared rankings, historical evidence and incremental synchronization. TASK-DATA-01 owns that implementation; this task only defines it.
+TASK-DATA-01A adds an optional Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production. A read API, backfill, incremental sync, revocation cascade and frontend source-of-truth switch are not included.
 
 ## Current architecture limitations
 
@@ -70,7 +70,7 @@ A database is now the next intentional architecture step because the product req
 - Serverless in-memory rate limits and import locks are per-instance safeguards, not distributed coordination.
 - The public score runtime cannot identify a durable snapshot version because no dataset API exists.
 
-## Target persistence architecture (design only)
+## Persistence architecture
 
 ```text
 consent + membership
@@ -82,21 +82,21 @@ consent + membership
   -> React dataset provider and existing analysis pages
 ```
 
-Neon stores normalized evidence, not UI-formatted strings. Provider identifiers stay behind the server boundary as keyed or encrypted join values. Raw payload retention is off by default; if later approved for debugging, it must be encrypted, access-controlled and automatically expired.
+Neon stores normalized evidence, not UI-formatted strings. Provider lookup identifiers are server-only, domain-separated HMACs. A separate nullable encrypted slot is reserved but unused. Non-consenting participants use match-scoped pseudonyms. Raw payload retention is off; a future debugging exception would require a separate encrypted, access-controlled and expiring design.
 
-## Initial backfill
+## Initial backfill — DATA-01B, not started
 
 Backfill runs newest-to-oldest with bounded v4 `size/start` windows, a request/time budget and an unchanged cursor until each page commits. It stops on an empty or short page, a known boundary, or the configured horizon. Every match upsert is idempotent. Coverage start/end and incompleteness are product-visible; stored matches never establish lifetime completeness.
 
-## Incremental sync
+## Incremental sync — DATA-01B, not started
 
 Incremental sync re-fetches a small newest overlap, deduplicates by a keyed match fingerprint, updates changed completed matches and queues only affected derivations. A durable per-player lock, provider-aware rate budget, retry state and schema/normalizer versions replace the current in-memory-only coordination.
 
-## Revocation
+## Revocation — DATA-01C, not started
 
 Revocation disables provider access immediately, records the policy/consent transition and starts an idempotent deletion job. The job removes private identity links, participant evidence, derived metrics and caches; shared match facts may remain only when they cannot identify the revoked player. Completion counts and cache invalidation are auditable without logging deleted identifiers.
 
-## Dataset runtime rebase
+## Dataset runtime rebase — DATA-02, not started
 
 The frontend should move from module-load localStorage to a `DatasetProvider` with explicit loading, ready, stale, empty and error states. A read-only versioned API returns application IDs, evidence availability, calculation versions, coverage dates and last-sync status. Demo remains a deliberate fallback and GitHub Pages rollback; it is never merged with the real squad dataset.
 

@@ -1,6 +1,6 @@
 # Code map
 
-This map records the current runtime and the intended rebase after TASK-API-02.1. It is a dependency guide, not a claim that the future database exists.
+This map records the active browser runtime, the TASK-DATA-01A durable write foundation and the later runtime rebase. A committed database layer is not a claim that production migration or frontend cutover has occurred.
 
 ## Current runtime
 
@@ -27,8 +27,8 @@ Current limitations:
 - one browser owns one imported real dataset;
 - dataset selection occurs at module load and requires reload after replacement;
 - imported normalized rows discard most round, kill and economy evidence;
-- no durable sync cursor, shared squad dataset, revocation job or retention record exists;
-- the provider audit endpoint emits only structural evidence and is rate-limited; it is not linked from product navigation.
+- durable sync/deletion tables exist, but DATA-01B and DATA-01C execution do not;
+- the provider audit endpoint emits only structural evidence outside production and is disabled in production.
 
 ## Current ownership
 
@@ -41,6 +41,9 @@ Current limitations:
 | Server routes | `api/valorant/**` | Consent, validation, throttling and provider calls |
 | Provider adapter | `server/henrikDataProvider.ts`, `src/dataSources/thirdParty/henrikV4.ts` | Fetch, structural audit and normalization boundary |
 | Normalization | `server/normalizeHenrikMatches.ts` | Provider DTO to browser-safe dataset |
+| Durable evidence normalization | `server/evidence/**` | Raw response in memory to HMAC-keyed relational evidence |
+| Database/migrations | `server/db/**`, `migrations/**`, `scripts/migrate.ts` | Neon adapter, transactions and deterministic schema versions |
+| Persistence repositories | `server/repositories/**`, `server/persistence/**` | Player, consent and one-match idempotent durable writes |
 | Analytics | `src/analytics/**`, `src/utils/aggregateStats.ts` | Selection, aggregation, rankings and summaries |
 | Scoring | `src/scoring/**` | Benchmarks, category formulas, weights and confidence |
 | Presentation | `src/utils/format.ts`, `src/analytics/presentation.ts` | Display-only rounding and labels |
@@ -62,13 +65,19 @@ scheduled/manual sync command
 
 ## Task ownership
 
-### TASK-DATA-01 — durable normalized evidence store
+### TASK-DATA-01A — durable database and consent foundation
 
-- Add Neon Postgres and migrations for squad, player, membership, consent, sync run, source match, participant, round, kill, economy and rank observations.
-- Store provider identifiers only as server-side keyed identifiers; never expose them to the browser.
-- Add idempotent initial backfill and incremental sync with coverage windows and audit logs.
-- Add revocation/deletion transaction and retention enforcement.
-- Keep scores out of ingestion tables.
+- Implemented Neon-compatible migrations for squad, player, membership, consent, sync run/cursor, source match, participant, round, kill, economy, rank observations and deletion jobs.
+- Implemented server-only HMAC lookup identifiers, match-scoped non-member pseudonyms and one-match transactions.
+- Kept scores out of ingestion tables and kept the browser runtime active.
+
+### TASK-DATA-01B — history and incremental sync
+
+- Not started: bounded pagination, coverage windows, retry/cursor execution and distributed coordination.
+
+### TASK-DATA-01C — revocation execution
+
+- Not started: revocation blocking, idempotent deletion cascade, retention enforcement and cache invalidation.
 
 ### TASK-DATA-02 — dataset runtime rebase
 

@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-003 與 TASK-API-02 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)，並在一個明確同意的帳號上完成受控、去識別化的真實資料欄位稽核。一般玩家只輸入 Riot ID、Tag、區域並明確同意，永遠不需要 HenrikDev key、`.env`、Riot 密碼、Cookie 或 MFA。稽核只記錄欄位路徑、型別、缺失與 null 頻率，不保存帳號、PUUID、比賽 ID、原始回應或 API key。TASK-002B 尚未開始；下一步是 TASK-DATA-01。
+TASK-003 與 TASK-API-02 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)，並在一個明確同意的帳號上完成受控、去識別化的真實資料欄位稽核。TASK-DATA-01A 的 migration、同意紀錄、HMAC 身分保護與 transactional evidence persistence 已在本機 disposable Postgres 驗證；production Neon 設定與受控 row-count 驗證仍待完成。TASK-DATA-01B、TASK-DATA-01C、DATA-02 與 TASK-002B 均未開始。
 
 ## V1 原則
 
@@ -22,7 +22,7 @@ TASK-003 與 TASK-API-02 已完成；Vercel 同源後端已部署至 [valorant-s
 1. 建立應用程式骨架、示範資料、儀表板與排行榜
 2. 已先完成交叉篩選、玩家比較、地圖／特務／對戰頁面與動態稱號
 3. 已完成 Vercel production deploy、受控真實 provider 稽核與欄位能力分類
-4. 以 TASK-DATA-01 建立可刪除、可追溯的持久化證據底層
+4. 以 TASK-DATA-01A 建立持久化證據底層，再分別完成 DATA-01B 回填與 DATA-01C 刪除流程
 5. 再進行 TASK-002B 的證據感知八維計分引擎
 6. Synergy 繼續保留為更後面的共用比賽分析
 
@@ -45,9 +45,12 @@ npm run dev
 npm run lint
 npm test
 npm run build
+npm run db:validate
 ```
 
 `npm test` 與 CI 只使用 mock／fixture，不會呼叫真實 provider。`npm run build` 也會掃描 browser source 與 bundle，防止 server secret 名稱進入前端。
+
+資料庫 migration 位於 `migrations/`；`npm run db:migrate` 僅可在受信任、具 server-only `DATABASE_URL` 的環境執行。`IDENTIFIER_HMAC_KEY`、`DATABASE_URL` 與 `HENRIK_API_KEY` 都不得進入 React 或 browser bundle。完整 schema、身分類型、同意與 retention 語意見 [docs/DATABASE.md](docs/DATABASE.md)。現行前端仍使用 browser-local REAL dataset；Neon 在 DATA-02 前不會取代公開分析資料源。
 
 Vite 在 Vercel 使用 `/` base path，在 GitHub Pages rollback 使用 `/valorant-squad-analytics/`。應用程式保留 hash routing，讓兩種部署都能直接切換頁面。Vercel 同源狀態端點已部署；provider secret 只存在 server runtime，真實資料稽核與測試輸出都不包含私密識別值。GitHub Pages 仍維持 Demo-only rollback。
 

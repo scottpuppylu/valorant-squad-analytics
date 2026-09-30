@@ -95,21 +95,40 @@ Status: **COMPLETE — SDD STRICT**
 
 TASK-API-02.1 does not implement a database, scheduled sync, new scoring formulas, TASK-002B or Synergy.
 
-## Task DATA-01 — durable normalized evidence store
+## Task DATA-01A — durable database and consent foundation
 
-Status: **RECOMMENDED NEXT / NOT STARTED**
+Status: **IMPLEMENTED LOCALLY / PRODUCTION VALIDATION PENDING**
 
-- [ ] Add Neon Postgres migrations for squad, player, membership, consent, sync, match, participant, round, event, economy and rank evidence.
-- [ ] Implement idempotent initial backfill and incremental sync with explicit coverage windows.
-- [ ] Add revocation, deletion, retention and server-side identifier protection.
-- [ ] Preserve raw/normalized/derived/versioned-score separation.
-- [ ] Keep Demo fallback and do not expose provider secrets or raw private identifiers.
+- [x] Add deterministic Neon-compatible migrations for squad, player, membership, consent, match, participant, round, event, economy, rank, sync and deletion foundations.
+- [x] Add server-only keyed identifier protection, match-scoped non-member pseudonyms and independent public application IDs.
+- [x] Add accurate `self_asserted` consent semantics and a schema path for future `riot_rso_verified` consent.
+- [x] Add normalized, idempotent, one-match transactional persistence with database constraints and disposable Postgres tests.
+- [x] Disable the provider evidence audit endpoint in production and extend the client secret-boundary scan.
+- [ ] Configure Neon in the production Vercel project, apply migration `0001`, and complete the bounded production row-count test.
 
-TASK-DATA-01 must complete before a shared cross-device production dataset can replace the current browser-local REAL envelope. It does not include TASK-002B scoring changes.
+The browser-local REAL envelope remains the active frontend runtime. The foundation does not calculate final event metrics or change scoring.
+
+## Task DATA-01B — bounded historical backfill
+
+Status: **NOT STARTED**
+
+Implement bounded newest-to-oldest pagination, coverage windows, retry/cursor semantics and distributed coordination. Do not infer lifetime completeness from stored matches.
+
+## Task DATA-01C — revocation and deletion execution
+
+Status: **NOT STARTED**
+
+Implement consent revocation, sync blocking, idempotent deletion jobs, unlinking/anonymization, retention enforcement and auditable completion counts.
+
+## Task DATA-02 — dataset runtime rebase
+
+Status: **NOT STARTED**
+
+Replace browser-local REAL as the production source of truth only after the durable read API, authorization and deletion evidence are ready.
 
 ## Task 002B — evidence-aware scoring correctness
 
-Status: **DEFERRED UNTIL AFTER TASK-DATA-01 / NOT STARTED**
+Status: **DEFERRED / NOT STARTED**
 
 TASK-002B does not depend on live API completion. It may use the current deterministic demo evidence while keeping formulas transparent, representing unavailable evidence explicitly and avoiding claims about unverified real-provider coverage.
 

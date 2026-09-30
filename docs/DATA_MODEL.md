@@ -110,13 +110,13 @@ Server routes validate explicit consent and keep `HENRIK_API_KEY` outside the br
 
 Phase 1 stores the sanitized envelope under `goblin-survey:real-dataset:v1` in localStorage. The value has schema version 1, import timestamp and exactly one normalized `REAL` dataset. Malformed, wrong-mode or identifier-bearing values are removed and the app falls back to Demo. Removing the dataset from `#/connect` immediately returns the app to Demo after reload.
 
-No database or server-side player persistence exists. Cross-device shared rankings and scheduled synchronization require TASK-DATA-01.
+TASK-DATA-01A now provides server-side player, self-asserted consent and normalized evidence persistence. The public frontend deliberately still uses the browser-local REAL envelope; cross-device reads, historical synchronization and deletion execution require later tasks.
 
 `src/dataSources/thirdParty/henrikV4.ts` now contains a sanitized structural summarizer. A bounded consenting audit observed the field families documented in `docs/REAL_DATA_FIELD_AUDIT.md`; it did not store raw payloads or identifier values and does not prove lifetime completeness.
 
-## Proposed Neon schema (design only)
+## Neon durable evidence schema
 
-TASK-DATA-01 should use UUID primary keys, UTC timestamps, foreign keys, row-level access boundaries and explicit schema/derivation versions. This schema is not implemented in the current repository.
+Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Production configuration status is tracked separately from the committed schema. See `docs/DATABASE.md` for migration, identity and transaction semantics.
 
 | Table | Required purpose and key fields |
 |---|---|
@@ -136,13 +136,11 @@ TASK-DATA-01 should use UUID primary keys, UTC timestamps, foreign keys, row-lev
 | `kill_assistants` | kill event and assistant player key |
 | `event_player_locations` | kill event, observed player key and coordinates; optional high-volume retention |
 | `rank_observations` | player, observed timestamp, season, tier/RR/Elo, match fingerprint when present |
-| `metric_evidence` | entity/grain, metric key, availability class, source and reconstruction version |
-| `metric_values` | versioned derived value, numerator/denominator, sample size and calculation trace reference |
 | `deletion_jobs` | consent/player scope, requested/completed timestamps, status and audit result |
 
-Provider match IDs and PUUIDs must be converted to keyed server identifiers for deduplication and joins. Public APIs expose only application UUIDs. Scores do not belong in ingestion tables; they are derived from versioned evidence.
+Provider match IDs and PUUIDs are converted to domain-separated keyed HMACs for deduplication and joins. Non-consenting players use match-scoped HMACs and do not receive player records. Public application UUIDs are independent random values. Recoverable encrypted provider identity columns exist but remain null until a separate encryption design is reviewed. Scores do not belong in ingestion tables; they are derived from versioned evidence.
 
-## Initial backfill design
+## Initial backfill design — DATA-01B, not started
 
 1. Require active consent and membership, then open a `sync_runs` row.
 2. Fetch bounded v4 history windows newest-to-oldest with `size` and `start`.
@@ -153,7 +151,7 @@ Provider match IDs and PUUIDs must be converted to keyed server identifiers for 
 
 Backfill is idempotent by keyed provider-match fingerprint plus source schema version. A failed page leaves the previous cursor unchanged and records a retryable sync result.
 
-## Incremental sync design
+## Incremental sync design — DATA-01B, not started
 
 - Start from `start=0`, move backward until reaching the latest committed boundary, and deduplicate every match.
 - Re-fetch a small overlap window so late corrections can update completed matches.
@@ -162,7 +160,7 @@ Backfill is idempotent by keyed provider-match fingerprint plus source schema ve
 - Separate ingestion from metric reconstruction; queue changed internal match IDs rather than recalculating the whole dataset synchronously.
 - Expose `lastSuccessfulSyncAt`, coverage dates, stale/error status and source limitations through a sanitized read API.
 
-## Revocation and deletion design
+## Revocation and deletion design — DATA-01C, not started
 
 Revocation immediately blocks new provider calls and creates an idempotent deletion job. In one auditable workflow it removes or anonymizes provider identity, match participation, derived metrics, rank observations and caches belonging only to the revoked player. Shared match facts needed by other consenting members may remain only after unlinking the revoked identity and proving that no public or operator-facing path can re-identify it. The job invalidates dataset caches and records counts, completion time and policy version without copying deleted identifiers into logs.
 

@@ -38,7 +38,8 @@
 
 ## Current stage
 
-- TASK-001, TASK-002A, TASK-003, TASK-API-02 and TASK-API-02.1 are complete. The next recommended task is TASK-DATA-01; TASK-002B and Synergy remain incomplete and must not start implicitly. Read `docs/REAL_DATA_FIELD_AUDIT.md`, `docs/CODE_MAP.md`, `docs/PRODUCTION_ARCHITECTURE.md`, `docs/DATA_MODEL.md`, and `docs/TASKS.md` before changing data, synchronization, provider or scoring boundaries.
+- TASK-DATA-01A's migration and durable persistence implementation exists; production Neon validation may still be pending. TASK-DATA-01B history, TASK-DATA-01C deletion execution, DATA-02 runtime rebase, TASK-002B and Synergy must not start implicitly. Read `docs/DATABASE.md`, `docs/REAL_DATA_FIELD_AUDIT.md`, `docs/CODE_MAP.md`, `docs/PRODUCTION_ARCHITECTURE.md`, `docs/DATA_MODEL.md`, and `docs/TASKS.md` before changing data, synchronization, provider or scoring boundaries.
+- Keep `DATABASE_URL`, `IDENTIFIER_HMAC_KEY`, provider identifiers and raw match IDs server-only. Never run migrations from browser code or return database/provider identifiers through public APIs.
 - Never treat stored-match results as complete lifetime history. Persist coverage windows, evidence availability and derivation versions explicitly.
 - Keep display rounding in `src/utils/format.ts` and `src/analytics/presentation.ts`; do not reduce calculation precision to format UI values.
 - Stay within the requested task. Record later ideas under the roadmap instead of silently expanding scope.
