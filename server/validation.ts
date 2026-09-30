@@ -1,7 +1,7 @@
 import { PublicApiError } from './errors.js';
 import { supportedAffinities, type ConnectionInput, type ImportLimit, type MatchImportInput, type ValorantAffinity } from './contracts.js';
 
-const allowedLimits = new Set<number>([3, 10, 20, 30]);
+const allowedLimits = new Set<number>([1, 3, 10, 20, 30]);
 
 function hasControlCharacter(value: string): boolean {
   return [...value].some((character) => {
@@ -53,7 +53,7 @@ export function parseMatchImportInput(value: unknown): MatchImportInput {
   const body = asRecord(value);
   const connection = parseConnectionInput(body);
   if (typeof body.limit !== 'number' || !Number.isInteger(body.limit) || !allowedLimits.has(body.limit)) {
-    throw new PublicApiError(400, 'BAD_REQUEST', '匯入場數只接受 10、20 或 30；受控驗證可使用 3。');
+    throw new PublicApiError(400, 'BAD_REQUEST', '匯入場數只接受 10、20 或 30；受控驗證可使用 1 或 3。');
   }
   return { ...connection, limit: body.limit as ImportLimit };
 }

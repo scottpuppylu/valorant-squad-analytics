@@ -68,6 +68,10 @@ describe('production connection validation', () => {
     expect(() => parseMatchImportInput({ ...connection, limit: 999 })).toThrowError(expect.objectContaining({ code: 'BAD_REQUEST' }));
   });
 
+  it('accepts the single-match production validation limit', () => {
+    expect(parseMatchImportInput({ ...connection, limit: 1 }).limit).toBe(1);
+  });
+
   it('rejects missing consent at the HTTP boundary before provider access', async () => {
     let status = 0;
     let payload: unknown;

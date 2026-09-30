@@ -3,7 +3,7 @@ import type { HenrikCapabilitySummary } from '../src/dataSources/thirdParty/henr
 
 export const supportedAffinities = ['ap', 'eu', 'na', 'kr', 'latam', 'br'] as const;
 export type ValorantAffinity = (typeof supportedAffinities)[number];
-export type ImportLimit = 3 | 10 | 20 | 30;
+export type ImportLimit = 1 | 3 | 10 | 20 | 30;
 
 export interface ConnectionInput {
   gameName: string;
