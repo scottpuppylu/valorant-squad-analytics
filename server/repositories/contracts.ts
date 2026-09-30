@@ -9,8 +9,13 @@ export interface ConnectedPlayerInput {
   displayTag: string;
 }
 
+export interface ConnectedPlayerRecord {
+  id: string;
+  publicId: string;
+}
+
 export interface PlayerRepository {
-  upsertConnectedPlayer(transaction: SqlExecutor, input: ConnectedPlayerInput): Promise<string>;
+  upsertConnectedPlayer(transaction: SqlExecutor, input: ConnectedPlayerInput): Promise<ConnectedPlayerRecord>;
 }
 
 export interface ConsentRepository {

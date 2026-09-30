@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { SqlExecutor } from '../db/types.js';
 import type { DurableMatchEvidence } from '../evidence/types.js';
-import type { ConnectedPlayerInput, ConsentRepository, MatchEvidenceRepository, PlayerRepository, RankRepository, SyncRepository } from './contracts.js';
+import type { ConnectedPlayerInput, ConnectedPlayerRecord, ConsentRepository, MatchEvidenceRepository, PlayerRepository, RankRepository, SyncRepository } from './contracts.js';
 
 export const DEFAULT_SQUAD_ID = '00000000-0000-4000-8000-000000000001';
 
 type IdRow = { id: string };
+type PlayerIdRow = IdRow & { public_id: string };
 type ParticipantIdRow = IdRow & { participant_lookup_hmac: string };
 
 function valuePlaceholders(rowCount: number, columnCount: number): string {
@@ -28,17 +29,18 @@ export async function ensureDefaultSquad(transaction: SqlExecutor): Promise<stri
 }
 
 export class PostgresPlayerRepository implements PlayerRepository {
-  async upsertConnectedPlayer(transaction: SqlExecutor, input: ConnectedPlayerInput): Promise<string> {
-    const existing = await transaction.query<IdRow>(
-      `SELECT p.id FROM players p JOIN provider_identities i ON i.player_id = p.id
+  async upsertConnectedPlayer(transaction: SqlExecutor, input: ConnectedPlayerInput): Promise<ConnectedPlayerRecord> {
+    const existing = await transaction.query<PlayerIdRow>(
+      `SELECT p.id, p.public_id FROM players p JOIN provider_identities i ON i.player_id = p.id
        WHERE i.provider = $1 AND i.affinity = $2 AND i.lookup_hmac = $3`,
       [input.provider, input.affinity, input.identityLookupHmac],
     );
     const playerId = existing.rows[0]?.id ?? randomUUID();
+    const publicId = existing.rows[0]?.public_id ?? randomUUID();
     if (existing.rows.length === 0) {
       await transaction.query(
         `INSERT INTO players (id, public_id, display_name, display_tag) VALUES ($1, $2, $3, $4)`,
-        [playerId, randomUUID(), input.displayName, input.displayTag],
+        [playerId, publicId, input.displayName, input.displayTag],
       );
       await transaction.query(
         `INSERT INTO provider_identities (id, player_id, provider, affinity, lookup_hmac)
@@ -54,7 +56,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
        ON CONFLICT (squad_id, player_id) DO UPDATE SET status = 'active', left_at = NULL`,
       [randomUUID(), squadId, playerId],
     );
-    return playerId;
+    return { id: playerId, publicId };
   }
 }
 

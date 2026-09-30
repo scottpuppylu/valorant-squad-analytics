@@ -23,6 +23,10 @@ interface ProviderOptions {
   durableWriter?: DurableEvidenceWriter;
 }
 
+export interface HistoricalMatchProvider {
+  fetchHistoryPage(input: ConnectionInput, start: number, size: number): Promise<unknown>;
+}
+
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
@@ -134,14 +138,17 @@ export class HenrikDataProvider implements ValorantDataProvider {
     if (typeof data.name !== 'string' || typeof data.tag !== 'string') {
       throw new PublicApiError(502, 'MALFORMED_PROVIDER_RESPONSE', '資料服務回應缺少可用的帳號資料。');
     }
+    let publicPlayerId: string | undefined;
     if (this.durableWriter) {
       if (typeof data.puuid !== 'string' || data.puuid.length === 0) {
         throw new PublicApiError(502, 'MALFORMED_PROVIDER_RESPONSE', '資料服務回應缺少可用的帳號資料。');
       }
-      await this.durableWriter.persistConnection(input, data.puuid, this.now().toISOString());
+      const durable = await this.durableWriter.persistConnection(input, data.puuid, this.now().toISOString());
+      publicPlayerId = durable.publicPlayerId;
     }
     return {
       account: {
+        ...(publicPlayerId ? { playerId: publicPlayerId } : {}),
         gameName: data.name,
         tag: data.tag,
         affinity: input.affinity,
@@ -177,6 +184,13 @@ export class HenrikDataProvider implements ValorantDataProvider {
       })}\n`);
     }
     return { dataset, importedMatches: dataset.matches.length, importedAt: this.now().toISOString() };
+  }
+
+  async fetchHistoryPage(input: ConnectionInput, start: number, size: number): Promise<unknown> {
+    return this.request(
+      `/valorant/v4/matches/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`,
+      { size: String(size), start: String(start) },
+    );
   }
 
   async auditEvidence(input: MatchImportInput): Promise<ProviderEvidenceAuditResult> {

@@ -99,6 +99,24 @@ describe('durable database and consent foundation', () => {
     ]));
   });
 
+  it('applies immutable migration 0002 once with durable cursor, lease, coverage, and retry state', async () => {
+    const versions = await database.query<{ version: string; applied: string }>(
+      `SELECT version,count(*)::text AS applied FROM schema_migrations GROUP BY version ORDER BY version`,
+    );
+    expect(versions.rows).toEqual([
+      { version: '0001', applied: '1' },
+      { version: '0002', applied: '1' },
+    ]);
+    const cursorColumns = await database.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns WHERE table_name='sync_cursors'`,
+    );
+    expect(cursorColumns.rows.map((row) => row.column_name)).toEqual(expect.arrayContaining([
+      'sync_kind', 'last_successful_page', 'last_page_fingerprint_hmac', 'last_error_category',
+      'next_attempt_at', 'coverage_complete_for_provider_window', 'coverage_incomplete_reason',
+      'lease_token', 'lease_expires_at',
+    ]));
+  });
+
   it('enforces database uniqueness independently of application checks', async () => {
     await database.query(`INSERT INTO squads (id, slug, display_name) VALUES ('00000000-0000-4000-8000-000000000001','unique-squad','Unique')`);
     await expect(database.query(`INSERT INTO squads (id, slug, display_name) VALUES ('00000000-0000-4000-8000-000000000002','unique-squad','Duplicate')`)).rejects.toThrow();

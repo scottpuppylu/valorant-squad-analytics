@@ -8,6 +8,7 @@ import { withImportLock } from '../server/importLock';
 import { normalizeHenrikMatches } from '../server/normalizeHenrik';
 import { enforceRateLimit, resetRateLimitsForTests } from '../server/rateLimit';
 import { parseConnectionInput, parseMatchImportInput } from '../server/validation';
+import { parseSyncContinueInput, parseSyncStartInput, parseSyncStatusQuery } from '../server/validation';
 import { ValorantBackendClient } from '../src/dataSources/server/ValorantBackendClient';
 
 const connection = { gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true } as const;
@@ -20,12 +21,19 @@ const deployedServerModules = [
   'api/valorant/matches/import.ts',
   'api/valorant/provider/status.ts',
   'api/valorant/provider/audit.ts',
+  'api/valorant/sync/start.ts',
+  'api/valorant/sync/continue.ts',
+  'api/valorant/sync/status.ts',
   'server/contracts.ts',
   'server/henrikDataProvider.ts',
   'server/http.ts',
   'server/importLock.ts',
   'server/normalizeHenrik.ts',
   'server/rateLimit.ts',
+  'server/sync/historicalSyncService.ts',
+  'server/sync/postgresSyncStore.ts',
+  'server/sync/runtime.ts',
+  'server/sync/types.ts',
   'server/validation.ts',
 ];
 
@@ -81,6 +89,16 @@ describe('production connection validation', () => {
 
   it('accepts the single-match production validation limit', () => {
     expect(parseMatchImportInput({ ...connection, limit: 1 }).limit).toBe(1);
+  });
+
+  it('accepts only opaque public application UUIDs at the sync boundary', () => {
+    const playerId = '11111111-1111-4111-8111-111111111111';
+    const runId = '22222222-2222-4222-8222-222222222222';
+    expect(parseSyncStartInput({ playerId, kind: 'backfill' })).toEqual({ playerId, kind: 'backfill' });
+    expect(parseSyncContinueInput({ runId })).toEqual({ runId });
+    expect(parseSyncStatusQuery(runId)).toBe(runId);
+    expect(() => parseSyncStartInput({ gameName: 'not-accepted', tag: 'TW', kind: 'backfill' })).toThrowError(expect.objectContaining({ code: 'BAD_REQUEST' }));
+    expect(() => parseSyncContinueInput({ runId: 'provider-match-id' })).toThrowError(expect.objectContaining({ code: 'BAD_REQUEST' }));
   });
 
   it('distinguishes a platform timeout from an unavailable provider', async () => {

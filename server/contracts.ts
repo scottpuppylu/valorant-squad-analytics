@@ -17,6 +17,7 @@ export interface MatchImportInput extends ConnectionInput {
 }
 
 export interface SanitizedAccount {
+  playerId?: string;
   gameName: string;
   tag: string;
   affinity: ValorantAffinity;
@@ -66,6 +67,7 @@ export interface ValorantDataProvider {
 export interface ApiRequest {
   method?: string;
   body?: unknown;
+  query?: Record<string, string | string[] | undefined>;
   headers: Record<string, string | string[] | undefined>;
   socket?: { remoteAddress?: string };
 }
