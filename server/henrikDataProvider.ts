@@ -9,6 +9,8 @@ import {
 import type { AccountResolutionResult, ConnectionInput, MatchImportInput, MatchImportResult, ProviderAuditEndpoint, ProviderEvidenceAuditResult, ProviderStatus, ValorantDataProvider } from './contracts.js';
 import { PublicApiError } from './errors.js';
 import { normalizeHenrikMatches } from './normalizeHenrik.js';
+import type { DurableEvidenceWriter } from './persistence/durableEvidenceService.js';
+import { createDurableEvidenceWriter } from './persistence/runtime.js';
 
 type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
@@ -18,6 +20,7 @@ interface ProviderOptions {
   retries?: number;
   delay?: (milliseconds: number) => Promise<void>;
   now?: () => Date;
+  durableWriter?: DurableEvidenceWriter;
 }
 
 function delay(milliseconds: number): Promise<void> {
@@ -63,6 +66,7 @@ export class HenrikDataProvider implements ValorantDataProvider {
   private readonly retries: number;
   private readonly wait: (milliseconds: number) => Promise<void>;
   private readonly now: () => Date;
+  private readonly durableWriter: DurableEvidenceWriter | undefined;
 
   constructor(private readonly apiKey: string | undefined, options: ProviderOptions = {}) {
     this.fetchImpl = options.fetchImpl ?? fetch;
@@ -70,6 +74,7 @@ export class HenrikDataProvider implements ValorantDataProvider {
     this.retries = options.retries ?? 1;
     this.wait = options.delay ?? delay;
     this.now = options.now ?? (() => new Date());
+    this.durableWriter = options.durableWriter;
   }
 
   status(): ProviderStatus {
@@ -129,6 +134,12 @@ export class HenrikDataProvider implements ValorantDataProvider {
     if (typeof data.name !== 'string' || typeof data.tag !== 'string') {
       throw new PublicApiError(502, 'MALFORMED_PROVIDER_RESPONSE', '資料服務回應缺少可用的帳號資料。');
     }
+    if (this.durableWriter) {
+      if (typeof data.puuid !== 'string' || data.puuid.length === 0) {
+        throw new PublicApiError(502, 'MALFORMED_PROVIDER_RESPONSE', '資料服務回應缺少可用的帳號資料。');
+      }
+      await this.durableWriter.persistConnection(input, data.puuid, this.now().toISOString());
+    }
     return {
       account: {
         gameName: data.name,
@@ -145,6 +156,7 @@ export class HenrikDataProvider implements ValorantDataProvider {
       { size: String(input.limit) },
     );
     const dataset = normalizeHenrikMatches(payload, input);
+    if (this.durableWriter) await this.durableWriter.persistMatches(input, payload, this.now().toISOString());
     return { dataset, importedMatches: dataset.matches.length, importedAt: this.now().toISOString() };
   }
 
@@ -200,5 +212,5 @@ export class HenrikDataProvider implements ValorantDataProvider {
 }
 
 export function createHenrikDataProvider(): HenrikDataProvider {
-  return new HenrikDataProvider(process.env.HENRIK_API_KEY);
+  return new HenrikDataProvider(process.env.HENRIK_API_KEY, { durableWriter: createDurableEvidenceWriter() });
 }
