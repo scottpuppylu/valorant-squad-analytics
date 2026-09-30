@@ -49,11 +49,11 @@ describe('browser-local consent management credential repository', () => {
   const playerId = '11111111-1111-4111-8111-111111111111';
   const managementCredential = 'A'.repeat(43);
 
-  it('stores the sensitive credential separately and removes it on revocation cleanup', () => {
+  it('stores the active credential separately and removes it only on explicit cleanup', () => {
     const storage = memoryStorage();
     const repository = new BrowserConsentCredentialRepository(storage);
     repository.save(playerId, managementCredential, '2026-09-30T00:00:00.000Z');
-    expect(repository.load()).toMatchObject({ playerId, managementCredential });
+    expect(repository.load()).toMatchObject({ schemaVersion: 2, playerId, managementCredential, revocationAccepted: false });
     expect(storage.values.has(realDatasetStorageKey)).toBe(false);
     repository.remove();
     expect(storage.values.has(consentCredentialStorageKey)).toBe(false);
@@ -65,5 +65,17 @@ describe('browser-local consent management credential repository', () => {
     storage.setItem(consentCredentialStorageKey, JSON.stringify({ schemaVersion: 1, playerId, managementCredential: 'short', savedAt: 'never' }));
     expect(repository.load()).toBeNull();
     expect(storage.values.has(consentCredentialStorageKey)).toBe(false);
+  });
+
+  it('migrates a valid v1 active credential without losing deletion authority', () => {
+    const storage = memoryStorage();
+    storage.setItem(consentCredentialStorageKey, JSON.stringify({
+      schemaVersion: 1, playerId, managementCredential, savedAt: '2026-09-30T00:00:00.000Z',
+    }));
+    const repository = new BrowserConsentCredentialRepository(storage);
+    expect(repository.load()).toMatchObject({
+      schemaVersion: 2, playerId, managementCredential, revocationAccepted: false,
+    });
+    expect(JSON.parse(storage.values.get(consentCredentialStorageKey)!)).toMatchObject({ schemaVersion: 2 });
   });
 });

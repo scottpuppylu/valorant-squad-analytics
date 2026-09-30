@@ -4,15 +4,20 @@ import { activeDataset } from '../data/analytics';
 import { removeBrowserRealDataset, saveBrowserRealDataset } from '../dataSources/real/BrowserRealDatasetRepository';
 import {
   loadBrowserConsentCredential,
-  removeBrowserConsentCredential,
   saveBrowserConsentCredential,
   type StoredConsentCredential,
 } from '../dataSources/real/BrowserConsentCredentialRepository';
+import {
+  acceptBrowserRevocation,
+  checkBrowserDeletionStatus,
+  continueBrowserDeletion,
+  type DeletionSessionUpdate,
+} from '../dataSources/real/BrowserDeletionSessionService';
 import { BackendApiError, valorantBackendClient } from '../dataSources/server/ValorantBackendClient';
-import type { Affinity, ConnectionRequest, ImportSize, PublicAccount, PublicSyncProgress } from '../dataSources/server/contracts';
+import type { Affinity, ConnectionRequest, ImportSize, PublicAccount, PublicDeletionProgress, PublicSyncProgress } from '../dataSources/server/contracts';
 
 type ProviderState = 'checking' | 'configured' | 'unconfigured' | 'unavailable';
-type FlowState = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'ACCOUNT_NOT_FOUND' | 'RATE_LIMITED' | 'PROVIDER_ERROR' | 'NO_MATCHES' | 'IMPORTING' | 'IMPORT_COMPLETE' | 'SYNCING' | 'REVOCING' | 'REVOKED';
+type FlowState = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'ACCOUNT_NOT_FOUND' | 'RATE_LIMITED' | 'PROVIDER_ERROR' | 'NO_MATCHES' | 'IMPORTING' | 'IMPORT_COMPLETE' | 'SYNCING' | 'REVOCING' | 'DELETION_WORKING' | 'REVOKED';
 
 const affinities: Array<{ value: Affinity; label: string }> = [
   { value: 'ap', label: '亞太（ap）' }, { value: 'kr', label: '韓國（kr）' }, { value: 'eu', label: '歐洲（eu）' },
@@ -35,9 +40,11 @@ export function ConnectPage() {
   const [message, setMessage] = useState('');
   const [syncProgress, setSyncProgress] = useState<PublicSyncProgress | null>(null);
   const [storedCredential, setStoredCredential] = useState<StoredConsentCredential | null>(() => loadBrowserConsentCredential());
+  const [deletionProgress, setDeletionProgress] = useState<PublicDeletionProgress | null>(null);
   const [revokeConfirmation, setRevokeConfirmation] = useState(false);
   const [revoked, setRevoked] = useState(false);
   const requestActive = useRef(false);
+  const deletionSessionActive = storedCredential?.revocationAccepted === true;
 
   useEffect(() => {
     let active = true;
@@ -47,9 +54,16 @@ export function ConnectPage() {
     return () => { active = false; };
   }, []);
 
+  useEffect(() => {
+    if (!deletionSessionActive || activeDataset.mode !== 'REAL') return;
+    removeBrowserRealDataset();
+    window.location.hash = '#/connect';
+    window.location.reload();
+  }, [deletionSessionActive]);
+
   async function resolveAccount(event: FormEvent) {
     event.preventDefault();
-    if (requestActive.current || !form.consent) return;
+    if (requestActive.current || !form.consent || storedCredential?.revocationAccepted) return;
     requestActive.current = true;
     setFlow('CONNECTING');
     setMessage('');
@@ -71,7 +85,7 @@ export function ConnectPage() {
   }
 
   async function importMatches() {
-    if (requestActive.current || !account?.playerId || !form.consent) return;
+    if (requestActive.current || !account?.playerId || !form.consent || storedCredential?.revocationAccepted) return;
     requestActive.current = true;
     setFlow('IMPORTING');
     setMessage('');
@@ -96,7 +110,7 @@ export function ConnectPage() {
   }
 
   async function syncAvailableHistory() {
-    if (requestActive.current || !account?.playerId) return;
+    if (requestActive.current || !account?.playerId || storedCredential?.revocationAccepted) return;
     requestActive.current = true;
     setFlow('SYNCING');
     setMessage('');
@@ -129,30 +143,66 @@ export function ConnectPage() {
     window.location.reload();
   }
 
+  function applyDeletionUpdate(update: DeletionSessionUpdate) {
+    setDeletionProgress(update.deletion);
+    setStoredCredential(update.session);
+    setRevoked(true);
+    setAccount(null);
+    setForm((current) => ({ ...current, consent: false }));
+    setRevokeConfirmation(false);
+    setFlow('REVOKED');
+    setMessage(update.deletion.status === 'complete'
+      ? '伺服器資料已完成刪除或匿名化；本機真實資料、刪除工作狀態與管理憑證已清除。'
+      : '撤回已接受並停止同步；本機真實資料已清除，刪除專用憑證會保留到伺服器工作完成。');
+  }
+
   async function revokeConsent() {
     if (requestActive.current || !storedCredential) return;
     requestActive.current = true;
     setFlow('REVOCING');
     setMessage('');
     const sensitiveCredential = storedCredential.managementCredential;
+    let accepted = false;
     try {
-      let result = await valorantBackendClient.revokeConsent(storedCredential.playerId, sensitiveCredential);
-      removeBrowserRealDataset();
-      removeBrowserConsentCredential();
-      setStoredCredential(null);
-      setRevoked(true);
-      for (let attempt = 0; attempt < 3 && result.deletion.status === 'paused'; attempt += 1) {
-        result = await valorantBackendClient.continueDeletion(result.deletion.jobId, sensitiveCredential);
-      }
-      setFlow('REVOKED');
-      setMessage(result.deletion.status === 'complete'
-        ? '已撤回同意；伺服器資料已完成刪除或匿名化，本機真實資料與管理憑證也已清除。'
-        : '已撤回同意並停止同步；伺服器正在以可續跑工作完成刪除或匿名化。本機資料與管理憑證已清除。');
-      setAccount(null);
-      setForm((current) => ({ ...current, consent: false }));
-      setRevokeConfirmation(false);
+      const result = await valorantBackendClient.revokeConsent(storedCredential.playerId, sensitiveCredential);
+      accepted = true;
+      applyDeletionUpdate(acceptBrowserRevocation(storedCredential.playerId, sensitiveCredential, result.deletion));
+      window.location.hash = '#/connect';
+      window.location.reload();
     } catch (error) {
       const safe = error instanceof BackendApiError ? error : new BackendApiError('PROVIDER_ERROR', '撤回同意失敗，尚未清除本機資料。');
+      if (accepted) {
+        removeBrowserRealDataset();
+        setRevoked(true);
+        setFlow('REVOKED');
+        setMessage('伺服器已接受撤回並停止同步，但瀏覽器無法保存刪除工作狀態。請保持此頁面並聯絡管理員。');
+      } else {
+        setFlow('PROVIDER_ERROR');
+        setMessage(safe.message);
+      }
+    } finally {
+      requestActive.current = false;
+    }
+  }
+
+  async function recoverDeletion(action: 'status' | 'continue') {
+    if (requestActive.current || !storedCredential?.revocationAccepted) return;
+    requestActive.current = true;
+    setFlow('DELETION_WORKING');
+    setMessage('');
+    try {
+      const update = action === 'status'
+        ? await checkBrowserDeletionStatus()
+        : await continueBrowserDeletion();
+      if (!update) {
+        setStoredCredential(loadBrowserConsentCredential());
+        setFlow('PROVIDER_ERROR');
+        setMessage('找不到可續跑的本機刪除工作狀態。');
+        return;
+      }
+      applyDeletionUpdate(update);
+    } catch (error) {
+      const safe = error instanceof BackendApiError ? error : new BackendApiError('PROVIDER_ERROR', '暫時無法更新資料刪除進度，憑證仍安全保留。');
       setFlow('PROVIDER_ERROR');
       setMessage(safe.message);
     } finally {
@@ -160,7 +210,7 @@ export function ConnectPage() {
     }
   }
 
-  const busy = flow === 'CONNECTING' || flow === 'IMPORTING' || flow === 'SYNCING' || flow === 'REVOCING';
+  const busy = flow === 'CONNECTING' || flow === 'IMPORTING' || flow === 'SYNCING' || flow === 'REVOCING' || flow === 'DELETION_WORKING';
   const providerLabel = provider === 'checking' ? '檢查中' : provider === 'configured' ? '可使用' : provider === 'unconfigured' ? '尚未設定' : '此部署未提供';
 
   return (
@@ -170,7 +220,7 @@ export function ConnectPage() {
         <span className="provider-status" data-status={provider === 'configured' ? 'ready' : 'unavailable'}>API 連線：{providerLabel}</span>
       </header>
 
-      {activeDataset.mode === 'REAL' && !revoked ? (
+      {activeDataset.mode === 'REAL' && !revoked && !deletionSessionActive ? (
         <section className="surface-card connect-panel">
           <p className="metric-label">目前資料來源</p>
           <h2>真實戰績已啟用</h2>
@@ -179,6 +229,27 @@ export function ConnectPage() {
         </section>
       ) : null}
 
+      {deletionSessionActive ? (
+        <section className="surface-card connect-panel deletion-progress-panel" aria-live="polite">
+          <p className="metric-label">同意已撤回</p>
+          <h2>資料刪除處理中</h2>
+          <p>本機真實戰績已清除。這個瀏覽器只保留刪除工作識別碼與刪除專用憑證，不會用於重新連接或同步戰績。</p>
+          <dl className="deletion-progress-grid">
+            <div><dt>目前狀態</dt><dd>{deletionProgress?.status ?? '等待查詢'}</dd></div>
+            <div><dt>目前階段</dt><dd>{deletionProgress?.stage ?? '已保存，可安全續跑'}</dd></div>
+            <div><dt>執行次數</dt><dd>{deletionProgress?.progress.attempts ?? '—'}</dd></div>
+          </dl>
+          <div className="connect-actions">
+            <button className="button-secondary" type="button" disabled={busy} onClick={() => void recoverDeletion('status')}>
+              {flow === 'DELETION_WORKING' ? '查詢中…' : '檢查刪除狀態'}
+            </button>
+            <button className="button-primary" type="button" disabled={busy} onClick={() => void recoverDeletion('continue')}>
+              {flow === 'DELETION_WORKING' ? '處理中…' : '繼續刪除'}
+            </button>
+          </div>
+          <p className="connect-notice">只有伺服器回報 complete 後，本機才會銷毀刪除專用憑證並重新開放連接流程。</p>
+        </section>
+      ) : (
       <div className="connect-grid">
         <form className="surface-card connect-panel" onSubmit={resolveAccount}>
           <div><p className="metric-label">第一步</p><h2>確認玩家帳號</h2><p>台灣玩家通常使用亞太（ap）；若帳號所屬不同，可自行修正。</p></div>
@@ -196,6 +267,7 @@ export function ConnectPage() {
           <p>本站只會把 Riot ID、Tag、區域與本次同意送往自己的同源後端。</p>
         </aside>
       </div>
+      )}
 
       {account ? (
         <section className="surface-card connect-panel">
@@ -215,7 +287,7 @@ export function ConnectPage() {
         </section>
       ) : null}
 
-      {storedCredential ? (
+      {storedCredential && !storedCredential.revocationAccepted ? (
         <section className="surface-card connect-panel consent-management-panel">
           <p className="metric-label">同意管理</p>
           <h2>取消參與哥布林大調查</h2>
