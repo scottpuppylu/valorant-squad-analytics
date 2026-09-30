@@ -6,6 +6,17 @@ import type { ConnectedPlayerInput, ConsentRepository, MatchEvidenceRepository, 
 export const DEFAULT_SQUAD_ID = '00000000-0000-4000-8000-000000000001';
 
 type IdRow = { id: string };
+type ParticipantIdRow = IdRow & { participant_lookup_hmac: string };
+
+function valuePlaceholders(rowCount: number, columnCount: number): string {
+  return Array.from({ length: rowCount }, (_, rowIndex) => (
+    `(${Array.from({ length: columnCount }, (_value, columnIndex) => `$${rowIndex * columnCount + columnIndex + 1}`).join(',')})`
+  )).join(',');
+}
+
+function flattenRows(rows: unknown[][]): unknown[] {
+  return rows.flatMap((row) => row);
+}
 
 export async function ensureDefaultSquad(transaction: SqlExecutor): Promise<string> {
   await transaction.query(
@@ -86,79 +97,121 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
         evidence.startedAt ?? null, evidence.gameLengthMs ?? null, observedAt],
     );
 
-    for (const team of evidence.teams) {
+    const teamRows = evidence.teams.map((team) => [
+      randomUUID(), sourceMatchId, team.teamKey, team.won ?? null, team.roundsWon ?? null, team.roundsLost ?? null,
+    ]);
+    if (teamRows.length > 0) {
       await transaction.query(
-        `INSERT INTO match_teams (id, source_match_id, team_key, won, rounds_won, rounds_lost) VALUES ($1,$2,$3,$4,$5,$6)
-         ON CONFLICT (source_match_id, team_key) DO UPDATE SET won=EXCLUDED.won, rounds_won=EXCLUDED.rounds_won, rounds_lost=EXCLUDED.rounds_lost`,
-        [randomUUID(), sourceMatchId, team.teamKey, team.won ?? null, team.roundsWon ?? null, team.roundsLost ?? null],
+        `INSERT INTO match_teams (id, source_match_id, team_key, won, rounds_won, rounds_lost)
+         VALUES ${valuePlaceholders(teamRows.length, 6)}
+         ON CONFLICT (source_match_id, team_key) DO UPDATE SET
+           won=EXCLUDED.won, rounds_won=EXCLUDED.rounds_won, rounds_lost=EXCLUDED.rounds_lost`,
+        flattenRows(teamRows),
       );
     }
 
-    const participantIds = new Map<string, string>();
-    for (const participant of evidence.participants) {
-      const linkedPlayerId = participant.providerIdentityHmac ? playerId : null;
-      const id = await upsertId(transaction,
+    const participantRows = evidence.participants.map((participant) => [
+      randomUUID(), sourceMatchId, participant.providerIdentityHmac ? playerId : null, participant.lookupHmac,
+      participant.teamKey, participant.agentId ?? null, participant.agentName ?? null, participant.status,
+      participant.kills ?? null, participant.deaths ?? null, participant.assists ?? null, participant.score ?? null,
+      participant.damageDealt ?? null, participant.damageReceived ?? null, participant.headshots ?? null,
+      participant.bodyshots ?? null, participant.legshots ?? null,
+    ]);
+    const participantResult = participantRows.length === 0
+      ? { rows: [] as ParticipantIdRow[] }
+      : await transaction.query<ParticipantIdRow>(
         `INSERT INTO match_participants (
-          id, source_match_id, player_id, participant_lookup_hmac, team_key, agent_id, agent_name, stats_evidence_status,
-          kills, deaths, assists, score, damage_dealt, damage_received, headshots, bodyshots, legshots
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
-        ON CONFLICT (source_match_id, participant_lookup_hmac) DO UPDATE SET
-          player_id=COALESCE(EXCLUDED.player_id, match_participants.player_id), team_key=EXCLUDED.team_key,
-          agent_id=EXCLUDED.agent_id, agent_name=EXCLUDED.agent_name, stats_evidence_status=EXCLUDED.stats_evidence_status,
-          kills=EXCLUDED.kills, deaths=EXCLUDED.deaths, assists=EXCLUDED.assists, score=EXCLUDED.score,
-          damage_dealt=EXCLUDED.damage_dealt, damage_received=EXCLUDED.damage_received,
-          headshots=EXCLUDED.headshots, bodyshots=EXCLUDED.bodyshots, legshots=EXCLUDED.legshots RETURNING id`,
-        [randomUUID(), sourceMatchId, linkedPlayerId, participant.lookupHmac, participant.teamKey, participant.agentId ?? null,
-          participant.agentName ?? null, participant.status, participant.kills ?? null, participant.deaths ?? null,
-          participant.assists ?? null, participant.score ?? null, participant.damageDealt ?? null, participant.damageReceived ?? null,
-          participant.headshots ?? null, participant.bodyshots ?? null, participant.legshots ?? null],
+           id, source_match_id, player_id, participant_lookup_hmac, team_key, agent_id, agent_name, stats_evidence_status,
+           kills, deaths, assists, score, damage_dealt, damage_received, headshots, bodyshots, legshots
+         ) VALUES ${valuePlaceholders(participantRows.length, 17)}
+         ON CONFLICT (source_match_id, participant_lookup_hmac) DO UPDATE SET
+           player_id=COALESCE(EXCLUDED.player_id, match_participants.player_id), team_key=EXCLUDED.team_key,
+           agent_id=EXCLUDED.agent_id, agent_name=EXCLUDED.agent_name, stats_evidence_status=EXCLUDED.stats_evidence_status,
+           kills=EXCLUDED.kills, deaths=EXCLUDED.deaths, assists=EXCLUDED.assists, score=EXCLUDED.score,
+           damage_dealt=EXCLUDED.damage_dealt, damage_received=EXCLUDED.damage_received,
+           headshots=EXCLUDED.headshots, bodyshots=EXCLUDED.bodyshots, legshots=EXCLUDED.legshots
+         RETURNING id, participant_lookup_hmac`,
+        flattenRows(participantRows),
       );
-      participantIds.set(participant.lookupHmac, id);
-    }
+    const participantIds = new Map(participantResult.rows.map((row) => [row.participant_lookup_hmac, row.id]));
 
     await transaction.query('DELETE FROM rounds WHERE source_match_id = $1', [sourceMatchId]);
-    for (const round of evidence.rounds) {
-      const roundId = await upsertId(transaction,
+    const preparedRounds = evidence.rounds.map((round) => ({ id: randomUUID(), round }));
+    const roundRows = preparedRounds.map(({ id, round }) => [
+      id, sourceMatchId, round.number, round.winningTeam ?? null, round.result ?? null, round.plantStatus,
+      round.plantParticipantHmac ? participantIds.get(round.plantParticipantHmac) ?? null : null, round.plantTimeMs ?? null,
+      round.defuseStatus, round.defuseParticipantHmac ? participantIds.get(round.defuseParticipantHmac) ?? null : null,
+      round.defuseTimeMs ?? null,
+    ]);
+    if (roundRows.length > 0) {
+      await transaction.query(
         `INSERT INTO rounds (id, source_match_id, round_number, winning_team, result, plant_status, plant_participant_id, plant_time_ms, defuse_status, defuse_participant_id, defuse_time_ms)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
-        [randomUUID(), sourceMatchId, round.number, round.winningTeam ?? null, round.result ?? null, round.plantStatus,
-          round.plantParticipantHmac ? participantIds.get(round.plantParticipantHmac) ?? null : null, round.plantTimeMs ?? null,
-          round.defuseStatus, round.defuseParticipantHmac ? participantIds.get(round.defuseParticipantHmac) ?? null : null, round.defuseTimeMs ?? null],
+         VALUES ${valuePlaceholders(roundRows.length, 11)}`,
+        flattenRows(roundRows),
       );
-      for (const item of round.participants) {
-        const participantId = participantIds.get(item.participantHmac);
-        if (!participantId) continue;
-        await transaction.query(
-          `INSERT INTO round_participants (id, round_id, match_participant_id, stats_evidence_status, kills, score, loadout_evidence_status, loadout_value, remaining_credits, weapon_evidence_status, weapon_id, weapon_name, armor_evidence_status, armor_id, armor_name)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
-          [randomUUID(), roundId, participantId, item.statsStatus, item.kills ?? null, item.score ?? null, item.loadoutStatus,
-            item.loadoutValue ?? null, item.remainingCredits ?? null, item.weaponStatus, item.weaponId ?? null, item.weaponName ?? null,
-            item.armorStatus, item.armorId ?? null, item.armorName ?? null],
-        );
+    }
+
+    const roundParticipantRows = preparedRounds.flatMap(({ id: roundId, round }) => round.participants.flatMap((item) => {
+      const participantId = participantIds.get(item.participantHmac);
+      return participantId ? [[
+        randomUUID(), roundId, participantId, item.statsStatus, item.kills ?? null, item.score ?? null, item.loadoutStatus,
+        item.loadoutValue ?? null, item.remainingCredits ?? null, item.weaponStatus, item.weaponId ?? null, item.weaponName ?? null,
+        item.armorStatus, item.armorId ?? null, item.armorName ?? null,
+      ]] : [];
+    }));
+    if (roundParticipantRows.length > 0) {
+      await transaction.query(
+        `INSERT INTO round_participants (id, round_id, match_participant_id, stats_evidence_status, kills, score, loadout_evidence_status, loadout_value, remaining_credits, weapon_evidence_status, weapon_id, weapon_name, armor_evidence_status, armor_id, armor_name)
+         VALUES ${valuePlaceholders(roundParticipantRows.length, 15)}`,
+        flattenRows(roundParticipantRows),
+      );
+    }
+
+    const preparedKills = preparedRounds.flatMap(({ id: roundId, round }) => round.kills.flatMap((kill) => {
+      const killerId = participantIds.get(kill.killerHmac);
+      const victimId = participantIds.get(kill.victimHmac);
+      return killerId && victimId ? [{ id: randomUUID(), roundId, kill, killerId, victimId }] : [];
+    }));
+    const killRows = preparedKills.map(({ id, roundId, kill, killerId, victimId }) => [
+      id, sourceMatchId, roundId, kill.lookupHmac, kill.sequence, kill.timeInRoundMs, kill.timeInMatchMs ?? null,
+      killerId, victimId, kill.weaponId ?? null, kill.weaponName ?? null, kill.location?.x ?? null, kill.location?.y ?? null,
+    ]);
+    if (killRows.length > 0) {
+      await transaction.query(
+        `INSERT INTO kill_events (id, source_match_id, round_id, event_lookup_hmac, event_sequence, time_in_round_ms, time_in_match_ms, killer_participant_id, victim_participant_id, weapon_id, weapon_name, location_x, location_y)
+         VALUES ${valuePlaceholders(killRows.length, 13)}`,
+        flattenRows(killRows),
+      );
+    }
+
+    const assistantRows = preparedKills.flatMap(({ id: killId, kill }) => [...new Set(kill.assistantHmacs)].flatMap((assistant) => {
+      const assistantId = participantIds.get(assistant);
+      return assistantId ? [[killId, assistantId]] : [];
+    }));
+    if (assistantRows.length > 0) {
+      await transaction.query(
+        `INSERT INTO kill_assistants (kill_event_id, match_participant_id)
+         VALUES ${valuePlaceholders(assistantRows.length, 2)} ON CONFLICT DO NOTHING`,
+        flattenRows(assistantRows),
+      );
+    }
+
+    const locationsByParticipant = new Map<string, unknown[]>();
+    for (const { id: killId, kill } of preparedKills) {
+      for (const location of kill.playerLocations) {
+        const locationPlayerId = participantIds.get(location.participantHmac);
+        if (locationPlayerId) locationsByParticipant.set(`${killId}:${locationPlayerId}`, [killId, locationPlayerId, location.x, location.y]);
       }
-      for (const kill of round.kills) {
-        const killerId = participantIds.get(kill.killerHmac); const victimId = participantIds.get(kill.victimHmac);
-        if (!killerId || !victimId) continue;
-        const killId = await upsertId(transaction,
-          `INSERT INTO kill_events (id, source_match_id, round_id, event_lookup_hmac, event_sequence, time_in_round_ms, time_in_match_ms, killer_participant_id, victim_participant_id, weapon_id, weapon_name, location_x, location_y)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-           ON CONFLICT (source_match_id, event_lookup_hmac) DO UPDATE SET time_in_round_ms=EXCLUDED.time_in_round_ms RETURNING id`,
-          [randomUUID(), sourceMatchId, roundId, kill.lookupHmac, kill.sequence, kill.timeInRoundMs, kill.timeInMatchMs ?? null,
-            killerId, victimId, kill.weaponId ?? null, kill.weaponName ?? null, kill.location?.x ?? null, kill.location?.y ?? null],
-        );
-        for (const assistant of new Set(kill.assistantHmacs)) {
-          const assistantId = participantIds.get(assistant);
-          if (assistantId) await transaction.query('INSERT INTO kill_assistants (kill_event_id, match_participant_id) VALUES ($1,$2) ON CONFLICT DO NOTHING', [killId, assistantId]);
-        }
-        for (const location of kill.playerLocations) {
-          const locationPlayerId = participantIds.get(location.participantHmac);
-          if (locationPlayerId) await transaction.query(
-            `INSERT INTO event_player_locations (kill_event_id, match_participant_id, location_x, location_y) VALUES ($1,$2,$3,$4)
-             ON CONFLICT (kill_event_id, match_participant_id) DO UPDATE SET location_x=EXCLUDED.location_x, location_y=EXCLUDED.location_y`,
-            [killId, locationPlayerId, location.x, location.y],
-          );
-        }
-      }
+    }
+    const locationRows = [...locationsByParticipant.values()];
+    if (locationRows.length > 0) {
+      await transaction.query(
+        `INSERT INTO event_player_locations (kill_event_id, match_participant_id, location_x, location_y)
+         VALUES ${valuePlaceholders(locationRows.length, 4)}
+         ON CONFLICT (kill_event_id, match_participant_id) DO UPDATE SET
+           location_x=EXCLUDED.location_x, location_y=EXCLUDED.location_y`,
+        flattenRows(locationRows),
+      );
     }
     return sourceMatchId;
   }

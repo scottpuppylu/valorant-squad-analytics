@@ -151,12 +151,31 @@ export class HenrikDataProvider implements ValorantDataProvider {
   }
 
   async importMatches(input: MatchImportInput): Promise<MatchImportResult> {
+    const totalStarted = performance.now();
+    const providerStarted = performance.now();
     const payload = await this.request(
       `/valorant/v4/matches/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`,
       { size: String(input.limit) },
     );
+    const providerFetchMs = Math.round(performance.now() - providerStarted);
+    const publicNormalizationStarted = performance.now();
     const dataset = normalizeHenrikMatches(payload, input);
-    if (this.durableWriter) await this.durableWriter.persistMatches(input, payload, this.now().toISOString());
+    const publicNormalizationMs = Math.round(performance.now() - publicNormalizationStarted);
+    const durableWrite = this.durableWriter
+      ? await this.durableWriter.persistMatches(input, payload, this.now().toISOString())
+      : undefined;
+    if (durableWrite?.performance) {
+      process.stdout.write(`${JSON.stringify({
+        event: 'durable_import_performance',
+        providerFetchMs,
+        publicNormalizationMs,
+        durableNormalizationMs: durableWrite.performance.normalizationMs,
+        dbTransactionMs: durableWrite.performance.dbTransactionMs,
+        totalRequestMs: Math.round(performance.now() - totalStarted),
+        sqlQueryCount: durableWrite.performance.sqlQueryCount,
+        evidenceCounts: durableWrite.performance.evidenceCounts,
+      })}\n`);
+    }
     return { dataset, importedMatches: dataset.matches.length, importedAt: this.now().toISOString() };
   }
 
