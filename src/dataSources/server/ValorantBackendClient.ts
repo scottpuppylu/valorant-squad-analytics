@@ -6,6 +6,8 @@ import type {
   ImportSize,
   ProviderPublicErrorCode,
   ProviderStatusResponse,
+  SyncKind,
+  SyncResponse,
 } from './contracts';
 
 export class BackendApiError extends Error {
@@ -52,6 +54,18 @@ export class ValorantBackendClient {
 
   importMatches(input: ConnectionRequest, limit: ImportSize): Promise<ImportResponse> {
     return requestJson('/api/valorant/matches/import', post({ ...input, limit }));
+  }
+
+  startSync(playerId: string, kind: SyncKind): Promise<SyncResponse> {
+    return requestJson('/api/valorant/sync/start', post({ playerId, kind }));
+  }
+
+  continueSync(runId: string): Promise<SyncResponse> {
+    return requestJson('/api/valorant/sync/continue', post({ runId }));
+  }
+
+  syncStatus(runId: string): Promise<SyncResponse> {
+    return requestJson(`/api/valorant/sync/status?runId=${encodeURIComponent(runId)}`);
   }
 }
 

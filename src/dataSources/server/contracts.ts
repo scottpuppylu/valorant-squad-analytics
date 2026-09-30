@@ -9,6 +9,11 @@ export type ProviderPublicErrorCode =
   | 'NO_MATCHES'
   | 'RATE_LIMITED'
   | 'IMPORT_IN_PROGRESS'
+  | 'LOCK_BUSY'
+  | 'CONSENT_REVOKED'
+  | 'SYNC_NOT_FOUND'
+  | 'SYNC_BACKOFF'
+  | 'DATABASE_ERROR'
   | 'PROVIDER_TIMEOUT'
   | 'PROVIDER_ERROR'
   | 'MALFORMED_PROVIDER_RESPONSE';
@@ -24,6 +29,7 @@ export interface ConnectionRequest {
 }
 
 export interface PublicAccount {
+  playerId?: string;
   gameName: string;
   tag: string;
   affinity: Affinity;
@@ -45,6 +51,45 @@ export interface ImportResponse {
   dataset: NormalizedAnalyticsDataset;
   importedMatches: number;
   importedAt: string;
+}
+
+export type SyncKind = 'backfill' | 'incremental';
+export type SyncStatus = 'pending' | 'running' | 'paused' | 'complete' | 'failed' | 'cancelled';
+
+export interface PublicSyncProgress {
+  runId: string;
+  kind: SyncKind;
+  status: SyncStatus;
+  progress: {
+    pages: number;
+    matchesSeen: number;
+    matchesPersisted: number;
+    overlapsUpdated: number;
+    retries: number;
+  };
+  coverage: {
+    from?: string;
+    to?: string;
+    lastSyncedAt?: string;
+    completeForProviderWindow: boolean;
+    incompleteReason?: string;
+  };
+  terminationReason?: string;
+  lastErrorCategory?: string;
+  nextAttemptAt?: string;
+  performance: {
+    providerFetchMs: number;
+    normalizationMs: number;
+    databaseMs: number;
+    totalMs: number;
+    sqlQueryCount: number;
+    providerRequests: number;
+  };
+}
+
+export interface SyncResponse {
+  ok: true;
+  sync: PublicSyncProgress;
 }
 
 export interface ErrorResponse {

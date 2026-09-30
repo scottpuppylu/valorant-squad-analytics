@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import { activeDataset } from '../data/analytics';
 import { removeBrowserRealDataset, saveBrowserRealDataset } from '../dataSources/real/BrowserRealDatasetRepository';
 import { BackendApiError, valorantBackendClient } from '../dataSources/server/ValorantBackendClient';
-import type { Affinity, ConnectionRequest, ImportSize, PublicAccount } from '../dataSources/server/contracts';
+import type { Affinity, ConnectionRequest, ImportSize, PublicAccount, PublicSyncProgress } from '../dataSources/server/contracts';
 
 type ProviderState = 'checking' | 'configured' | 'unconfigured' | 'unavailable';
-type FlowState = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'ACCOUNT_NOT_FOUND' | 'RATE_LIMITED' | 'PROVIDER_ERROR' | 'NO_MATCHES' | 'IMPORTING' | 'IMPORT_COMPLETE';
+type FlowState = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'ACCOUNT_NOT_FOUND' | 'RATE_LIMITED' | 'PROVIDER_ERROR' | 'NO_MATCHES' | 'IMPORTING' | 'IMPORT_COMPLETE' | 'SYNCING';
 
 const affinities: Array<{ value: Affinity; label: string }> = [
   { value: 'ap', label: '亞太（ap）' }, { value: 'kr', label: '韓國（kr）' }, { value: 'eu', label: '歐洲（eu）' },
@@ -27,6 +27,7 @@ export function ConnectPage() {
   const [account, setAccount] = useState<PublicAccount | null>(null);
   const [limit, setLimit] = useState<ImportSize>(10);
   const [message, setMessage] = useState('');
+  const [syncProgress, setSyncProgress] = useState<PublicSyncProgress | null>(null);
   const requestActive = useRef(false);
 
   useEffect(() => {
@@ -81,6 +82,29 @@ export function ConnectPage() {
     }
   }
 
+  async function syncAvailableHistory() {
+    if (requestActive.current || !account?.playerId) return;
+    requestActive.current = true;
+    setFlow('SYNCING');
+    setMessage('');
+    try {
+      const result = syncProgress && syncProgress.status !== 'complete'
+        ? await valorantBackendClient.continueSync(syncProgress.runId)
+        : await valorantBackendClient.startSync(account.playerId, syncProgress?.status === 'complete' ? 'incremental' : 'backfill');
+      setSyncProgress(result.sync);
+      setFlow('CONNECTED');
+      setMessage(result.sync.status === 'complete'
+        ? `同步完成：已處理 ${result.sync.progress.matchesSeen} 場目前資料來源可取得的紀錄。`
+        : `已完成 ${result.sync.progress.pages} 個安全區塊；可繼續從已保存的進度同步。`);
+    } catch (error) {
+      const safe = error instanceof BackendApiError ? error : new BackendApiError('PROVIDER_ERROR', '歷史同步失敗，已保存先前進度。');
+      setFlow(stateForError(safe));
+      setMessage(safe.message);
+    } finally {
+      requestActive.current = false;
+    }
+  }
+
   function openImportedDataset() {
     window.location.hash = '#/';
     window.location.reload();
@@ -92,7 +116,7 @@ export function ConnectPage() {
     window.location.reload();
   }
 
-  const busy = flow === 'CONNECTING' || flow === 'IMPORTING';
+  const busy = flow === 'CONNECTING' || flow === 'IMPORTING' || flow === 'SYNCING';
   const providerLabel = provider === 'checking' ? '檢查中' : provider === 'configured' ? '可使用' : provider === 'unconfigured' ? '尚未設定' : '此部署未提供';
 
   return (
@@ -134,6 +158,16 @@ export function ConnectPage() {
           <p className="metric-label">帳號已確認</p><h2>{account.gameName}#{account.tag}</h2><p>區域：{account.affinity}{account.accountLevel === undefined ? '' : ` · 帳號等級 ${account.accountLevel}`}</p>
           <label>匯入最近戰績<select value={limit} disabled={busy} onChange={(event) => setLimit(Number(event.target.value) as ImportSize)}><option value={1}>1 場（最小資料）</option><option value={10}>10 場</option><option value={20}>20 場</option><option value={30}>30 場</option></select></label>
           <button className="button-primary" type="button" disabled={busy || !form.consent} onClick={importMatches}>{flow === 'IMPORTING' ? '匯入中…' : '匯入最近戰績'}</button>
+          {account.playerId ? (
+            <div className="connect-history-sync">
+              <p className="metric-label">持久化歷史同步</p>
+              <p>每次只處理一個安全區塊，進度會保存；範圍僅代表目前資料供應商可取得的歷史紀錄，不代表完整生涯。</p>
+              <button className="button-secondary" type="button" disabled={busy} onClick={syncAvailableHistory}>
+                {flow === 'SYNCING' ? '同步中…' : syncProgress?.status === 'paused' ? '繼續同步下一區塊' : syncProgress?.status === 'complete' ? '檢查新增或修正紀錄' : '開始歷史同步'}
+              </button>
+              {syncProgress ? <p>區塊 {syncProgress.progress.pages} · 已處理 {syncProgress.progress.matchesSeen} 場 · 重疊更新 {syncProgress.progress.overlapsUpdated} 場</p> : null}
+            </div>
+          ) : null}
         </section>
       ) : null}
 
