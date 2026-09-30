@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
-const forbidden = 'HENRIK_API_KEY';
+const forbidden = ['HENRIK_API_KEY', 'DATABASE_URL', 'IDENTIFIER_HMAC_KEY'];
 const textExtensions = new Set(['.js', '.css', '.html', '.map', '.ts', '.tsx']);
 
 async function walk(directory) {
@@ -16,8 +16,10 @@ async function walk(directory) {
 async function assertAbsent(directory) {
   const files = (await walk(directory)).filter((file) => textExtensions.has(extname(file)));
   for (const file of files) {
-    if ((await readFile(file, 'utf8')).includes(forbidden)) {
-      throw new Error(`Server-only environment variable name found in browser artifact: ${file}`);
+    const source = await readFile(file, 'utf8');
+    const exposed = forbidden.find((name) => source.includes(name));
+    if (exposed) {
+      throw new Error(`Server-only environment variable name ${exposed} found in browser artifact: ${file}`);
     }
   }
 }

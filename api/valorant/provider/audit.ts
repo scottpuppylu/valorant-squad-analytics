@@ -6,6 +6,7 @@ import { clientKey, readJsonBody, requireMethod, secureJson, sendError } from '.
 import { withImportLock } from '../../../server/importLock.js';
 import { enforceRateLimit } from '../../../server/rateLimit.js';
 import { parseMatchImportInput } from '../../../server/validation.js';
+import { assertProviderAuditAllowed } from '../../../server/providerAuditAccess.js';
 
 function auditLockKey(client: string, gameName: string, tag: string): string {
   return createHash('sha256').update(`audit|${client}|${gameName.toLowerCase()}|${tag.toLowerCase()}`).digest('hex');
@@ -15,6 +16,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   secureJson(response);
   try {
     requireMethod(request, 'POST');
+    assertProviderAuditAllowed();
     const client = clientKey(request);
     enforceRateLimit(`audit:${client}`, Date.now(), 1);
     const input = parseMatchImportInput(readJsonBody(request));
