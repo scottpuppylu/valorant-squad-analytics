@@ -141,7 +141,9 @@ Status: **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**
 - [x] Add bounded, leased, idempotent and resumable deletion stages with safe aggregate progress.
 - [x] Delete exclusive matches; unlink and minimize the revoked participant while retaining anonymous event topology in shared matches.
 - [x] Remove rank rows, provider identity, membership, consent and sync cursor; anonymize safe sync-run aggregates and player PII.
-- [x] Add Chinese two-step revocation UX and clear the browser REAL dataset plus separately stored management credential after acceptance.
+- [x] Add Chinese two-step revocation UX; clear the browser REAL dataset immediately after acceptance while retaining a deletion-only credential/job session until server completion.
+- [x] Restore pending deletion across reload, expose status/continue controls, block provider flows locally and destroy the credential only after `complete`.
+- [x] Rotate identity-derived event HMACs for affected shared-match kills while preserving anonymous event ordering and FK topology.
 - [x] Add disposable PGlite tests for authorization, race behavior, exclusive/shared data, rank, crash rollback, stale lease, retries, re-consent and local cleanup.
 - [x] Apply `0003` to production and perform non-destructive schema/API validation.
 - [ ] Obtain explicit human confirmation immediately before revoking the current production test player.

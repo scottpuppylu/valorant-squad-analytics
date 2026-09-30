@@ -15,7 +15,11 @@ New consent receives a random 32-byte base64url management credential once. Plai
 - Credentials are never accepted in URLs and must never enter logs, Git, screenshots or reports.
 - Verification validates the fixed credential shape and uses constant-time byte comparison.
 - Malformed browser credential state is deleted instead of trusted.
-- On accepted revocation, the browser immediately removes both its REAL dataset and credential. The in-memory request credential may finish bounded continuation calls in the same page session.
+- On accepted revocation, the browser immediately removes its REAL dataset. The same local record becomes a deletion-only session containing the public player ID, public deletion-job ID, management credential and `revocationAccepted=true`; it contains no Riot ID, tag, PUUID, provider match ID or HMAC value.
+- A deletion-only credential may call only deletion status and continuation. The account/import/sync UI is unavailable while that session exists, and server consent remains the provider-access authority.
+- Pending, running, paused and retryable failed jobs retain the deletion-only credential across reload. Only a server response with `status=complete` removes the job state and credential and returns the browser to Demo/reconnect eligibility.
+
+Browser lifecycle: **active consent credential → revocation accepted → deletion-only credential/job session → deletion complete → credential destroyed**.
 
 An existing production consent created before migration `0003` has no credential. It is deliberately not auto-issued on reconnect. The operator-only `npm run consent:provision` workflow requires `DATABASE_URL`, `IDENTIFIER_HMAC_KEY`, an explicit `CONSENT_PROVISION_PLAYER_ID` and an absolute `CONSENT_PROVISION_OUTPUT_PATH` outside the repository. It updates exactly one active legacy consent and creates a new external file; the plaintext is never printed. The public app has no provisioning endpoint.
 
@@ -68,6 +72,16 @@ A shared match is retained for at least one other active consenting member. Ever
 - round presence, team key and killer/victim/assistant/plant/defuse references remain as anonymous event topology;
 - kill weapon/location evidence involving that participant is cleared.
 
+`event_lookup_hmac` originally hashes the match ID plus the killer and victim participant HMACs. A system holding both provider evidence and `IDENTIFIER_HMAC_KEY` can therefore reproduce an event key involving the revoked participant. During shared-match anonymization, each affected killer/victim event receives a fresh random 32-byte hex tombstone inside the same transaction. The database uniqueness constraint preserves uniqueness; the event row UUID, round/event sequence, timing and all foreign-key topology remain unchanged. A committed retry cannot rotate again because the participant is already unlinked from the player, while a failed batch rolls the rotation back with the rest of the transaction.
+
+Other retained identity-derived fields were reviewed as follows:
+
+- the source-match HMAC depends only on the provider match ID, not the revoked participant, and remains necessary to deduplicate shared evidence for the remaining consenting player;
+- sync boundary HMACs, coverage dates and cursors are removed in `clear_sync_metadata`;
+- locations for the revoked participant are deleted, and victim/killer location plus weapon fields are cleared on affected events;
+- assistant, plant, defuse, killer and victim relationships retain only random internal participant UUID references after `player_id` is removed and the participant lookup HMAC is randomized;
+- round presence and anonymous relationships remain because future Trade, KAST, Clutch and Impact reconstruction depends on event topology rather than provider identity.
+
 The retained structure supports trade/KAST/clutch/impact reconstruction for the remaining consenting member without a cross-match or provider identity link to the revoked person. No unavailable derived-metric table exists today; that stage is therefore a documented zero-row operation until such a table is introduced.
 
 ## Sync and rank metadata
@@ -79,7 +93,7 @@ Sync cursors are deleted. Sync runs retain only privacy-safe operational aggrega
 ## Retention, recovery and SLO
 
 - Raw provider payload retention remains off.
-- Browser REAL data and management credential are removed on accepted revocation.
+- Browser REAL data is removed immediately on accepted revocation. The management credential is retained only in the deletion session while status is pending/running/paused/retryable-failed, then destroyed automatically on `complete`.
 - Personal server evidence remains only while a deletion job is safely working or awaiting retry.
 - Operational objective: normally finish immediately for the current small dataset; otherwise resume as bounded chunks and investigate any job not complete within 24 hours.
 - Manual recovery threshold: a job still incomplete after seven days requires operator review of only safe stage/error/count state.
@@ -92,7 +106,7 @@ Re-consent is allowed only after the prior deletion job completes. Because provi
 
 ## Disposable validation matrix
 
-The PGlite suite covers credential one-time issuance, legacy no-auto-upgrade, invalid credential, atomic revocation, active and paused sync cancellation, lease release, single and multiple exclusive matches, shared-match anonymization, zero/nonzero rank removal, post-revoke provider blocking, provider-fetch race, bounded pause, stale lease recovery, worker failure rollback, repeated revoke/continue/completion, re-consent separation, child topology integrity, malformed browser storage and local credential/data removal.
+The PGlite and browser-storage suites cover credential one-time issuance, legacy v1 browser-record migration, legacy server consent no-auto-upgrade, invalid credential, atomic revocation, active and paused sync cancellation, lease release, single and multiple exclusive matches, shared-match participant/event-HMAC anonymization, idempotent retry, zero/nonzero rank removal, post-revoke provider blocking, provider-fetch race, bounded pause, stale lease recovery, worker failure rollback, repeated revoke/continue/completion, re-consent separation, child topology integrity, malformed browser deletion sessions, immediate REAL removal, reload/status recovery, paused continuation retention and credential destruction only after completion.
 
 These tests use fictional identifiers and never call Henrik or production Neon.
 

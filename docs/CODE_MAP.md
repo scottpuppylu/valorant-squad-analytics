@@ -45,6 +45,7 @@ Current limitations:
 | Public routes | `src/App.tsx`, `src/routes.ts`, `src/components/AppShell.tsx` | Hash routes and product navigation |
 | Active dataset | `src/data/analytics.ts` | Choose REAL browser envelope or Demo fallback |
 | Browser persistence | `src/dataSources/real/BrowserRealDatasetRepository.ts` | Validate, store and remove one sanitized REAL dataset |
+| Deletion recovery | `src/dataSources/real/BrowserConsentCredentialRepository.ts`, `BrowserDeletionSessionService.ts` | Migrate active credential state, persist deletion-only job recovery, clear REAL immediately and destroy credential only on completion |
 | API client | `src/dataSources/server/ValorantBackendClient.ts` | Same-origin account/import requests and public errors |
 | Server routes | `api/valorant/**` | Consent, validation, throttling and provider calls |
 | Provider adapter | `server/henrikDataProvider.ts`, `src/dataSources/thirdParty/henrikV4.ts` | Fetch, structural audit and normalization boundary |
@@ -92,8 +93,10 @@ scheduled/manual sync command
 - `server/consentManagementCredential.ts`: one-time random credential generation, domain-separated HMAC and constant-time verification.
 - `server/deletion/`: atomic revocation, deletion lease/state machine, exclusive deletion, shared-match anonymization and privacy-safe progress.
 - `api/valorant/consent/revoke.ts` and `api/valorant/deletion/*`: authenticated POST-only public boundaries.
-- `src/dataSources/real/BrowserConsentCredentialRepository.ts`: sensitive browser credential storage, separate from analytics data.
-- `src/pages/ConnectPage.tsx`: Chinese two-step confirmation and browser cleanup.
+- `src/dataSources/real/BrowserConsentCredentialRepository.ts`: versioned active/deletion-only credential record, separate from analytics data.
+- `src/dataSources/real/BrowserDeletionSessionService.ts`: immediate REAL cleanup, reload-safe status/continue and terminal credential destruction.
+- `src/pages/ConnectPage.tsx`: Chinese two-step confirmation plus pending-deletion recovery UI that hides provider access until completion.
+- Shared-match deletion rotates both participant HMACs and affected killer/victim event HMACs to random tombstones while retaining random internal UUID topology for future Trade/KAST/Clutch/Impact reconstruction.
 - `scripts/provision-consent-management.ts`: explicit operator-only legacy provisioning to a new file outside the repository; never a public route.
 - `server/deletion/retentionService.ts` and `scripts/purge-expired-deletion-audits.ts`: bounded expiry of 90-day aggregate audit and orphan-free tombstone cleanup.
 - Production destructive validation remains gated and pending.
