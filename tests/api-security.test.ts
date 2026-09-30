@@ -26,6 +26,10 @@ const deployedServerModules = [
   'server/validation.ts',
 ];
 
+const vercelConfiguration = JSON.parse(readFileSync('vercel.json', 'utf8')) as {
+  functions?: Record<string, { maxDuration?: number }>;
+};
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 }
@@ -54,6 +58,10 @@ function providerMatch() {
 }
 
 describe('production connection validation', () => {
+  it('allows bounded provider imports enough time to finish one database transaction', () => {
+    expect(vercelConfiguration.functions?.['api/**/*.ts']?.maxDuration).toBeGreaterThanOrEqual(60);
+  });
+
   it('uses Node ESM-compatible extensions throughout the deployed function graph', () => {
     for (const modulePath of deployedServerModules) {
       const source = readFileSync(modulePath, 'utf8');

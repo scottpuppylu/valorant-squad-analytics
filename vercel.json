@@ -5,7 +5,7 @@
   "outputDirectory": "dist",
   "functions": {
     "api/**/*.ts": {
-      "maxDuration": 15
+      "maxDuration": 60
     }
   },
   "headers": [
