@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import resolveHandler from '../api/valorant/account/resolve';
 import type { ApiRequest, ApiResponse, MatchImportInput } from '../server/contracts';
 import { PublicApiError } from '../server/errors';
@@ -8,9 +8,12 @@ import { withImportLock } from '../server/importLock';
 import { normalizeHenrikMatches } from '../server/normalizeHenrik';
 import { enforceRateLimit, resetRateLimitsForTests } from '../server/rateLimit';
 import { parseConnectionInput, parseMatchImportInput } from '../server/validation';
+import { ValorantBackendClient } from '../src/dataSources/server/ValorantBackendClient';
 
 const connection = { gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true } as const;
 const importInput: MatchImportInput = { ...connection, limit: 3 };
+
+afterEach(() => vi.unstubAllGlobals());
 
 const deployedServerModules = [
   'api/valorant/account/resolve.ts',
@@ -78,6 +81,14 @@ describe('production connection validation', () => {
 
   it('accepts the single-match production validation limit', () => {
     expect(parseMatchImportInput({ ...connection, limit: 1 }).limit).toBe(1);
+  });
+
+  it('distinguishes a platform timeout from an unavailable provider', async () => {
+    vi.stubGlobal('fetch', async () => new Response('Gateway Timeout', { status: 504 }));
+    await expect(new ValorantBackendClient().importMatches(connection, 1)).rejects.toMatchObject({
+      code: 'PROVIDER_TIMEOUT',
+      message: '戰績儲存逾時，資料未寫入，請稍後重試。',
+    });
   });
 
   it('rejects missing consent at the HTTP boundary before provider access', async () => {

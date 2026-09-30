@@ -21,6 +21,9 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   try {
     payload = await response.json() as T | ErrorResponse;
   } catch {
+    if (response.status === 504) {
+      throw new BackendApiError('PROVIDER_TIMEOUT', '戰績儲存逾時，資料未寫入，請稍後重試。');
+    }
     throw new BackendApiError('PROVIDER_ERROR', '此部署目前沒有可用的資料服務。');
   }
   if (!response.ok || (typeof payload === 'object' && payload !== null && 'ok' in payload && payload.ok === false)) {
