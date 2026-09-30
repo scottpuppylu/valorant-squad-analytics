@@ -69,6 +69,7 @@ scheduled/manual sync command
 
 - Implemented Neon-compatible migrations for squad, player, membership, consent, sync run/cursor, source match, participant, round, kill, economy, rank observations and deletion jobs.
 - Implemented server-only HMAC lookup identifiers, match-scoped non-member pseudonyms and one-match transactions.
+- Production Neon migration `0001` and a bounded one-match write/rewrite are verified; set-based child writes keep the measured path to 15 SQL statements and about five seconds.
 - Kept scores out of ingestion tables and kept the browser runtime active.
 
 ### TASK-DATA-01B — history and incremental sync

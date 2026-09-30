@@ -59,14 +59,20 @@ HenrikDev is an unofficial provider. A controlled structural audit observed matc
 
 The public analytics runtime still stores the sanitized normalized dataset under a versioned browser key. This remains sufficient for one player to review imported data on one browser and is deliberately not replaced in TASK-DATA-01A.
 
-TASK-DATA-01A adds an optional Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production. A read API, backfill, incremental sync, revocation cascade and frontend source-of-truth switch are not included.
+TASK-DATA-01A adds a production-validated Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production. A read API, backfill, incremental sync, revocation cascade and frontend source-of-truth switch are not included.
+
+### DATA-01A production validation
+
+The controlled production sample used one explicitly consenting account and one match. The first write completed in 5.617 seconds and the identical rewrite in 5.041 seconds. Provider fetches took 815 ms and 668 ms; durable normalization took 50 ms and 11 ms; Neon transactions took 4.724 seconds and 4.361 seconds. Each request used 15 SQL statements including transaction control after teams, participants, rounds, round participants, kills, assistants and locations were converted to set-based writes.
+
+Both writes ended with the same aggregates: one player, one active consent, one membership, one source match, two teams, ten match participants, 24 rounds, 240 round-participant rows, 177 kills and 72 assistant links. The sample contained 177 kill-coordinate rows and 240 observed economy rows. It did not contain per-player event-location evidence, so `event_player_locations` correctly remained zero. Nine non-member participants remained match-scoped and pseudonymous. Rank persistence was not part of this import path and `rank_observations` remained zero.
 
 ## Current architecture limitations
 
 - `src/data/analytics.ts` chooses the dataset at module load, so replacement requires a reload.
-- One browser-local envelope is the only real-data store; it is not shared, durable or independently backed up.
-- Import limits are fixed to 10/20/30 matches and the normalizer discards most round, kill and economy evidence after computing a few match-level values.
-- No server consent ledger, sync cursor, deletion job, retention process or cross-device authorization exists.
+- One browser-local envelope remains the only frontend real-data source; Neon evidence is durable but is not read back into the public analytics runtime yet.
+- Import limits are 1/10/20/30 matches. The browser dataset remains match-level, while the server now persists normalized round, kill and available economy/location evidence.
+- A server consent ledger and sync/deletion schema exist; cursor execution, deletion execution, retention processing and cross-device authorization do not.
 - Serverless in-memory rate limits and import locks are per-instance safeguards, not distributed coordination.
 - The public score runtime cannot identify a durable snapshot version because no dataset API exists.
 

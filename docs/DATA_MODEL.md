@@ -110,13 +110,13 @@ Server routes validate explicit consent and keep `HENRIK_API_KEY` outside the br
 
 Phase 1 stores the sanitized envelope under `goblin-survey:real-dataset:v1` in localStorage. The value has schema version 1, import timestamp and exactly one normalized `REAL` dataset. Malformed, wrong-mode or identifier-bearing values are removed and the app falls back to Demo. Removing the dataset from `#/connect` immediately returns the app to Demo after reload.
 
-TASK-DATA-01A now provides server-side player, self-asserted consent and normalized evidence persistence. The public frontend deliberately still uses the browser-local REAL envelope; cross-device reads, historical synchronization and deletion execution require later tasks.
+TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. The public frontend deliberately still uses the browser-local REAL envelope; cross-device reads, historical synchronization and deletion execution require later tasks.
 
 `src/dataSources/thirdParty/henrikV4.ts` now contains a sanitized structural summarizer. A bounded consenting audit observed the field families documented in `docs/REAL_DATA_FIELD_AUDIT.md`; it did not store raw payloads or identifier values and does not prove lifetime completeness.
 
 ## Neon durable evidence schema
 
-Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Production configuration status is tracked separately from the committed schema. See `docs/DATABASE.md` for migration, identity and transaction semantics.
+Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0001` is applied to the production Neon database. A controlled one-match production write and identical rewrite verified the relational grain, cascade replacement and duplicate constraints; see `docs/PRODUCTION_ARCHITECTURE.md` for privacy-safe timing and aggregate evidence.
 
 | Table | Required purpose and key fields |
 |---|---|

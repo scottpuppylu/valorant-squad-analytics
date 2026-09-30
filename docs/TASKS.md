@@ -97,14 +97,16 @@ TASK-API-02.1 does not implement a database, scheduled sync, new scoring formula
 
 ## Task DATA-01A — durable database and consent foundation
 
-Status: **IMPLEMENTED LOCALLY / PRODUCTION VALIDATION PENDING**
+Status: **COMPLETE**
 
 - [x] Add deterministic Neon-compatible migrations for squad, player, membership, consent, match, participant, round, event, economy, rank, sync and deletion foundations.
 - [x] Add server-only keyed identifier protection, match-scoped non-member pseudonyms and independent public application IDs.
 - [x] Add accurate `self_asserted` consent semantics and a schema path for future `riot_rso_verified` consent.
 - [x] Add normalized, idempotent, one-match transactional persistence with database constraints and disposable Postgres tests.
 - [x] Disable the provider evidence audit endpoint in production and extend the client secret-boundary scan.
-- [ ] Configure Neon in the production Vercel project, apply migration `0001`, and complete the bounded production row-count test.
+- [x] Configure Neon in the production Vercel project, apply migration `0001`, and complete the bounded production row-count and idempotency test.
+
+Production validation used one explicitly consenting account and one match. Set-based persistence completed in 5.617 seconds on the first write and 5.041 seconds on the identical second write, using 15 SQL statements including transaction control. Aggregate evidence counts were unchanged after the second write. The tested provider response supplied 177 kill locations but no per-player event-location rows; this absence remains explicit rather than fabricated.
 
 The browser-local REAL envelope remains the active frontend runtime. The foundation does not calculate final event metrics or change scoring.
 

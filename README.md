@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-003 與 TASK-API-02 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)，並在一個明確同意的帳號上完成受控、去識別化的真實資料欄位稽核。TASK-DATA-01A 的 migration、同意紀錄、HMAC 身分保護與 transactional evidence persistence 已在本機 disposable Postgres 驗證；production Neon 設定與受控 row-count 驗證仍待完成。TASK-DATA-01B、TASK-DATA-01C、DATA-02 與 TASK-002B 均未開始。
+TASK-003、TASK-API-02 與 TASK-DATA-01A 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。Production Neon 已套用 migration `0001`，並以一個明確同意的帳號完成單場 transactional evidence 寫入、相同資料重寫、HMAC 身分保護、非成員假名化與彙總 row-count 驗證。TASK-DATA-01B、TASK-DATA-01C、DATA-02 與 TASK-002B 均未開始。
 
 ## V1 原則
 
