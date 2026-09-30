@@ -252,7 +252,7 @@ export class HistoricalSyncService {
         runId: run.id,
         nextStart,
         pageNumber: Math.floor(cursor.nextStart / this.pageSize),
-        boundaryHmac: matchHmacs.at(-1),
+        boundaryHmac: matchHmacs.length > 0 ? matchHmacs[matchHmacs.length - 1] : undefined,
         fingerprintHmac,
         coverageFrom: pageCoverage.from,
         coverageTo: pageCoverage.to,
