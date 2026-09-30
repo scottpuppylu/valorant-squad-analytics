@@ -6,7 +6,7 @@ TASK-DATA-01A adds the first server-side evidence store without changing the pub
 
 Production uses `@neondatabase/serverless` and the server-only variables `DATABASE_URL` and `IDENTIFIER_HMAC_KEY`. Neither name may use a `VITE_` prefix or appear in `src/` or the browser build. CI uses in-memory PGlite and does not require production credentials.
 
-Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migrations`, applies each unapplied version in a transaction, and records its filename. Migration `0001_durable_evidence_foundation.sql` is the immutable initial schema; migration `0002_bounded_historical_sync.sql` adds executable run/cursor metrics, coverage and expiring lease state; migration `0003_consent_revocation_deletion.sql` adds consent-management HMAC, tombstone and deletion state. Production migrations are run from a trusted server/operator environment, never from React or a public endpoint. `0003` production validation is pending.
+Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migrations`, applies each unapplied version in a transaction, and records its filename. Migration `0001_durable_evidence_foundation.sql` is the immutable initial schema; migration `0002_bounded_historical_sync.sql` adds executable run/cursor metrics, coverage and expiring lease state; migration `0003_consent_revocation_deletion.sql` adds consent-management HMAC, tombstone and deletion state. Production migrations are run from a trusted server/operator environment, never from React or a public endpoint. `0003` is applied to production and its credential-protected status query was verified non-destructively; no production revocation or deletion has run.
 
 ## Identity classes
 

@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**
 
-TASK-DATA-01C implements the revocation and deletion control plane. Migration `0003_consent_revocation_deletion.sql`, API routes, UI and disposable Postgres tests exist. The current production test player has **not** been revoked or deleted. That first irreversible production action requires a separate explicit human confirmation after non-destructive validation.
+TASK-DATA-01C implements the revocation and deletion control plane. Migration `0003_consent_revocation_deletion.sql`, API routes, UI and disposable Postgres tests exist. Migration `0003` is applied to production, and a credential-protected status request using non-existent test identifiers returned the expected `DELETION_NOT_FOUND` response without changing data. The current production test player has **not** been revoked or deleted. That first irreversible production action requires a separate explicit human confirmation.
 
 This is an engineering retention policy, not a legal-compliance claim.
 

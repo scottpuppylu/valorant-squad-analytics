@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-003、TASK-API-02、TASK-DATA-01A 與 TASK-DATA-01B 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。Production Neon 目前已套用 migrations `0001` 與 `0002`。DATA-01C 撤回、匿名化與可續跑刪除已完成實作及 disposable Postgres 驗證，但 production migration `0003` 與真實測試玩家的不可逆撤回尚未執行，因此狀態是 **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**。DATA-02、TASK-METRICS-01 與 TASK-002B 均未開始。
+TASK-003、TASK-API-02、TASK-DATA-01A 與 TASK-DATA-01B 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。Production Neon 目前已套用 migrations `0001`、`0002` 與 `0003`；`0003` 的只讀狀態查詢也已完成非破壞性驗證。DATA-01C 撤回、匿名化與可續跑刪除已完成實作及 disposable Postgres 驗證，但真實測試玩家的不可逆撤回尚未執行，因此狀態是 **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**。DATA-02、TASK-METRICS-01 與 TASK-002B 均未開始。
 
 ## V1 原則
 

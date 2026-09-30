@@ -143,11 +143,11 @@ Status: **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**
 - [x] Remove rank rows, provider identity, membership, consent and sync cursor; anonymize safe sync-run aggregates and player PII.
 - [x] Add Chinese two-step revocation UX and clear the browser REAL dataset plus separately stored management credential after acceptance.
 - [x] Add disposable PGlite tests for authorization, race behavior, exclusive/shared data, rank, crash rollback, stale lease, retries, re-consent and local cleanup.
-- [ ] Apply `0003` to production and perform non-destructive schema/API validation.
+- [x] Apply `0003` to production and perform non-destructive schema/API validation.
 - [ ] Obtain explicit human confirmation immediately before revoking the current production test player.
 - [ ] Execute and record the first production destructive revocation/deletion validation.
 
-Until the final three items are completed, DATA-01C must not be reported as complete. See `docs/REVOCATION_AND_DELETION.md`.
+Until the final two destructive items are completed, DATA-01C must not be reported as complete. See `docs/REVOCATION_AND_DELETION.md`.
 
 ## Task DATA-02 — dataset runtime rebase
 
