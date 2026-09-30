@@ -1,6 +1,6 @@
 # Code map
 
-This map records the active browser runtime, the TASK-DATA-01A durable write foundation and the later runtime rebase. A committed database layer is not a claim that production migration or frontend cutover has occurred.
+This map records the active browser runtime, the production-validated TASK-DATA-01A evidence foundation, the TASK-DATA-01B durable sync path and the later runtime rebase.
 
 ## Current runtime
 
@@ -20,6 +20,14 @@ React routes/components
   -> HenrikDev v4
   -> normalizeHenrikMatches
   -> sanitized browser-local REAL dataset
+
+#/connect durable sync controls
+  -> /api/valorant/sync/start | continue | status
+  -> HistoricalSyncService
+  -> PostgresSyncStore durable cursor + expiring lease
+  -> bounded HenrikDev v4 size/start page
+  -> DurableEvidenceService per-match transactions
+  -> normalized Neon evidence + safe aggregate progress
 ```
 
 Current limitations:
@@ -27,7 +35,7 @@ Current limitations:
 - one browser owns one imported real dataset;
 - dataset selection occurs at module load and requires reload after replacement;
 - imported normalized rows discard most round, kill and economy evidence;
-- durable sync/deletion tables exist, but DATA-01B and DATA-01C execution do not;
+- durable backfill/incremental sync exists, but DATA-01C deletion execution and DATA-02 reads do not;
 - the provider audit endpoint emits only structural evidence outside production and is disabled in production.
 
 ## Current ownership
@@ -44,6 +52,7 @@ Current limitations:
 | Durable evidence normalization | `server/evidence/**` | Raw response in memory to HMAC-keyed relational evidence |
 | Database/migrations | `server/db/**`, `migrations/**`, `scripts/migrate.ts` | Neon adapter, transactions and deterministic schema versions |
 | Persistence repositories | `server/repositories/**`, `server/persistence/**` | Player, consent and one-match idempotent durable writes |
+| Historical sync | `server/sync/**`, `api/valorant/sync/**` | Run/cursor state, leases, bounded pages, retries, coverage and safe status |
 | Analytics | `src/analytics/**`, `src/utils/aggregateStats.ts` | Selection, aggregation, rankings and summaries |
 | Scoring | `src/scoring/**` | Benchmarks, category formulas, weights and confidence |
 | Presentation | `src/utils/format.ts`, `src/analytics/presentation.ts` | Display-only rounding and labels |
@@ -54,7 +63,7 @@ Current limitations:
 scheduled/manual sync command
   -> consent + membership authorization
   -> provider adapter with bounded cursor
-  -> raw-response quarantine (optional, encrypted, short retention)
+  -> raw response validated and normalized in memory, then discarded
   -> normalized relational transaction
   -> metric evidence/reconstruction jobs
   -> versioned aggregate/materialized views
@@ -74,7 +83,9 @@ scheduled/manual sync command
 
 ### TASK-DATA-01B — history and incremental sync
 
-- Not started: bounded pagination, coverage windows, retry/cursor execution and distributed coordination.
+- Complete: bounded newest-to-oldest pagination, coverage windows, retry/backoff, monotonic cursor execution and expiring Postgres lease coordination.
+- Complete: newest-overlap incremental sync, public application-ID APIs and production aggregate validation.
+- See `docs/HISTORICAL_SYNC.md` for the exact state machine, termination contract and measured capacity.
 
 ### TASK-DATA-01C — revocation execution
 

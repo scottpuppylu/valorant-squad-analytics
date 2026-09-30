@@ -6,7 +6,7 @@ TASK-DATA-01A adds the first server-side evidence store without changing the pub
 
 Production uses `@neondatabase/serverless` and the server-only variables `DATABASE_URL` and `IDENTIFIER_HMAC_KEY`. Neither name may use a `VITE_` prefix or appear in `src/` or the browser build. CI uses in-memory PGlite and does not require production credentials.
 
-Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migrations`, applies each unapplied version in a transaction, and records its filename. Migration `0001_durable_evidence_foundation.sql` is the initial schema. Production migrations are run from a trusted server/operator environment, never from React or a public endpoint.
+Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migrations`, applies each unapplied version in a transaction, and records its filename. Migration `0001_durable_evidence_foundation.sql` is the immutable initial schema; migration `0002_bounded_historical_sync.sql` adds executable run/cursor metrics, coverage and expiring lease state. Production migrations are run from a trusted server/operator environment, never from React or a public endpoint.
 
 ## Identity classes
 
@@ -34,7 +34,7 @@ Source matches are unique by provider and keyed match HMAC. Participants, active
 
 - Identity and permission: `squads`, `players`, `squad_memberships`, `provider_identities`, `consents`
 - Source evidence: `source_matches`, `match_teams`, `match_participants`, `rounds`, `round_participants`, `kill_events`, `kill_assistants`, `event_player_locations`
-- Future observation/synchronization: `rank_observations`, `sync_runs`, `sync_cursors`
+- Active bounded match synchronization: `sync_runs`, `sync_cursors`; future rank observation synchronization: `rank_observations`
 - Future revocation execution: `deletion_jobs`
 
 No scoring table is introduced. Rank/MMR evidence remains separate and is never fed into the community score by this task.

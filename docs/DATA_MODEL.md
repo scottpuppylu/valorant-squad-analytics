@@ -110,13 +110,13 @@ Server routes validate explicit consent and keep `HENRIK_API_KEY` outside the br
 
 Phase 1 stores the sanitized envelope under `goblin-survey:real-dataset:v1` in localStorage. The value has schema version 1, import timestamp and exactly one normalized `REAL` dataset. Malformed, wrong-mode or identifier-bearing values are removed and the app falls back to Demo. Removing the dataset from `#/connect` immediately returns the app to Demo after reload.
 
-TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. The public frontend deliberately still uses the browser-local REAL envelope; cross-device reads, historical synchronization and deletion execution require later tasks.
+TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. TASK-DATA-01B adds durable historical and incremental synchronization behind the same consent boundary. The public frontend deliberately still uses the browser-local REAL envelope; cross-device reads and deletion execution require later tasks.
 
 `src/dataSources/thirdParty/henrikV4.ts` now contains a sanitized structural summarizer. A bounded consenting audit observed the field families documented in `docs/REAL_DATA_FIELD_AUDIT.md`; it did not store raw payloads or identifier values and does not prove lifetime completeness.
 
 ## Neon durable evidence schema
 
-Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0001` is applied to the production Neon database. A controlled one-match production write and identical rewrite verified the relational grain, cascade replacement and duplicate constraints; see `docs/PRODUCTION_ARCHITECTURE.md` for privacy-safe timing and aggregate evidence.
+Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0002_bounded_historical_sync.sql` adds public run IDs, sync kinds, cumulative metrics, termination/error fields, cursor coverage and expiring lease fields. Both are applied to production; `0001` remains immutable. See `docs/PRODUCTION_ARCHITECTURE.md` for privacy-safe evidence.
 
 | Table | Required purpose and key fields |
 |---|---|
@@ -140,25 +140,27 @@ Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, U
 
 Provider match IDs and PUUIDs are converted to domain-separated keyed HMACs for deduplication and joins. Non-consenting players use match-scoped HMACs and do not receive player records. Public application UUIDs are independent random values. Recoverable encrypted provider identity columns exist but remain null until a separate encryption design is reviewed. Scores do not belong in ingestion tables; they are derived from versioned evidence.
 
-## Initial backfill design — DATA-01B, not started
+## Initial backfill — DATA-01B complete
 
 1. Require active consent and membership, then open a `sync_runs` row.
 2. Fetch bounded v4 history windows newest-to-oldest with `size` and `start`.
-3. Stop on an empty/short page, an already committed boundary fingerprint, a configured time horizon or a request budget.
+3. Stop on an empty/short page, repeated page fingerprint, no older unique matches or the 300-match configured horizon. Reaching the horizon is explicitly incomplete.
 4. Normalize one response in memory, upsert match/team/participant/round/event evidence in one transaction, and never log raw identifiers or payload bodies.
-5. Persist the oldest/newest covered timestamps and an explicit `coverage_incomplete` flag. Stored matches may supplement diagnostics but never establish lifetime completeness.
-6. Recompute versioned derived metrics only for changed matches and affected players.
+5. Persist oldest/newest covered timestamps, last sync time, provider-window completeness and an explicit incomplete reason.
+6. Release or expire the 45-second per-player lease so another serverless instance can resume safely.
 
 Backfill is idempotent by keyed provider-match fingerprint plus source schema version. A failed page leaves the previous cursor unchanged and records a retryable sync result.
 
-## Incremental sync design — DATA-01B, not started
+## Incremental sync — DATA-01B complete
 
 - Start from `start=0`, move backward until reaching the latest committed boundary, and deduplicate every match.
 - Re-fetch a small overlap window so late corrections can update completed matches.
 - Store provider/OpenAPI version, normalizer version and response observation time.
 - Use a per-player distributed lock, request budget, exponential backoff and provider-aware rate limits.
-- Separate ingestion from metric reconstruction; queue changed internal match IDs rather than recalculating the whole dataset synchronously.
-- Expose `lastSuccessfulSyncAt`, coverage dates, stale/error status and source limitations through a sanitized read API.
+- Keep ingestion separate from future metric reconstruction; TASK-METRICS-01 remains deferred.
+- Expose only public run IDs, aggregate progress, coverage dates, safe error classes and performance totals through the status API.
+
+Production validation observed 159 match responses over 54 chunks, six overlap updates and zero retries before `empty_page`; a later incremental run observed three existing matches and stopped at `known_boundary`. The stored range is a provider-available window, not lifetime history. Exact mechanics and capacity are in `docs/HISTORICAL_SYNC.md`.
 
 ## Revocation and deletion design — DATA-01C, not started
 

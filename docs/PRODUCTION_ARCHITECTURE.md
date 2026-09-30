@@ -8,6 +8,7 @@ Decision date: 2026-09-29
 - Same-origin provider status endpoint: deployed and verified in configured mode; the credential remains server-only.
 - GitHub Pages rollback: still active in Demo mode.
 - Live account resolution and bounded import: verified with one explicitly consenting account.
+- Durable history sync: verified with 54 bounded backfill chunks plus one newest-overlap incremental chunk.
 - Real-data field coverage: verified only for the bounded, sanitized 2026-09-30 sample documented in `REAL_DATA_FIELD_AUDIT.md`; lifetime completeness is **NOT VERIFIED**.
 
 ## Decision
@@ -59,7 +60,7 @@ HenrikDev is an unofficial provider. A controlled structural audit observed matc
 
 The public analytics runtime still stores the sanitized normalized dataset under a versioned browser key. This remains sufficient for one player to review imported data on one browser and is deliberately not replaced in TASK-DATA-01A.
 
-TASK-DATA-01A adds a production-validated Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production. A read API, backfill, incremental sync, revocation cascade and frontend source-of-truth switch are not included.
+TASK-DATA-01A adds a production-validated Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. TASK-DATA-01B migration `0002` adds executable sync state, public run IDs, aggregate performance/coverage fields and expiring leases. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production. A durable read API, revocation cascade and frontend source-of-truth switch are not included.
 
 ### DATA-01A production validation
 
@@ -72,8 +73,8 @@ Both writes ended with the same aggregates: one player, one active consent, one 
 - `src/data/analytics.ts` chooses the dataset at module load, so replacement requires a reload.
 - One browser-local envelope remains the only frontend real-data source; Neon evidence is durable but is not read back into the public analytics runtime yet.
 - Import limits are 1/10/20/30 matches. The browser dataset remains match-level, while the server now persists normalized round, kill and available economy/location evidence.
-- A server consent ledger and sync/deletion schema exist; cursor execution, deletion execution, retention processing and cross-device authorization do not.
-- Serverless in-memory rate limits and import locks are per-instance safeguards, not distributed coordination.
+- A server consent ledger and durable cursor execution exist; deletion execution, retention processing and cross-device authorization do not.
+- Historical sync uses a durable 45-second per-player Postgres lease. The older bounded-import in-memory guard remains only for its separate one-request path.
 - The public score runtime cannot identify a durable snapshot version because no dataset API exists.
 
 ## Persistence architecture
@@ -90,13 +91,19 @@ consent + membership
 
 Neon stores normalized evidence, not UI-formatted strings. Provider lookup identifiers are server-only, domain-separated HMACs. A separate nullable encrypted slot is reserved but unused. Non-consenting participants use match-scoped pseudonyms. Raw payload retention is off; a future debugging exception would require a separate encrypted, access-controlled and expiring design.
 
-## Initial backfill — DATA-01B, not started
+## Initial backfill — DATA-01B complete
 
-Backfill runs newest-to-oldest with bounded v4 `size/start` windows, a request/time budget and an unchanged cursor until each page commits. It stops on an empty or short page, a known boundary, or the configured horizon. Every match upsert is idempotent. Coverage start/end and incompleteness are product-visible; stored matches never establish lifetime completeness.
+Backfill runs newest-to-oldest with one v4 `size=3/start=N` request per invocation and a 25-second useful-work budget. The cursor advances only after all matches on the page commit independently. It stops on empty page, short page, repeated fingerprint, no older unique match, or the 300-match horizon. Empty/short pages mark the observed provider window complete; repeated/no-unique/horizon termination records an incomplete reason. Every match upsert remains HMAC-keyed and idempotent.
 
-## Incremental sync — DATA-01B, not started
+## Incremental sync — DATA-01B complete
 
-Incremental sync re-fetches a small newest overlap, deduplicates by a keyed match fingerprint, updates changed completed matches and queues only affected derivations. A durable per-player lock, provider-aware rate budget, retry state and schema/normalizer versions replace the current in-memory-only coordination.
+Incremental sync starts again at `start=0`, intentionally re-fetches the newest three matches and stops as soon as a known durable boundary is observed. This updates corrected evidence without crawling the historical window again. Each chunk re-checks active `self_asserted` consent before the provider call. Rate-limited/time-out/5xx results persist exponential backoff; database and malformed-response errors fail without cursor advance.
+
+### DATA-01B production validation
+
+The controlled production run used only the existing consenting player. Backfill issued 54 provider requests, observed 159 match responses, updated six overlaps, retried zero times and stopped on `empty_page`. The observed provider window is 2025-01-25 through 2026-09-28. The follow-up incremental request observed three already-known matches, updated those overlaps and stopped on `known_boundary`.
+
+The backfill accumulated 116.509 seconds of provider fetch time, 1.224 seconds of normalization, 371.672 seconds of database transactions, 512.581 seconds of measured service-core work and 2,394 SQL statements. A full three-match chunk averaged 9.492 seconds of service-core work. Consecutive production UI requests averaged 13.429 seconds end to end, or about 13.4 matches per minute under the conservative manual cadence. See `docs/HISTORICAL_SYNC.md` for calculation details and limitations.
 
 ## Revocation — DATA-01C, not started
 

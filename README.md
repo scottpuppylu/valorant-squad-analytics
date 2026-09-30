@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-003、TASK-API-02 與 TASK-DATA-01A 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。Production Neon 已套用 migration `0001`，並以一個明確同意的帳號完成單場 transactional evidence 寫入、相同資料重寫、HMAC 身分保護、非成員假名化與彙總 row-count 驗證。TASK-DATA-01B、TASK-DATA-01C、DATA-02 與 TASK-002B 均未開始。
+TASK-003、TASK-API-02、TASK-DATA-01A 與 TASK-DATA-01B 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。Production Neon 已套用 migrations `0001` 與 `0002`。一個明確同意的帳號已完成 54 個安全區塊的正式歷史回填與一次 newest-overlap 增量同步；涵蓋的是「目前資料供應商可取得的歷史紀錄」，不是 Riot 完整生涯。TASK-DATA-01C、DATA-02、TASK-METRICS-01 與 TASK-002B 均未開始。
 
 ## V1 原則
 
@@ -22,9 +22,9 @@ TASK-003、TASK-API-02 與 TASK-DATA-01A 已完成；Vercel 同源後端已部�
 1. 建立應用程式骨架、示範資料、儀表板與排行榜
 2. 已先完成交叉篩選、玩家比較、地圖／特務／對戰頁面與動態稱號
 3. 已完成 Vercel production deploy、受控真實 provider 稽核與欄位能力分類
-4. 以 TASK-DATA-01A 建立持久化證據底層，再分別完成 DATA-01B 回填與 DATA-01C 刪除流程
-5. 再進行 TASK-002B 的證據感知八維計分引擎
-6. Synergy 繼續保留為更後面的共用比賽分析
+4. 已以 TASK-DATA-01A 建立持久化證據底層，並以 DATA-01B 完成有界、可續跑的歷史與增量同步
+5. 下一個資料治理工作是 DATA-01C 撤回同意與刪除執行；DATA-02 前端資料源切換仍延後
+6. TASK-METRICS-01、TASK-002B 與 Synergy 繼續保留為後續工作
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
 
@@ -48,7 +48,7 @@ npm run build
 npm run db:validate
 ```
 
-`npm test` 與 CI 只使用 mock／fixture，不會呼叫真實 provider。`npm run build` 也會掃描 browser source 與 bundle，防止 server secret 名稱進入前端。
+`npm test` 與 CI 只使用 mock／fixture，不會呼叫真實 provider 或 production Neon。`npm run build` 也會掃描 browser source 與 bundle，防止 server secret 名稱進入前端。
 
 資料庫 migration 位於 `migrations/`；`npm run db:migrate` 僅可在受信任、具 server-only `DATABASE_URL` 的環境執行。`IDENTIFIER_HMAC_KEY`、`DATABASE_URL` 與 `HENRIK_API_KEY` 都不得進入 React 或 browser bundle。完整 schema、身分類型、同意與 retention 語意見 [docs/DATABASE.md](docs/DATABASE.md)。現行前端仍使用 browser-local REAL dataset；Neon 在 DATA-02 前不會取代公開分析資料源。
 
@@ -58,7 +58,7 @@ Vite 在 Vercel 使用 `/` base path，在 GitHub Pages rollback 使用 `/valora
 
 計分公式見 [docs/SCORING.md](docs/SCORING.md)，資料結構見 [docs/DATA_MODEL.md](docs/DATA_MODEL.md)，官方欄位能力見 [docs/RIOT_API_CAPABILITY.md](docs/RIOT_API_CAPABILITY.md)，未來整合前提見 [docs/RIOT_INTEGRATION_PLAN.md](docs/RIOT_INTEGRATION_PLAN.md)。
 
-production 需求見 [docs/TASK_API_02_SPEC.md](docs/TASK_API_02_SPEC.md)，真實欄位證據見 [docs/REAL_DATA_FIELD_AUDIT.md](docs/REAL_DATA_FIELD_AUDIT.md)，架構決策見 [docs/PRODUCTION_ARCHITECTURE.md](docs/PRODUCTION_ARCHITECTURE.md)，後續代碼分工見 [docs/CODE_MAP.md](docs/CODE_MAP.md)。
+production 需求見 [docs/TASK_API_02_SPEC.md](docs/TASK_API_02_SPEC.md)，真實欄位證據見 [docs/REAL_DATA_FIELD_AUDIT.md](docs/REAL_DATA_FIELD_AUDIT.md)，歷史同步契約見 [docs/HISTORICAL_SYNC.md](docs/HISTORICAL_SYNC.md)，架構決策見 [docs/PRODUCTION_ARCHITECTURE.md](docs/PRODUCTION_ARCHITECTURE.md)，後續代碼分工見 [docs/CODE_MAP.md](docs/CODE_MAP.md)。
 
 ## 安全與商標
 

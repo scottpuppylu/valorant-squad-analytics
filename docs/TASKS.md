@@ -112,9 +112,22 @@ The browser-local REAL envelope remains the active frontend runtime. The foundat
 
 ## Task DATA-01B — bounded historical backfill
 
-Status: **NOT STARTED**
+Status: **COMPLETE — SDD STRICT**
 
-Implement bounded newest-to-oldest pagination, coverage windows, retry/cursor semantics and distributed coordination. Do not infer lifetime completeness from stored matches.
+- [x] Add migration `0002_bounded_historical_sync.sql` without changing applied migration `0001`.
+- [x] Add bounded v4 `size/start` backfill with one three-match provider page per invocation and a 25-second useful-work budget.
+- [x] Persist explicit run/cursor state, coverage, retries, safe error classes and deterministic termination reasons.
+- [x] Add a 45-second expiring per-player Postgres lease so only one invocation can advance a cursor.
+- [x] Advance the cursor only after each match page commits; retain earlier pages when a later page fails.
+- [x] Add provider-aware 429/backoff behavior and no infinite retries.
+- [x] Add newest-overlap incremental sync that stops on the first known durable boundary.
+- [x] Keep raw payloads in memory only, public APIs on application UUIDs, and HMAC/provider identifiers server-only.
+- [x] Add Chinese connect-page controls for starting, resuming and checking durable sync status while keeping analytics browser-local.
+- [x] Validate production with the existing consenting player only.
+
+The production backfill executed 54 chunks and 54 provider requests, observed 159 match responses, updated six overlaps, retried zero times and terminated on an empty page. Its safely reported provider window spans 2025-01-25 through 2026-09-28. The incremental run fetched one three-match page, updated three overlaps and terminated on the known boundary. These dates describe only what the unofficial provider returned at validation time; they do not prove complete Riot lifetime history. See `docs/HISTORICAL_SYNC.md`.
+
+Rank/MMR history synchronization is **NOT IMPLEMENTED**. The observed provider schema does not provide a separately verified bounded pagination contract suitable for the same durable state machine, and match-history completion does not depend on it.
 
 ## Task DATA-01C — revocation and deletion execution
 
