@@ -113,6 +113,10 @@ The old phase-1 envelope `goblin-survey:real-dataset:v1` is retired from the act
 
 TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. TASK-DATA-01B adds durable historical and incremental synchronization behind the same consent boundary. TASK-DATA-01C provides production-validated credential-authorized revocation and durable deletion. TASK-DATA-02A adds the versioned durable read projection and explicit React runtime states; private REAL visibility remains disabled by default pending DATA-02B policy.
 
+DATA-02A.1 hardens the durable read boundary without changing this schema. Match-level `stats_evidence_status='observed'` means the provider supplied a stats object; individual nullable columns can still be missing and therefore remain `NULL`. The projection requires observed finite K/D/A, score and damage plus an agent, at least one durable round, and complete round-presence evidence before emitting a legacy-compatible `MatchPerformance`. An unusable performance is omitted, and a match with no usable visible performance is omitted. Active player profiles remain governed by consent and membership rather than by whether one match is usable.
+
+Shot-location fields preserve the same distinction: all three observed zero counts produce the valid measured `HS%=0`, while any missing head/body/leg count omits optional HS% and marks its dataset-level availability partial. Complete evidence may also legitimately produce zero kills, assists, FK, FD or KAST. Missing evidence is never converted into measured zero.
+
 `src/dataSources/thirdParty/henrikV4.ts` now contains a sanitized structural summarizer. A bounded consenting audit observed the field families documented in `docs/REAL_DATA_FIELD_AUDIT.md`; it did not store raw payloads or identifier values and does not prove lifetime completeness.
 
 ## Neon durable evidence schema
@@ -176,6 +180,9 @@ The first production validation processed 154 exclusive matches and no shared ma
 ## Missing data
 
 - Optional statistics remain `undefined`; they are not silently converted to observed zero.
+- Durable REAL performances with incomplete required compatibility evidence are omitted rather than projected with fabricated ACS, ADR or KAST values.
+- A durable match with zero usable browser-visible performances is omitted, and the dataset is `empty` when no usable matches remain.
+- Observed numeric zero remains a valid value and is not treated as missing.
 - A category renormalizes its available weights when one optional input is missing.
 - A category with no usable inputs returns the documented neutral fallback of 50.
 - A zero denominator returns a finite fallback rather than `Infinity` or `NaN`.

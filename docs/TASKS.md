@@ -173,6 +173,21 @@ Status: **COMPLETE — SDD STRICT**
 
 `REAL_DATASET_READ_MODE` remains disabled in normal production deployment, so **PRIVATE REAL DATA EXPOSED = NO**. DATA-02A prepares the read path; it does not decide who may see a private squad dataset. See `docs/DATASET_RUNTIME.md`.
 
+### Task DATA-02A.1 — evidence null semantics hardening
+
+Status: **COMPLETE — SDD STRICT**
+
+- [x] Omit a legacy-compatible performance when required stats, denominator or complete round-presence evidence is unavailable.
+- [x] Omit matches with no usable visible performance and return `empty` when no usable match remains.
+- [x] Keep a shared match when at least one active consenting member has complete evidence, without fabricating metrics for another incomplete member.
+- [x] Preserve legitimate observed zero values for combat totals, ACS, ADR, HS%, KAST, FK and FD.
+- [x] Treat nullable head/body/leg shot fields as missing evidence rather than silently converting them to zero.
+- [x] Keep KAST/FK/FD evidence `partial` when an eligible candidate is omitted for incomplete round evidence.
+- [x] Preserve schema version 1, snapshot content semantics and the existing legacy-normalizer parity fixture.
+- [x] Add disposable database and route regression tests without adding or changing a migration.
+
+This is a focused projection-correctness hardening. Production REAL visibility remains disabled, migrations `0001`–`0004` remain immutable, and DATA-02B has not started.
+
 ### Task DATA-02B — visibility, distribution and revalidation policy
 
 Status: **NOT STARTED**

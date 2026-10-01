@@ -1,6 +1,6 @@
 # Durable dataset runtime
 
-Status: **TASK-DATA-02A IMPLEMENTED — production exposure disabled by default**
+Status: **TASK-DATA-02A + DATA-02A.1 IMPLEMENTED — production exposure disabled by default**
 
 ## Boundary
 
@@ -42,14 +42,19 @@ The snapshot version hashes only browser-visible dataset, coverage and evidence 
 
 ## Compatibility projection
 
+- A browser `MatchPerformance` is emitted only when match-level stats evidence is `observed`, the agent and K/D/A/score/damage fields are observed finite numbers, at least one durable round exists, and the player has round-presence evidence for every durable round in the match.
+- Missing core or round evidence omits the performance instead of manufacturing numeric zero. A match with no usable visible performance is also omitted; active player profiles may remain visible independently.
 - `ACS = match participant score / observed durable rounds`
 - `ADR = damage dealt / observed durable rounds`
-- `HS% = headshots / (headshots + bodyshots + legshots)`; zero observed hits returns zero
+- `HS% = headshots / (headshots + bodyshots + legshots)` only when all three persisted shot counts are observed; an incomplete tuple omits optional HS% and marks its dataset evidence `partial`
+- a completely observed shot tuple whose total is zero produces the legitimate measured value `HS% = 0`
 - KAST counts a round when the player killed, assisted, survived, or was traded
 - a traded death means a teammate killed the original killer in the same round within 5,000 ms after the death
 - FK/FD uses the earliest event by round time, then durable event sequence for deterministic ties
 
-KAST/FK/FD are marked `partial` when complete round presence evidence is not available. No Trade, Clutch, Economy, Impact or Role Value scoring engine is introduced here.
+KAST/FK/FD are marked `partial` when any eligible candidate lacks complete round-presence evidence, including when that candidate is omitted and another member keeps the shared match visible. Observed numeric zeros remain zeros: zero kills, assists, score, damage, shots, FK, FD or a completely reconstructed zero KAST are not treated as missing. DATA-02A.1 changes projection correctness only; it does not change scoring formulas or introduce Trade, Clutch, Economy, Impact or Role Value.
+
+Because the snapshot hashes the corrected browser-visible dataset and evidence availability, omitting an unusable performance or match changes `snapshot.version`. The public response remains schema version 1 and no migration is required; applied migrations `0001` through `0004` remain unchanged.
 
 ## React states
 
