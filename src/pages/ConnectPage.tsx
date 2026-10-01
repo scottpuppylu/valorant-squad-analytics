@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { activeDataset } from '../data/analytics';
-import { removeBrowserRealDataset, saveBrowserRealDataset } from '../dataSources/real/BrowserRealDatasetRepository';
+import { removeBrowserRealDataset } from '../dataSources/real/BrowserRealDatasetRepository';
 import {
   loadBrowserConsentCredential,
   saveBrowserConsentCredential,
@@ -15,6 +14,7 @@ import {
 } from '../dataSources/real/BrowserDeletionSessionService';
 import { BackendApiError, valorantBackendClient } from '../dataSources/server/ValorantBackendClient';
 import type { Affinity, ConnectionRequest, ImportSize, PublicAccount, PublicDeletionProgress, PublicSyncProgress } from '../dataSources/server/contracts';
+import { useDataset } from '../hooks/useDataset';
 
 type ProviderState = 'checking' | 'configured' | 'unconfigured' | 'unavailable';
 type FlowState = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'ACCOUNT_NOT_FOUND' | 'RATE_LIMITED' | 'PROVIDER_ERROR' | 'NO_MATCHES' | 'IMPORTING' | 'IMPORT_COMPLETE' | 'SYNCING' | 'REVOCING' | 'DELETION_WORKING' | 'REVOKED';
@@ -32,6 +32,7 @@ function stateForError(error: BackendApiError): FlowState {
 }
 
 export function ConnectPage() {
+  const { dataset: activeDataset, status: datasetStatus, source: datasetSource, refresh } = useDataset();
   const [provider, setProvider] = useState<ProviderState>('checking');
   const [flow, setFlow] = useState<FlowState>('IDLE');
   const [form, setForm] = useState<ConnectionRequest>({ gameName: '', tag: '', affinity: 'ap', consent: false });
@@ -59,7 +60,7 @@ export function ConnectPage() {
     removeBrowserRealDataset();
     window.location.hash = '#/connect';
     window.location.reload();
-  }, [deletionSessionActive]);
+  }, [activeDataset.mode, deletionSessionActive]);
 
   async function resolveAccount(event: FormEvent) {
     event.preventDefault();
@@ -97,9 +98,9 @@ export function ConnectPage() {
         consent: form.consent,
       };
       const result = await valorantBackendClient.importMatches(verifiedConnection, account.playerId, limit);
-      saveBrowserRealDataset(result.dataset, result.importedAt);
+      await refresh();
       setFlow('IMPORT_COMPLETE');
-      setMessage(`已安全匯入 ${result.importedMatches} 場戰績。`);
+      setMessage(`已安全處理 ${result.importedMatches} 場戰績並要求重新讀取持久化資料。`);
     } catch (error) {
       const safe = error instanceof BackendApiError ? error : new BackendApiError('PROVIDER_ERROR', '匯入失敗，請稍後再試。');
       setFlow(stateForError(safe));
@@ -134,13 +135,6 @@ export function ConnectPage() {
 
   function openImportedDataset() {
     window.location.hash = '#/';
-    window.location.reload();
-  }
-
-  function removeImportedDataset() {
-    removeBrowserRealDataset();
-    window.location.hash = '#/connect';
-    window.location.reload();
   }
 
   function applyDeletionUpdate(update: DeletionSessionUpdate) {
@@ -220,12 +214,12 @@ export function ConnectPage() {
         <span className="provider-status" data-status={provider === 'configured' ? 'ready' : 'unavailable'}>API 連線：{providerLabel}</span>
       </header>
 
-      {activeDataset.mode === 'REAL' && !revoked && !deletionSessionActive ? (
+      {datasetSource === 'REAL_SERVER' && activeDataset.mode === 'REAL' && !revoked && !deletionSessionActive ? (
         <section className="surface-card connect-panel">
           <p className="metric-label">目前資料來源</p>
-          <h2>真實戰績已啟用</h2>
-          <p>目前瀏覽器保存 {activeDataset.players.length} 位玩家、{activeDataset.matches.length} 場已正規化戰績；Demo 與真實資料不會混合。</p>
-          <div className="connect-actions"><button className="button-primary" type="button" onClick={openImportedDataset}>查看真實戰績</button><button className="button-secondary" type="button" onClick={removeImportedDataset}>移除本機戰績並返回 Demo</button></div>
+          <h2>持久化真實戰績{datasetStatus === 'empty' ? '目前為空' : '已啟用'}</h2>
+          <p>目前由伺服器 Dataset API 提供 {activeDataset.players.length} 位有效同意玩家、{activeDataset.matches.length} 場有界戰績；完整資料集不會保存到 localStorage，也不會與 Demo 混合。</p>
+          <div className="connect-actions"><button className="button-primary" type="button" onClick={openImportedDataset}>查看戰績</button><button className="button-secondary" type="button" onClick={() => void refresh()}>重新整理資料</button></div>
         </section>
       ) : null}
 
@@ -272,8 +266,9 @@ export function ConnectPage() {
       {account ? (
         <section className="surface-card connect-panel">
           <p className="metric-label">帳號已確認</p><h2>{account.gameName}#{account.tag}</h2><p>區域：{account.affinity}{account.accountLevel === undefined ? '' : ` · 帳號等級 ${account.accountLevel}`}</p>
-          <label>匯入最近戰績<select value={limit} disabled={busy} onChange={(event) => setLimit(Number(event.target.value) as ImportSize)}><option value={1}>1 場（最小資料）</option><option value={10}>10 場</option><option value={20}>20 場</option><option value={30}>30 場</option></select></label>
-          <button className="button-primary" type="button" disabled={busy || !form.consent || !account.playerId} onClick={importMatches}>{flow === 'IMPORTING' ? '匯入中…' : '匯入最近戰績'}</button>
+          <label>先處理最近戰績<select value={limit} disabled={busy} onChange={(event) => setLimit(Number(event.target.value) as ImportSize)}><option value={1}>1 場（最小資料）</option><option value={10}>10 場</option><option value={20}>20 場</option><option value={30}>30 場</option></select></label>
+          <button className="button-primary" type="button" disabled={busy || !form.consent || !account.playerId} onClick={importMatches}>{flow === 'IMPORTING' ? '處理中…' : '保存到持久化資料庫'}</button>
+          <p className="connect-notice">舊版瀏覽器內完整 REAL dataset 已退役；這個動作只寫入伺服器持久化證據，再由 Dataset API 讀取。</p>
           {account.playerId ? (
             <div className="connect-history-sync">
               <p className="metric-label">持久化歷史同步</p>

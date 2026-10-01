@@ -7,7 +7,7 @@ import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
 import { PlayerRankingTable } from '../components/PlayerRankingTable';
 import { SectionHeading } from '../components/SectionHeading';
 import { ScoreProfileTable } from '../components/ScoreProfileTable';
-import { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } from '../data/analytics';
+import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
 import { zhTW } from '../i18n/zhTW';
 import type { ScoreCategory } from '../types/valorant';
@@ -25,13 +25,14 @@ function topCategory(entries: PerformanceEntry[]): string {
 }
 
 export function MapsPage() {
+  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } } = useDataset();
   const { filters, update, reset } = useAnalysisFilters();
   const baseFilters = useMemo(() => ({ ...filters, map: 'all' as const }), [filters]);
-  const baseSelection = useMemo(() => selectPerformances(performanceEntries, baseFilters), [baseFilters]);
+  const baseSelection = useMemo(() => selectPerformances(performanceEntries, baseFilters), [baseFilters, performanceEntries]);
   const summaries = useMemo(() => groupByMap(baseSelection.entries), [baseSelection.entries]);
   const selectedMap = (filters.map === 'all' ? (summaries[0]?.id ?? availableMaps[0]) : filters.map) as typeof filters.map;
   const selectedFilters = useMemo(() => ({ ...filters, map: selectedMap }), [filters, selectedMap]);
-  const selected = useMemo(() => selectPerformances(performanceEntries, selectedFilters), [selectedFilters]);
+  const selected = useMemo(() => selectPerformances(performanceEntries, selectedFilters), [performanceEntries, selectedFilters]);
   const rows = useMemo(() => rankPlayers(selected, filters, 'overall'), [filters, selected]);
   const agents = useMemo(() => groupByAgent(selected.entries), [selected.entries]);
   const selectedSummary = summaries.find((summary) => summary.id === selectedMap);

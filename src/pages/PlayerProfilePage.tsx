@@ -9,7 +9,7 @@ import { MetricInfo } from '../components/MetricInfo';
 import { RecentPerformance } from '../components/RecentPerformance';
 import { ScoreBadge } from '../components/ScoreBadge';
 import { SectionHeading } from '../components/SectionHeading';
-import { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } from '../data/analytics';
+import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
 import { zhTW } from '../i18n/zhTW';
 import { formatAcs, formatAdr, formatPercent, formatRatio, formatScore } from '../utils/format';
@@ -32,15 +32,16 @@ const formCopy = {
 } as const;
 
 export function PlayerProfilePage() {
+  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } } = useDataset();
   const { playerId } = useParams();
   const { filters, update, reset } = useAnalysisFilters();
   const player = activeDataset.players.find((candidate) => candidate.id === playerId);
-  const selection = useMemo(() => selectPerformances(performanceEntries, { ...filters, playerId: player?.id ?? '__missing__' }), [filters, player]);
+  const selection = useMemo(() => selectPerformances(performanceEntries, { ...filters, playerId: player?.id ?? '__missing__' }), [filters, performanceEntries, player]);
   const analytics = useMemo(() => aggregateSelection(selection)[0], [selection]);
   const entries = selection.byPlayer.get(player?.id ?? '') ?? [];
 
   if (!player) {
-    return <div className="empty-state-page"><div className="surface-card p-8 text-center"><p className="metric-label">找不到玩家</p><h1 className="mt-4 text-3xl font-semibold text-white">這個玩家連結不存在</h1><p className="mt-3 text-slate-400">請回到戰力排名選擇目前示範資料中的玩家。</p><Link className="button-primary mt-7" to="/leaderboard">返回戰力排名</Link></div></div>;
+    return <div className="empty-state-page"><div className="surface-card p-8 text-center"><p className="metric-label">找不到玩家</p><h1 className="mt-4 text-3xl font-semibold text-white">這個玩家連結不存在</h1><p className="mt-3 text-slate-400">請回到戰力排名選擇目前資料集中的玩家。</p><Link className="button-primary mt-7" to="/leaderboard">返回戰力排名</Link></div></div>;
   }
 
   const maps = groupByMap(entries);

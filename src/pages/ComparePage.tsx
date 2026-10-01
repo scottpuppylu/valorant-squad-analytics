@@ -5,7 +5,7 @@ import { aggregateSelection } from '../analytics/rankings';
 import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
 import { PlayerAvatar } from '../components/PlayerAvatar';
 import { SectionHeading } from '../components/SectionHeading';
-import { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } from '../data/analytics';
+import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
 import { zhTW } from '../i18n/zhTW';
 import type { PlayerAnalytics, ScoreCategory } from '../types/valorant';
@@ -24,10 +24,11 @@ function relativeAreas(analytics: PlayerAnalytics) {
 }
 
 export function ComparePage() {
+  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } } = useDataset();
   const { filters, update, reset, params, setParams } = useAnalysisFilters();
   const requested = (params.get('players')?.split(',').filter(Boolean) ?? activeDataset.players.slice(0, 2).map((player) => player.id)).slice(0, 4);
   const selectedIds = [...new Set(requested)].filter((id) => activeDataset.players.some((player) => player.id === id));
-  const selection = useMemo(() => selectPerformances(performanceEntries, { ...filters, playerId: 'all' }), [filters]);
+  const selection = useMemo(() => selectPerformances(performanceEntries, { ...filters, playerId: 'all' }), [filters, performanceEntries]);
   const analytics = useMemo(() => {
     try { return comparePlayers(aggregateSelection(selection), selectedIds); } catch { return []; }
   }, [selectedIds, selection]);

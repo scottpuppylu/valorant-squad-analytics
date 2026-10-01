@@ -8,19 +8,20 @@ import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
 import { BadgeGrid } from '../components/BadgeGrid';
 import { PlayerRankingTable } from '../components/PlayerRankingTable';
 import { SectionHeading } from '../components/SectionHeading';
-import { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } from '../data/analytics';
+import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
 
 const metrics = Object.keys(rankingMetricLabels) as RankingMetric[];
 
 export function LeaderboardPage() {
+  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } } = useDataset();
   const { filters, update, reset, params, setParams } = useAnalysisFilters();
   const requestedMetric = params.get('metric') as RankingMetric | null;
   const metric = requestedMetric && metrics.includes(requestedMetric) ? requestedMetric : 'overall';
   const requestedDirection = params.get('direction');
   const defaultDirection: SortDirection = lowerIsBetterMetrics.has(metric) ? 'asc' : 'desc';
   const direction: SortDirection = requestedDirection === 'asc' || requestedDirection === 'desc' ? requestedDirection : defaultDirection;
-  const selection = useMemo(() => selectPerformances(performanceEntries, filters), [filters]);
+  const selection = useMemo(() => selectPerformances(performanceEntries, filters), [filters, performanceEntries]);
   const rows = useMemo(() => rankPlayers(selection, filters, metric, direction), [direction, filters, metric, selection]);
   const insufficient = useMemo(() => insufficientPlayers(selection, filters), [filters, selection]);
   const badges = useMemo(() => computeBadges(selection, Math.max(filters.minMatches, 5), Math.max(filters.minRounds, 100)), [filters.minMatches, filters.minRounds, selection]);

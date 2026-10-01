@@ -6,21 +6,22 @@ import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
 import { PlayerRankingTable } from '../components/PlayerRankingTable';
 import { SectionHeading } from '../components/SectionHeading';
 import { ScoreProfileTable } from '../components/ScoreProfileTable';
-import { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } from '../data/analytics';
+import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
 import { zhTW } from '../i18n/zhTW';
 import type { PlayerRole } from '../types/valorant';
 import { formatAcs, formatAdr, formatPercent, formatRatio } from '../utils/format';
 
 export function AgentsPage() {
+  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } } = useDataset();
   const { filters, update, reset, params, setParams } = useAnalysisFilters();
   const view = params.get('view') === 'role' ? 'role' : 'agent';
   const baseFilters = useMemo(() => ({ ...filters, agent: 'all' as const, role: 'all' as const }), [filters]);
-  const baseSelection = useMemo(() => selectPerformances(performanceEntries, baseFilters), [baseFilters]);
+  const baseSelection = useMemo(() => selectPerformances(performanceEntries, baseFilters), [baseFilters, performanceEntries]);
   const summaries = useMemo(() => view === 'agent' ? groupByAgent(baseSelection.entries) : groupByRole(baseSelection.entries), [baseSelection.entries, view]);
   const selectedId = view === 'agent' ? (filters.agent === 'all' ? summaries[0]?.id : filters.agent) : (filters.role === 'all' ? summaries[0]?.id : filters.role);
   const selectedFilters = useMemo(() => ({ ...filters, agent: view === 'agent' ? selectedId as typeof filters.agent : 'all' as const, role: view === 'role' ? selectedId as PlayerRole : 'all' as const }), [filters, selectedId, view]);
-  const selected = useMemo(() => selectPerformances(performanceEntries, selectedFilters), [selectedFilters]);
+  const selected = useMemo(() => selectPerformances(performanceEntries, selectedFilters), [performanceEntries, selectedFilters]);
   const rows = useMemo(() => rankPlayers(selected, filters, 'overall'), [filters, selected]);
 
   function changeView(nextView: string) {

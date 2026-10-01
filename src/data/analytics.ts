@@ -1,14 +1,26 @@
-import { demoDataSource } from '../dataSources/demo/DemoDataSource';
-import { loadBrowserRealDataset } from '../dataSources/real/BrowserRealDatasetRepository';
 import { buildPlayerAnalytics } from '../scoring/calculateScores';
 import { createPerformanceEntries } from '../analytics/filters';
+import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 
-export const activeDataset = loadBrowserRealDataset()?.dataset ?? demoDataSource.snapshot();
-export const playerAnalytics = buildPlayerAnalytics(activeDataset.players, activeDataset.matches);
-export const performanceEntries = createPerformanceEntries(activeDataset);
-export const availableMaps = [...new Set(activeDataset.matches.map((match) => match.map))].sort();
-export const availableGameModes = [...new Set(activeDataset.matches.map((match) => match.gameMode))].sort();
-export const availableAgents = [...new Set(activeDataset.matches.flatMap((match) => match.performances.map((performance) => performance.agent)))].sort();
+export interface DatasetAnalytics {
+  activeDataset: NormalizedAnalyticsDataset;
+  playerAnalytics: ReturnType<typeof buildPlayerAnalytics>;
+  performanceEntries: ReturnType<typeof createPerformanceEntries>;
+  availableMaps: string[];
+  availableGameModes: string[];
+  availableAgents: string[];
+  getPlayerAnalytics(playerId: string): ReturnType<typeof buildPlayerAnalytics>[number] | undefined;
+}
 
-export const getPlayerAnalytics = (playerId: string) =>
-  playerAnalytics.find(({ player }) => player.id === playerId);
+export function buildAnalytics(activeDataset: NormalizedAnalyticsDataset): DatasetAnalytics {
+  const playerAnalytics = buildPlayerAnalytics(activeDataset.players, activeDataset.matches);
+  return {
+    activeDataset,
+    playerAnalytics,
+    performanceEntries: createPerformanceEntries(activeDataset),
+    availableMaps: [...new Set(activeDataset.matches.map((match) => match.map))].sort(),
+    availableGameModes: [...new Set(activeDataset.matches.map((match) => match.gameMode))].sort(),
+    availableAgents: [...new Set(activeDataset.matches.flatMap((match) => match.performances.map((performance) => performance.agent)))].sort(),
+    getPlayerAnalytics: (playerId: string) => playerAnalytics.find(({ player }) => player.id === playerId),
+  };
+}

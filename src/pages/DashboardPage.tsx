@@ -7,13 +7,14 @@ import { PlayerAvatar } from '../components/PlayerAvatar';
 import { RecentPerformance } from '../components/RecentPerformance';
 import { ScoreBadge } from '../components/ScoreBadge';
 import { SectionHeading } from '../components/SectionHeading';
-import { activeDataset, playerAnalytics } from '../data/analytics';
+import { useDataset } from '../hooks/useDataset';
 import { zhTW } from '../i18n/zhTW';
 import { formatPercent, formatRatio, formatScore } from '../utils/format';
 
 const ScoreRadar = lazy(() => import('../components/ScoreRadar').then((module) => ({ default: module.ScoreRadar })));
 
 export function DashboardPage() {
+  const { analytics: { activeDataset, playerAnalytics } } = useDataset();
   const [selectedPlayerId, setSelectedPlayerId] = useState(playerAnalytics[0]!.player.id);
   const selected = playerAnalytics.find(({ player }) => player.id === selectedPlayerId) ?? playerAnalytics[0]!;
   const leader = playerAnalytics[0]!;
@@ -28,7 +29,7 @@ export function DashboardPage() {
             看見完整回合，<br /><span className="text-gradient">不只看擊殺資訊。</span>
           </h1>
           <p className="mt-6 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">
-            {activeDataset.mode === 'REAL' ? '目前顯示這個瀏覽器已匯入的真實戰績；Demo 資料不會混入排名。' : '為虛構朋友小隊打造的透明、角色感知社群表現指標。每個分數都能回溯到示範對戰資料與公開公式。'}
+            {activeDataset.mode === 'REAL' ? '目前顯示伺服器持久化、已去除 provider 識別值的有界真實戰績；Demo 資料不會混入排名。' : '為虛構朋友小隊打造的透明、角色感知社群表現指標。每個分數都能回溯到示範對戰資料與公開公式。'}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link className="button-primary" to="/leaderboard">查看戰力排名</Link>
@@ -112,7 +113,7 @@ export function DashboardPage() {
         </article>
 
         <article className="surface-card p-5 sm:p-7">
-          <SectionHeading eyebrow="近期表現" title={selected.player.handle + ' · 最近六場'} description={activeDataset.mode === 'REAL' ? '目前瀏覽器最近匯入的正規化戰績；不是即時資料。' : '最新虛構對戰資料；不含即時或官方玩家資料。'} />
+          <SectionHeading eyebrow="近期表現" title={selected.player.handle + ' · 最近六場'} description={activeDataset.mode === 'REAL' ? '目前持久化資料集最近可用的有界戰績；不是即時或完整生涯資料。' : '最新虛構對戰資料；不含即時或官方玩家資料。'} />
           <RecentPerformance analytics={selected} />
         </article>
       </section>

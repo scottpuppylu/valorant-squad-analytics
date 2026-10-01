@@ -4,16 +4,17 @@ import { matchesForSelection, selectPerformances } from '../analytics/filters';
 import { gameModeLabels } from '../analytics/presentation';
 import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
 import { PlayerAvatar } from '../components/PlayerAvatar';
-import { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } from '../data/analytics';
+import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
 import { formatAcs, formatAdr, formatPercent } from '../utils/format';
 
 const pageSize = 8;
 
 export function MatchesPage() {
+  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } } = useDataset();
   const { filters, update, reset, params, setParams } = useAnalysisFilters();
-  const selection = useMemo(() => selectPerformances(performanceEntries, filters), [filters]);
-  const matches = useMemo(() => matchesForSelection(activeDataset.matches, selection), [selection]);
+  const selection = useMemo(() => selectPerformances(performanceEntries, filters), [filters, performanceEntries]);
+  const matches = useMemo(() => matchesForSelection(activeDataset.matches, selection), [activeDataset.matches, selection]);
   const requestedPage = Math.max(1, Number(params.get('page')) || 1);
   const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
   const page = Math.min(requestedPage, pageCount);
