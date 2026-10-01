@@ -1,8 +1,8 @@
 # Consent revocation and durable deletion
 
-Status: **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**
+Status: **COMPLETE — SDD STRICT**
 
-TASK-DATA-01C implements the revocation and deletion control plane. Migration `0003_consent_revocation_deletion.sql`, API routes, UI and disposable Postgres tests exist. Migration `0003` is applied to production, and a credential-protected status request using non-existent test identifiers returned the expected `DELETION_NOT_FOUND` response without changing data. The current production test player has **not** been revoked or deleted. That first irreversible production action requires a separate explicit human confirmation.
+TASK-DATA-01C implements the revocation and deletion control plane. Migration `0003_consent_revocation_deletion.sql`, API routes, UI and disposable Postgres tests exist. Migration `0003` is applied to production. After explicit human approval, the first irreversible production test-player revocation and deletion completed on 2026-10-01 using the existing service boundary.
 
 This is an engineering retention policy, not a legal-compliance claim.
 
@@ -110,10 +110,14 @@ The PGlite and browser-storage suites cover credential one-time issuance, legacy
 
 These tests use fictional identifiers and never call Henrik or production Neon.
 
-## Production approval gate
+## Production validation evidence
 
-Before the first real destructive validation, stop and request exactly:
+The approved production run first required exactly one active legacy consent and stopped if that gate was not met. Safe pre-deletion aggregates were 154 source matches, all exclusive; zero shared matches and rank rows; one provider identity, membership and consent; two sync cursors and two sync runs.
 
-> 「TASK-DATA-01C 已完成實作與非破壞性驗證。下一步會正式撤回目前測試玩家的同意，立即停止未來 Henrik 同步，並開始刪除或匿名化目前 Neon 中該玩家的歷史資料。此操作不可復原。請確認是否執行 production revocation。」
+After revocation committed, controlled manual-import, reconnect, backfill and incremental attempts all stopped before provider access; the measured provider-fetch count was zero. The deletion worker completed in three leased attempts. Final counters were: zero rank rows, 154 exclusive matches, zero shared matches, zero shared participants, one provider identity, one membership, two sync cursors and two anonymized sync runs. The consent was removed and the player became the documented tombstone.
 
-Do not call the production revoke endpoint, continue deletion, or claim DATA-01C complete until the user explicitly confirms this gate.
+Post-deletion verification found zero linked source matches, participants, rank rows, provider identities, memberships, consents, cursors or player-linked sync runs; personal sync residue was zero. Global orphan checks for match participants, rounds, round participants, kill events, assistants and event locations were all zero. The production subject had no shared matches, so shared anonymization remains verified by the disposable Postgres suite rather than this production sample.
+
+The run used a short-lived operator endpoint solely to bridge the legacy consent. It required POST, a constant-time bearer check, expiry, rate limiting, the exact-one candidate gate and the server-only management credential. It called `RevocationDeletionService` directly and was never committed. After verification, the three temporary Vercel secrets, local credential/response artifacts and endpoint source were removed; a clean production deployment returned 404 for the former route. Browser-local cleanup is **NOT VERIFIED** because the original consenting browser profile could not be identified safely.
+
+Any future destructive production revocation is a new irreversible action and requires a fresh explicit human confirmation immediately before execution. Completion of this one test-player run is not standing approval for another player.

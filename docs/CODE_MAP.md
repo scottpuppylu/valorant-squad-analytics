@@ -1,6 +1,6 @@
 # Code map
 
-This map records the active browser runtime, the production-validated TASK-DATA-01A evidence foundation, the TASK-DATA-01B durable sync path and the later runtime rebase.
+This map records the active browser runtime, the production-validated TASK-DATA-01A evidence foundation, the TASK-DATA-01B durable sync path, the completed TASK-DATA-01C revocation path and the later runtime rebase.
 
 ## Current runtime
 
@@ -35,7 +35,7 @@ Current limitations:
 - one browser owns one imported real dataset;
 - dataset selection occurs at module load and requires reload after replacement;
 - imported normalized rows discard most round, kill and economy evidence;
-- durable backfill/incremental sync and DATA-01C deletion execution exist; DATA-01C production destructive validation and DATA-02 reads do not;
+- durable backfill/incremental sync and production-validated DATA-01C deletion execution exist; DATA-02 reads do not;
 - the provider audit endpoint emits only structural evidence outside production and is disabled in production.
 
 ## Current ownership
@@ -99,7 +99,7 @@ scheduled/manual sync command
 - Shared-match deletion rotates both participant HMACs and affected killer/victim event HMACs to random tombstones while retaining random internal UUID topology for future Trade/KAST/Clutch/Impact reconstruction.
 - `scripts/provision-consent-management.ts`: explicit operator-only legacy provisioning to a new file outside the repository; never a public route.
 - `server/deletion/retentionService.ts` and `scripts/purge-expired-deletion-audits.ts`: bounded expiry of 90-day aggregate audit and orphan-free tombstone cleanup.
-- Production destructive validation remains gated and pending.
+- Production destructive validation completed on 2026-10-01 after explicit approval. The one-time operator route used for the legacy consent was removed before the clean redeploy and is not part of this code map or Git history.
 
 ### TASK-DATA-02 — dataset runtime rebase
 

@@ -76,7 +76,7 @@ Actual elapsed time may be longer when rate backoff, pauses, network variance, s
 
 ## Consent and privacy
 
-Every start and continuation checks active consent before calling the provider. Lease acquisition, match persistence and cursor success commit also re-check/lock active consent, so a committed revocation wins a provider-fetch race: no later evidence or cursor advance can overwrite cancellation. Manual import and reconnect while deletion is open are blocked before provider access. Consent is still `self_asserted`, not Riot ownership verification. DATA-01C production destructive validation remains pending.
+Every start and continuation checks active consent before calling the provider. Lease acquisition, match persistence and cursor success commit also re-check/lock active consent, so a committed revocation wins a provider-fetch race: no later evidence or cursor advance can overwrite cancellation. Manual import and reconnect while deletion is open are blocked before provider access. Consent is still `self_asserted`, not Riot ownership verification. The approved DATA-01C production run measured zero provider fetches across manual import, reconnect, backfill and incremental block checks after revocation.
 
 Non-consenting participants remain match-scoped HMAC pseudonyms and do not receive reusable player identities. Structured telemetry contains only public run UUID, kind, status, aggregate timing/counts, safe termination and safe error categories.
 

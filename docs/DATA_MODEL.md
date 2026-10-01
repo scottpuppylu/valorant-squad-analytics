@@ -110,13 +110,13 @@ Server routes validate explicit consent and keep `HENRIK_API_KEY` outside the br
 
 Phase 1 stores the sanitized envelope under `goblin-survey:real-dataset:v1` in localStorage. The value has schema version 1, import timestamp and exactly one normalized `REAL` dataset. Malformed, wrong-mode or identifier-bearing values are removed and the app falls back to Demo. Removing the dataset from `#/connect` immediately returns the app to Demo after reload.
 
-TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. TASK-DATA-01B adds durable historical and incremental synchronization behind the same consent boundary. TASK-DATA-01C now implements credential-authorized revocation and durable deletion, with production destructive validation still pending. The public frontend deliberately still uses the browser-local REAL envelope; cross-device reads require DATA-02.
+TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. TASK-DATA-01B adds durable historical and incremental synchronization behind the same consent boundary. TASK-DATA-01C provides production-validated credential-authorized revocation and durable deletion. The public frontend deliberately still uses the browser-local REAL envelope; cross-device reads require DATA-02.
 
 `src/dataSources/thirdParty/henrikV4.ts` now contains a sanitized structural summarizer. A bounded consenting audit observed the field families documented in `docs/REAL_DATA_FIELD_AUDIT.md`; it did not store raw payloads or identifier values and does not prove lifetime completeness.
 
 ## Neon durable evidence schema
 
-Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0002_bounded_historical_sync.sql` adds public run IDs, sync kinds, cumulative metrics, termination/error fields, cursor coverage and expiring lease fields. Migration `0003_consent_revocation_deletion.sql` adds consent-credential HMACs, player tombstones and the leased staged deletion audit. All three are applied to production and remain immutable; `0003` passed non-destructive schema/API validation, while production revocation and deletion remain gated.
+Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0002_bounded_historical_sync.sql` adds public run IDs, sync kinds, cumulative metrics, termination/error fields, cursor coverage and expiring lease fields. Migration `0003_consent_revocation_deletion.sql` adds consent-credential HMACs, player tombstones and the leased staged deletion audit. All three are applied to production and remain immutable; `0003` passed both non-destructive schema/API validation and the explicitly approved production revocation/deletion run.
 
 | Table | Required purpose and key fields |
 |---|---|
@@ -162,13 +162,15 @@ Backfill is idempotent by keyed provider-match fingerprint plus source schema ve
 
 Production validation observed 159 match responses over 54 chunks, six overlap updates and zero retries before `empty_page`; a later incremental run observed three existing matches and stopped at `known_boundary`. The stored range is a provider-available window, not lifetime history. Exact mechanics and capacity are in `docs/HISTORICAL_SYNC.md`.
 
-## Revocation and deletion model — DATA-01C implemented, production destructive validation pending
+## Revocation and deletion model — DATA-01C complete and production validated
 
 New active consents may carry one management credential HMAC; plaintext is returned once to the consenting browser and is never stored server-side. Legacy active consent remains null until the explicit operator-only provisioning workflow is used. A public player UUID is lookup-only and cannot authorize deletion.
 
 Revocation atomically changes consent to revoked, deactivates membership, cancels unfinished sync runs, releases cursor leases and creates/reuses one open deletion job. The worker stages remove rank observations, process exclusive/shared matches, remove provider identity and membership, clear or anonymize sync metadata, tombstone player PII and finalize aggregate audit.
 
 An exclusive source match is deleted with its children. In a shared match, the revoked participant loses `player_id`, receives a random match-scoped tombstone, and loses agent, combat aggregate, ability, economy, weapon, armor and location evidence. Team membership, round presence and killer/victim/assistant/plant/defuse references remain only as anonymous topology needed by other active consenting members. Re-consent after completion creates a new player/consent/credential and does not relink deleted history.
+
+The first production validation processed 154 exclusive matches and no shared matches in three deletion attempts. It removed the provider identity, membership, consent and two cursors, anonymized personal fields on two sync runs, tombstoned the player and left zero orphan rows. This validates the observed exclusive path; shared-match behavior remains covered by disposable-database tests because the production subject had no shared match.
 
 ## Missing data
 

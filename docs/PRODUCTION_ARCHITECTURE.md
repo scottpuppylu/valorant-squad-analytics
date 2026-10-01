@@ -60,7 +60,7 @@ HenrikDev is an unofficial provider. A controlled structural audit observed matc
 
 The public analytics runtime still stores the sanitized normalized dataset under a versioned browser key. This remains sufficient for one player to review imported data on one browser and is deliberately not replaced in TASK-DATA-01A.
 
-TASK-DATA-01A adds a production-validated Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. TASK-DATA-01B migration `0002` adds executable sync state, public run IDs, aggregate performance/coverage fields and expiring leases. DATA-01C migration `0003` and its revoke/deletion runtime are implemented and disposable-database validated; `0003` is applied to production and its status query passed non-destructive validation, but no production revocation or deletion has run. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production. A durable read API and frontend source-of-truth switch are not included.
+TASK-DATA-01A adds a production-validated Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. TASK-DATA-01B migration `0002` adds executable sync state, public run IDs, aggregate performance/coverage fields and expiring leases. DATA-01C migration `0003` and its revoke/deletion runtime are disposable-database and production validated; the approved run completed on 2026-10-01. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production. A durable read API and frontend source-of-truth switch are not included.
 
 ### DATA-01A production validation
 
@@ -73,7 +73,7 @@ Both writes ended with the same aggregates: one player, one active consent, one 
 - `src/data/analytics.ts` chooses the dataset at module load, so replacement requires a reload.
 - One browser-local envelope remains the only frontend real-data source; Neon evidence is durable but is not read back into the public analytics runtime yet.
 - Import limits are 1/10/20/30 matches. The browser dataset remains match-level, while the server now persists normalized round, kill and available economy/location evidence.
-- A server consent ledger, durable cursor execution and credential-authorized deletion state machine exist. Production destructive validation, automatic 90-day audit expiry execution and cross-device recovery without the browser credential remain pending/operator-assisted.
+- A server consent ledger, durable cursor execution and production-validated credential-authorized deletion state machine exist. Automatic 90-day audit expiry execution and cross-device recovery without the browser credential remain pending/operator-assisted.
 - Historical sync uses a durable 45-second per-player Postgres lease. The older bounded-import in-memory guard remains only for its separate one-request path.
 - The public score runtime cannot identify a durable snapshot version because no dataset API exists.
 
@@ -105,11 +105,13 @@ The controlled production run used only the existing consenting player. Backfill
 
 The backfill accumulated 116.509 seconds of provider fetch time, 1.224 seconds of normalization, 371.672 seconds of database transactions, 512.581 seconds of measured service-core work and 2,394 SQL statements. A full three-match chunk averaged 9.492 seconds of service-core work. Consecutive production UI requests averaged 13.429 seconds end to end, or about 13.4 matches per minute under the conservative manual cadence. See `docs/HISTORICAL_SYNC.md` for calculation details and limitations.
 
-## Revocation — DATA-01C implemented / production destructive validation pending
+## Revocation — DATA-01C complete and production validated
 
 `POST /api/valorant/consent/revoke`, `/api/valorant/deletion/continue` and `/api/valorant/deletion/status` accept credentials only in JSON request bodies. Each request requires the one-time browser management credential; the server stores only its domain-separated HMAC and compares in constant time. No token is accepted in a URL, public UUID alone has no destructive authority, and old consent is not silently upgraded.
 
 Revocation disables provider access in the same transaction, cancels unfinished sync and starts a leased, bounded and idempotent deletion job. Exclusive matches cascade-delete. Shared match participation is unlinked, randomly re-tombstoned and minimized while anonymous event topology remains for another active consenting member. Rank rows, provider identity, membership, consent, sync cursor, personal sync coverage and player display PII are removed; only a tombstone plus aggregate deletion audit remains. Full semantics and recovery policy are in `REVOCATION_AND_DELETION.md`.
+
+The explicitly approved 2026-10-01 run gated on exactly one active legacy production candidate, provisioned its management credential only inside the server boundary, and verified manual import, reconnect, backfill and incremental sync stopped before any provider fetch. The worker completed in three attempts: 154 exclusive matches deleted, zero shared matches anonymized, one provider identity and membership removed, two cursors removed and two sync runs anonymized. Rank and shared-match counts were zero. The tombstone, zero personal sync residue and zero orphan checks all passed. The temporary operator route and three temporary secrets were then removed, followed by a clean production redeploy whose removed route returned 404.
 
 ## Dataset runtime rebase — DATA-02, not started
 

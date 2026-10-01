@@ -131,7 +131,7 @@ Rank/MMR history synchronization is **NOT IMPLEMENTED**. The observed provider s
 
 ## Task DATA-01C — revocation and deletion execution
 
-Status: **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**
+Status: **COMPLETE — SDD STRICT**
 
 - [x] Add immutable migration `0003_consent_revocation_deletion.sql` without changing `0001` or `0002`.
 - [x] Issue a one-time, high-entropy browser management credential for new consent and persist only its domain-separated HMAC.
@@ -146,10 +146,10 @@ Status: **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**
 - [x] Rotate identity-derived event HMACs for affected shared-match kills while preserving anonymous event ordering and FK topology.
 - [x] Add disposable PGlite tests for authorization, race behavior, exclusive/shared data, rank, crash rollback, stale lease, retries, re-consent and local cleanup.
 - [x] Apply `0003` to production and perform non-destructive schema/API validation.
-- [ ] Obtain explicit human confirmation immediately before revoking the current production test player.
-- [ ] Execute and record the first production destructive revocation/deletion validation.
+- [x] Obtain explicit human confirmation immediately before revoking the current production test player.
+- [x] Execute and record the first production destructive revocation/deletion validation.
 
-Until the final two destructive items are completed, DATA-01C must not be reported as complete. See `docs/REVOCATION_AND_DELETION.md`.
+The approved 2026-10-01 production run used a short-lived operator-only endpoint that never entered Git history. The exact-one legacy-candidate gate passed, all four post-revocation provider paths stopped before fetch, and the real deletion service completed in three leased attempts. It removed 154 exclusive matches, one provider identity, one membership, two sync cursors and personal metadata from two sync runs; there were no shared matches or rank rows. Post-checks found no linked personal evidence, no sync residue and zero relational orphans. The temporary endpoint, three temporary Vercel secrets and local credential/response files were removed before a clean production redeploy. Browser-local cleanup is **NOT VERIFIED** because the original consenting browser profile could not be identified safely. See `docs/REVOCATION_AND_DELETION.md`.
 
 ## Task DATA-02 — dataset runtime rebase
 

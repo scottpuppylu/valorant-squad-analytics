@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-003、TASK-API-02、TASK-DATA-01A 與 TASK-DATA-01B 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。Production Neon 目前已套用 migrations `0001`、`0002` 與 `0003`；`0003` 的只讀狀態查詢也已完成非破壞性驗證。DATA-01C 撤回、匿名化與可續跑刪除已完成實作及 disposable Postgres 驗證，但真實測試玩家的不可逆撤回尚未執行，因此狀態是 **IMPLEMENTED / PRODUCTION DESTRUCTIVE VALIDATION PENDING**。DATA-02、TASK-METRICS-01 與 TASK-002B 均未開始。
+TASK-003、TASK-API-02、TASK-DATA-01A、TASK-DATA-01B 與 TASK-DATA-01C 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。Production Neon 已套用 migrations `0001`、`0002` 與 `0003`。2026-10-01 經明確人工核准的 DATA-01C production 驗證已完成：正式測試玩家的同意已撤回，154 場 exclusive matches 經既有可續跑服務刪除，個人 provider／membership／consent／sync 證據已移除或匿名化，且 provider-block 與 orphan integrity 均通過。一次性 operator 端點、臨時 secrets 與本機憑證檔均已清除。DATA-02、TASK-METRICS-01 與 TASK-002B 均未開始。
 
 ## V1 原則
 
@@ -23,7 +23,7 @@ TASK-003、TASK-API-02、TASK-DATA-01A 與 TASK-DATA-01B 已完成；Vercel 同�
 2. 已先完成交叉篩選、玩家比較、地圖／特務／對戰頁面與動態稱號
 3. 已完成 Vercel production deploy、受控真實 provider 稽核與欄位能力分類
 4. 已以 TASK-DATA-01A 建立持久化證據底層，並以 DATA-01B 完成有界、可續跑的歷史與增量同步
-5. DATA-01C 已完成實作與非破壞性驗證，等待明確人工核准後才會對 production 測試玩家執行不可逆撤回；DATA-02 前端資料源切換仍延後
+5. DATA-01C 已完成 disposable 與 production 不可逆撤回／刪除驗證；DATA-02 前端資料源切換仍延後
 6. TASK-METRICS-01、TASK-002B 與 Synergy 繼續保留為後續工作
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
