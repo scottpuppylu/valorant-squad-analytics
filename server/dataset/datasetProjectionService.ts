@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
+import { playerEmojiOptions, type PlayerEmoji } from '../../src/types/avatar.js';
 import type { MatchPerformance, MatchRecord, Player } from '../../src/types/valorant.js';
-import { isPlayerEmoji } from '../../src/utils/avatar.js';
 import { primaryRoleForAgents } from '../../src/utils/agentRoles.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
 import type { DatasetEventRow, DatasetProjectionResult, DatasetReadRepository } from './types.js';
@@ -17,6 +17,11 @@ interface EventEvidence {
 }
 
 const accentPalette = ['#6ee7b7', '#67e8f9', '#c4b5fd', '#f9a8d4', '#fdba74', '#fde68a'];
+const playerEmojiSet = new Set<string>(playerEmojiOptions);
+
+function safePlayerEmoji(value: string): PlayerEmoji {
+  return playerEmojiSet.has(value) ? value as PlayerEmoji : '🤖';
+}
 
 function dateValue(value: string | Date | null | undefined): string | undefined {
   if (!value) return undefined;
@@ -115,7 +120,7 @@ export class DatasetProjectionService {
         accent: accentFor(row.public_id),
         tagline: '持久化戰績成員',
         playstyle: '依目前可用的持久化對戰證據呈現；不代表完整生涯紀錄。',
-        defaultEmoji: isPlayerEmoji(row.default_emoji) ? row.default_emoji : '🤖',
+        defaultEmoji: safePlayerEmoji(row.default_emoji),
       };
     });
     const roundIdsByMatch = new Map<string, string[]>();

@@ -145,8 +145,10 @@ describe('durable dataset projection privacy and compatibility', () => {
   it('returns one active player and one performance while omitting nine non-consenting identities', async () => {
     const database = await migratedDatabase();
     await seedProjection(database, 1, 1, 9);
+    await database.query("UPDATE players SET default_emoji='not-an-emoji' WHERE id=$1", [uuid(1, 1)]);
     const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
     expect(result.payload.dataset.players).toHaveLength(1);
+    expect(result.payload.dataset.players[0]!.defaultEmoji).toBe('🤖');
     expect(result.payload.dataset.matches).toHaveLength(1);
     expect(result.payload.dataset.matches[0]!.performances).toHaveLength(1);
     const serialized = JSON.stringify(result.payload).toLowerCase();
