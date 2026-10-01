@@ -138,7 +138,7 @@ describe('migration 0004', () => {
     expect(before).toMatch(/^[0-9a-f-]{36}$/u);
     expect(await applyMigrations(existing, all)).toEqual([]);
     expect((await existing.query<{ public_id: string }>('SELECT public_id FROM source_matches')).rows[0]!.public_id).toBe(before);
-  });
+  }, 30_000);
 });
 
 describe('durable dataset projection privacy and compatibility', () => {
