@@ -110,6 +110,7 @@ describe('durable database and consent foundation', () => {
       { version: '0001', applied: '1' },
       { version: '0002', applied: '1' },
       { version: '0003', applied: '1' },
+      { version: '0004', applied: '1' },
     ]);
     const cursorColumns = await database.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name='sync_cursors'`,

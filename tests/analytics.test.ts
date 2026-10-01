@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { calculateRecentForm, comparePlayers, computeBadges, groupByAgent, groupByMap, groupByRole, mapExtremes, mostUsedAgent, resolveWinners } from '../src/analytics/analysis';
 import { defaultAnalysisFilters, matchesForSelection, resetAnalysisFilters, selectPerformances } from '../src/analytics/filters';
 import { aggregateSelection, rankPlayers } from '../src/analytics/rankings';
-import { activeDataset, performanceEntries } from '../src/data/analytics';
+import { buildAnalytics } from '../src/data/analytics';
+import { demoDataSource } from '../src/dataSources/demo/DemoDataSource';
+
+const { activeDataset, performanceEntries } = buildAnalytics(demoDataSource.snapshot());
 
 describe('analytics selection pipeline', () => {
   it('selects all normalized player performances by default', () => {

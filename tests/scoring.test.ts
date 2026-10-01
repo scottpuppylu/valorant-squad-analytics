@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { demoMatches } from '../src/data/demoMatches';
-import { playerAnalytics } from '../src/data/analytics';
+import { buildAnalytics } from '../src/data/analytics';
+import { demoDataSource } from '../src/dataSources/demo/DemoDataSource';
 import { players } from '../src/data/players';
 import { calculateConfidence, calculatePlayerScores } from '../src/scoring/calculateScores';
 import { normalizeRange, weightedAvailableScore } from '../src/scoring/normalize';
 import type { RawPlayerStats } from '../src/types/valorant';
 import { safeDivide } from '../src/utils/number';
+
+const { playerAnalytics } = buildAnalytics(demoDataSource.snapshot());
 
 describe('demo dataset', () => {
   it('contains 32 unique matches and eight fictional players', () => {
