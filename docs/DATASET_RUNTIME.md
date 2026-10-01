@@ -63,8 +63,8 @@ Disposable PGlite fixtures exercise the same repository and projection service:
 
 | Fixture | SQL | DB time | Projection | Serialized response |
 |---|---:|---:|---:|---:|
-| 1 player / 30 matches | 6 | 19.49 ms | 1.38 ms | 13,234 bytes |
-| 4 players / 300 matches | 6 | 203.35 ms | 8.03 ms | 292,133 bytes |
+| 1 player / 30 matches | 6 | 21.80 ms | 1.80 ms | 13,234 bytes |
+| 4 players / 300 matches | 6 | 192.40 ms | 7.03 ms | 292,133 bytes |
 
 Times are one local test-run observation, not a Neon latency promise. The constant six-query plan avoids per-player and per-match N+1 reads.
 
