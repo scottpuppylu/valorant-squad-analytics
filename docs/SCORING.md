@@ -161,15 +161,15 @@ Calculation values stay numeric and retain their existing internal precision. Th
 
 This display fix does not correct the documented pre-scoring aggregate rounding; that remains owned by TASK-002B.
 
-## TASK-API-02 preliminary normalization
+## DATA-02A legacy compatibility projection
 
-The scoring formulas above are unchanged. When a sanitized real dataset is imported, the server adapter currently prepares compatible match-level inputs as follows:
+The scoring formulas above are unchanged. When the durable dataset read gate is deliberately enabled, `legacy-browser-projection-v1` prepares compatible match-level inputs as follows:
 
-- `ACS = provider total score / team rounds played`
-- `ADR = provider damage dealt / team rounds played`
+- `ACS = durable participant score / observed durable rounds`
+- `ADR = durable participant damage dealt / observed durable rounds`
 - first kill/death = killer/victim of the earliest `time_in_round_in_ms` event in each round
 - `KAST = rounds with kill OR assist OR survival OR reconstructed traded death / observed rounds`
 - reconstructed traded death = a teammate kills the original killer within 5,000 ms after the player's death in the same round
 - `HS% = headshots / (headshots + bodyshots + legshots)`
 
-The five-second trade rule is a transparent product rule, not an official provider label. The controlled audit observed the event fields needed to reconstruct opening kills, trades and KAST, but the current normalized model still discards most event and economy evidence. Clutch, economy, Impact Kill and Role Value therefore remain unavailable or partial in the product until TASK-DATA-01 and later metric work preserve and derive them. See `docs/REAL_DATA_FIELD_AUDIT.md` for exact classifications.
+The five-second trade rule is a transparent product rule, not an official provider label. Durable event topology is used only on the server to produce consenting-player compatibility metrics and is not returned to the browser. Missing complete round presence marks KAST/FK/FD evidence partial. Clutch, economy, Impact Kill, Role Value and final Trade scoring remain unavailable until later metric work. See `docs/DATASET_RUNTIME.md` and `docs/REAL_DATA_FIELD_AUDIT.md`.

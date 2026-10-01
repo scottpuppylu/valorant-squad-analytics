@@ -1,13 +1,14 @@
 # Code map
 
-This map records the active browser runtime, the production-validated TASK-DATA-01A evidence foundation, the TASK-DATA-01B durable sync path, the completed TASK-DATA-01C revocation path and the later runtime rebase.
+This map records the active DATA-02A runtime, durable evidence/sync/deletion foundations and the intentionally disabled private REAL visibility gate.
 
 ## Current runtime
 
 ```text
 React routes/components
-  -> src/data/analytics.ts (dataset chosen at module load)
-  -> BrowserRealDatasetRepository OR DemoDataSource
+  -> DatasetProvider (loading/ready/stale/empty/error/demo)
+  -> GET /api/valorant/dataset OR deliberate DemoDataSource
+  -> src/data/analytics.ts buildAnalytics(dataset)
   -> PerformanceEntry selection/filtering
   -> aggregatePlayerStats
   -> scoring modules
@@ -18,8 +19,13 @@ React routes/components
   -> /api/valorant/account/resolve + /matches/import
   -> HenrikDataProvider
   -> HenrikDev v4
-  -> normalizeHenrikMatches
-  -> sanitized browser-local REAL dataset
+  -> normalized durable evidence in Neon
+
+GET /api/valorant/dataset
+  -> REAL_DATASET_READ_MODE fail-closed gate
+  -> PostgresDatasetReadRepository (six set-based reads)
+  -> DatasetProjectionService (legacy-browser-projection-v1)
+  -> browser-safe REAL dataset, coverage and opaque snapshot
 
 #/connect durable sync controls
   -> /api/valorant/sync/start | continue | status
@@ -32,10 +38,10 @@ React routes/components
 
 Current limitations:
 
-- one browser owns one imported real dataset;
-- dataset selection occurs at module load and requires reload after replacement;
-- imported normalized rows discard most round, kill and economy evidence;
-- durable backfill/incremental sync and production-validated DATA-01C deletion execution exist; DATA-02 reads do not;
+- private REAL exposure is disabled until the operator deliberately selects a DATA-02B policy;
+- the projection is bounded to the newest 300 eligible durable matches and is not lifetime history;
+- compatibility metrics exist, but final Trade/Clutch/Economy/Impact/Role Value reconstruction remains deferred;
+- the legacy browser REAL envelope remains only for cleanup/tests/rollback and is not read by the product;
 - the provider audit endpoint emits only structural evidence outside production and is disabled in production.
 
 ## Current ownership
@@ -43,10 +49,11 @@ Current limitations:
 | Area | Files | Responsibility |
 |---|---|---|
 | Public routes | `src/App.tsx`, `src/routes.ts`, `src/components/AppShell.tsx` | Hash routes and product navigation |
-| Active dataset | `src/data/analytics.ts` | Choose REAL browser envelope or Demo fallback |
-| Browser persistence | `src/dataSources/real/BrowserRealDatasetRepository.ts` | Validate, store and remove one sanitized REAL dataset |
+| Active dataset | `src/contexts/DatasetProvider.tsx`, `src/data/analytics.ts` | Own runtime state and build deterministic analysis from an injected dataset |
+| Durable read API | `api/valorant/dataset.ts`, `server/dataset/**` | Fail-closed gate, bounded set-based rows, privacy-safe projection and snapshot |
+| Legacy browser dataset | `src/dataSources/real/BrowserRealDatasetRepository.ts` | Cleanup/tests/rollback only; not a production source of truth |
 | Deletion recovery | `src/dataSources/real/BrowserConsentCredentialRepository.ts`, `BrowserDeletionSessionService.ts` | Migrate active credential state, persist deletion-only job recovery, clear REAL immediately and destroy credential only on completion |
-| API client | `src/dataSources/server/ValorantBackendClient.ts` | Same-origin account/import requests and public errors |
+| API client | `src/dataSources/server/ValorantBackendClient.ts`, `DatasetApiClient.ts` | Same-origin account/import/sync/deletion and dataset-read requests |
 | Server routes | `api/valorant/**` | Consent, validation, throttling and provider calls |
 | Provider adapter | `server/henrikDataProvider.ts`, `src/dataSources/thirdParty/henrikV4.ts` | Fetch, structural audit and normalization boundary |
 | Normalization | `server/normalizeHenrikMatches.ts` | Provider DTO to browser-safe dataset |
@@ -58,7 +65,7 @@ Current limitations:
 | Scoring | `src/scoring/**` | Benchmarks, category formulas, weights and confidence |
 | Presentation | `src/utils/format.ts`, `src/analytics/presentation.ts` | Display-only rounding and labels |
 
-## Intended durable runtime
+## Active durable runtime foundation
 
 ```text
 scheduled/manual sync command
@@ -66,10 +73,9 @@ scheduled/manual sync command
   -> provider adapter with bounded cursor
   -> raw response validated and normalized in memory, then discarded
   -> normalized relational transaction
-  -> metric evidence/reconstruction jobs
-  -> versioned aggregate/materialized views
-  -> read-only dataset API
-  -> React query/provider
+  -> DATA-02A legacy compatibility projection
+  -> versioned read-only dataset API
+  -> React DatasetProvider
   -> existing filters/rankings/pages
 ```
 
@@ -103,10 +109,10 @@ scheduled/manual sync command
 
 ### TASK-DATA-02 — dataset runtime rebase
 
-- Add read-only versioned dataset endpoints and a React dataset provider.
-- Replace module-load localStorage selection with explicit loading/error/stale states.
-- Preserve Demo fallback and GitHub Pages rollback.
-- Add cache/version invalidation and end-to-end tests.
+- DATA-02A complete: migration `0004`, versioned read endpoint, six-query bounded projection, opaque snapshot and React DatasetProvider.
+- DATA-02A complete: explicit loading/ready/stale/empty/error/demo states, deliberate Pages Demo and disabled-Vercel Demo.
+- DATA-02A complete: legacy REAL localStorage cleanup, page migration, privacy/parity/performance tests.
+- DATA-02B pending: explicit read authorization/distribution, cache/revalidation and deliberate production visibility decision.
 
 ### TASK-METRICS-01 — event reconstruction
 
@@ -123,4 +129,4 @@ scheduled/manual sync command
 
 ### Future Synergy
 
-Synergy remains after durable shared match/membership evidence and TASK-002B. It must not be inferred from one browser-local player import.
+Synergy remains after DATA-02B, durable shared match/membership evidence and TASK-002B. It must not be inferred from the legacy browser import or this compatibility projection.

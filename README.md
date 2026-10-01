@@ -4,13 +4,13 @@
 
 ## 目前狀態
 
-TASK-003、TASK-API-02、TASK-DATA-01A、TASK-DATA-01B 與 TASK-DATA-01C 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。Production Neon 已套用 migrations `0001`、`0002` 與 `0003`。2026-10-01 經明確人工核准的 DATA-01C production 驗證已完成：正式測試玩家的同意已撤回，154 場 exclusive matches 經既有可續跑服務刪除，個人 provider／membership／consent／sync 證據已移除或匿名化，且 provider-block 與 orphan integrity 均通過。一次性 operator 端點、臨時 secrets 與本機憑證檔均已清除。DATA-02、TASK-METRICS-01 與 TASK-002B 均未開始。
+TASK-003、TASK-API-02、TASK-DATA-01A、TASK-DATA-01B、TASK-DATA-01C 與 TASK-DATA-02A 已完成；Vercel 同源後端已部署至 [valorant-squad-analytics.vercel.app](https://valorant-squad-analytics.vercel.app/)。DATA-02A 新增 versioned durable read API、最多最近 300 場的 browser-safe projection、React `DatasetProvider` 與 migration `0004` 的 public match ID。Production REAL 讀取由 `REAL_DATASET_READ_MODE` 控制且預設關閉；目前沒有把 private REAL 資料公開。DATA-02 整體仍為進行中，下一步只建議 DATA-02B；TASK-METRICS-01 與 TASK-002B 均未開始。
 
 ## V1 原則
 
 - Vite 前端與薄型 Vercel serverless API；GitHub Pages 暫留為 Demo rollback
 - React、TypeScript、Vite、Tailwind CSS、Recharts、Vitest、npm
-- Demo 使用固定 JSON；現行真實資料經後端正規化後只保存在該玩家的瀏覽器，跨裝置共用尚未實作
+- Demo 使用固定 JSON；真實資料 runtime 已改為 versioned server read API，不把完整 REAL dataset 保存到 localStorage
 - API key 只存在 Vercel server runtime，絕不進入 React bundle 或 API response
 - 原始數據、衍生指標、正規化、權重與 UI 必須分離
 - 所有計分公式公開並有測試
@@ -23,8 +23,9 @@ TASK-003、TASK-API-02、TASK-DATA-01A、TASK-DATA-01B 與 TASK-DATA-01C 已完�
 2. 已先完成交叉篩選、玩家比較、地圖／特務／對戰頁面與動態稱號
 3. 已完成 Vercel production deploy、受控真實 provider 稽核與欄位能力分類
 4. 已以 TASK-DATA-01A 建立持久化證據底層，並以 DATA-01B 完成有界、可續跑的歷史與增量同步
-5. DATA-01C 已完成 disposable 與 production 不可逆撤回／刪除驗證；DATA-02 前端資料源切換仍延後
-6. TASK-METRICS-01、TASK-002B 與 Synergy 繼續保留為後續工作
+5. DATA-01C 已完成 disposable 與 production 不可逆撤回／刪除驗證
+6. DATA-02A 已完成 durable read API 與 DatasetProvider 基礎；production visibility gate 仍預設關閉
+7. DATA-02B、TASK-METRICS-01、TASK-002B 與 Synergy 繼續保留為後續工作
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
 
@@ -50,7 +51,7 @@ npm run db:validate
 
 `npm test` 與 CI 只使用 mock／fixture，不會呼叫真實 provider 或 production Neon。`npm run build` 也會掃描 browser source 與 bundle，防止 server secret 名稱進入前端。
 
-資料庫 migration 位於 `migrations/`；`npm run db:migrate` 僅可在受信任、具 server-only `DATABASE_URL` 的環境執行。`IDENTIFIER_HMAC_KEY`、`DATABASE_URL` 與 `HENRIK_API_KEY` 都不得進入 React 或 browser bundle。完整 schema、身分類型、同意與 retention 語意見 [docs/DATABASE.md](docs/DATABASE.md)，撤回與刪除契約見 [docs/REVOCATION_AND_DELETION.md](docs/REVOCATION_AND_DELETION.md)。現行前端仍使用 browser-local REAL dataset；Neon 在 DATA-02 前不會取代公開分析資料源。
+資料庫 migration 位於 `migrations/`；`npm run db:migrate` 僅可在受信任、具 server-only `DATABASE_URL` 的環境執行。`IDENTIFIER_HMAC_KEY`、`DATABASE_URL` 與 `HENRIK_API_KEY` 都不得進入 React 或 browser bundle。完整 schema、身分類型、同意與 retention 語意見 [docs/DATABASE.md](docs/DATABASE.md)，撤回與刪除契約見 [docs/REVOCATION_AND_DELETION.md](docs/REVOCATION_AND_DELETION.md)。DATA-02A runtime 與 visibility gate 見 [docs/DATASET_RUNTIME.md](docs/DATASET_RUNTIME.md)。
 
 Vite 在 Vercel 使用 `/` base path，在 GitHub Pages rollback 使用 `/valorant-squad-analytics/`。應用程式保留 hash routing，讓兩種部署都能直接切換頁面。Vercel 同源狀態端點已部署；provider secret 只存在 server runtime，真實資料稽核與測試輸出都不包含私密識別值。GitHub Pages 仍維持 Demo-only rollback。
 

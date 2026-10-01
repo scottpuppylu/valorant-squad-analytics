@@ -108,7 +108,7 @@ Status: **COMPLETE**
 
 Production validation used one explicitly consenting account and one match. Set-based persistence completed in 5.617 seconds on the first write and 5.041 seconds on the identical second write, using 15 SQL statements including transaction control. Aggregate evidence counts were unchanged after the second write. The tested provider response supplied 177 kill locations but no per-player event-location rows; this absence remains explicit rather than fabricated.
 
-The browser-local REAL envelope remains the active frontend runtime. The foundation does not calculate final event metrics or change scoring.
+At DATA-01A completion the browser-local REAL envelope remained active; DATA-02A later retired it. The foundation itself did not calculate final event metrics or change scoring.
 
 ## Task DATA-01B — bounded historical backfill
 
@@ -153,9 +153,31 @@ The approved 2026-10-01 production run used a short-lived operator-only endpoint
 
 ## Task DATA-02 — dataset runtime rebase
 
+Status: **IN PROGRESS**
+
+### Task DATA-02A — durable read API and React dataset runtime foundation
+
+Status: **COMPLETE — SDD STRICT**
+
+- [x] Create and push `checkpoint-before-data-02a` at the verified DATA-01C HEAD.
+- [x] Add immutable migration `0004_dataset_read_runtime.sql` with a stable browser-safe source-match public ID.
+- [x] Add six-query, bounded `DatasetReadRepository` and browser-safe `DatasetProjectionService` boundaries.
+- [x] Expose versioned `GET /api/valorant/dataset` with REAL reads disabled by default.
+- [x] Limit the dataset to the most recent 300 eligible durable matches and state that it is not lifetime history.
+- [x] Expose only non-anonymized players with active consent and active membership; never expose non-consenting identities or event topology.
+- [x] Match the legacy projection for ACS, ADR, HS%, KAST, FK and FD without introducing later scoring dimensions.
+- [x] Replace module-load/localStorage dataset selection with `DatasetProvider` states: loading, ready, stale, empty, error and demo.
+- [x] Keep GitHub Pages intentionally Demo-only and Vercel disabled mode intentionally Demo; never merge Demo and REAL.
+- [x] Retire the full browser REAL envelope from the active path and clean the legacy key without persisting server reads.
+- [x] Add disposable migration, privacy, shared/revoked, parity, provider-state, route and bounded-performance tests.
+
+`REAL_DATASET_READ_MODE` remains disabled in normal production deployment, so **PRIVATE REAL DATA EXPOSED = NO**. DATA-02A prepares the read path; it does not decide who may see a private squad dataset. See `docs/DATASET_RUNTIME.md`.
+
+### Task DATA-02B — visibility, distribution and revalidation policy
+
 Status: **NOT STARTED**
 
-Replace browser-local REAL as the production source of truth only after the durable read API, authorization and deletion evidence are ready.
+Decide the explicit private-squad read authorization model, cache/revalidation policy and operator-controlled production enablement. Do not reuse the destructive consent-management credential as a read token. DATA-02B must not silently begin TASK-METRICS-01, TASK-002B or Synergy.
 
 ## Task 002B — evidence-aware scoring correctness
 

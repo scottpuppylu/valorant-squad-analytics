@@ -102,21 +102,22 @@ TASK-API-02 replaces the local probe as the intended product flow:
 
 ```text
 React #/connect -> same-origin Vercel API -> HenrikDataProvider
-  -> normalizeHenrikMatches -> sanitized NormalizedAnalyticsDataset
-  -> browser-local REAL dataset -> existing TASK-003 analytics
+  -> normalizeHenrikEvidence -> normalized durable Neon evidence
+  -> DatasetProjectionService -> versioned browser-safe REAL dataset
+  -> DatasetProvider -> existing TASK-003 analytics
 ```
 
 Server routes validate explicit consent and keep `HENRIK_API_KEY` outside the browser. The adapter uses PUUID and provider match ID only while processing one response; the returned player and match keys are one-way opaque SHA-256 prefixes. PUUIDs, raw provider match IDs and raw payloads are not returned or persisted.
 
-Phase 1 stores the sanitized envelope under `goblin-survey:real-dataset:v1` in localStorage. The value has schema version 1, import timestamp and exactly one normalized `REAL` dataset. Malformed, wrong-mode or identifier-bearing values are removed and the app falls back to Demo. Removing the dataset from `#/connect` immediately returns the app to Demo after reload.
+The old phase-1 envelope `goblin-survey:real-dataset:v1` is retired from the active product path. `DatasetProvider` deletes that legacy value on startup, never reads it as the source of truth, and never writes server-read REAL data to localStorage. Emoji overrides and the separate consent-management/deletion credential remain browser-local.
 
-TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. TASK-DATA-01B adds durable historical and incremental synchronization behind the same consent boundary. TASK-DATA-01C provides production-validated credential-authorized revocation and durable deletion. The public frontend deliberately still uses the browser-local REAL envelope; cross-device reads require DATA-02.
+TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. TASK-DATA-01B adds durable historical and incremental synchronization behind the same consent boundary. TASK-DATA-01C provides production-validated credential-authorized revocation and durable deletion. TASK-DATA-02A adds the versioned durable read projection and explicit React runtime states; private REAL visibility remains disabled by default pending DATA-02B policy.
 
 `src/dataSources/thirdParty/henrikV4.ts` now contains a sanitized structural summarizer. A bounded consenting audit observed the field families documented in `docs/REAL_DATA_FIELD_AUDIT.md`; it did not store raw payloads or identifier values and does not prove lifetime completeness.
 
 ## Neon durable evidence schema
 
-Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0002_bounded_historical_sync.sql` adds public run IDs, sync kinds, cumulative metrics, termination/error fields, cursor coverage and expiring lease fields. Migration `0003_consent_revocation_deletion.sql` adds consent-credential HMACs, player tombstones and the leased staged deletion audit. All three are applied to production and remain immutable; `0003` passed both non-destructive schema/API validation and the explicitly approved production revocation/deletion run.
+Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0002_bounded_historical_sync.sql` adds public run IDs, sync kinds, cumulative metrics, termination/error fields, cursor coverage and expiring lease fields. Migration `0003_consent_revocation_deletion.sql` adds consent-credential HMACs, player tombstones and the leased staged deletion audit. Migration `0004_dataset_read_runtime.sql` adds a distinct immutable public match UUID used by the sanitized read API. Applied migrations are never edited.
 
 | Table | Required purpose and key fields |
 |---|---|
@@ -127,7 +128,7 @@ Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, U
 | `consents` | player, scope, policy version, granted/revoked timestamps, actor and provenance |
 | `sync_runs` | provider, player, trigger, status, started/finished, request counts, error class and coverage window |
 | `sync_cursors` | player/queue endpoint, newest/oldest observed time, boundary match fingerprint, last success |
-| `source_matches` | internal UUID, keyed provider-match fingerprint, queue/map/start/duration/version/completion, source schema version |
+| `source_matches` | internal UUID, independent public application UUID, keyed provider-match fingerprint, queue/map/start/duration/version/completion, source schema version |
 | `match_teams` | match/team key, won, rounds won/lost |
 | `match_participants` | match/player/team/agent, K/D/A, score, damage, shots, aggregate ability and economy evidence |
 | `rounds` | match/round index, winner/result, plant/defuse actor and timing when observed |
