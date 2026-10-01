@@ -8,11 +8,14 @@ import { participantHmac, providerIdentityHmac } from '../server/identityProtect
 import { DurableEvidenceService } from '../server/persistence/durableEvidenceService';
 import { assertProviderAuditAllowed } from '../server/providerAuditAccess';
 import type { MatchImportInput } from '../server/contracts';
+import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy';
+import { HenrikDataProvider } from '../server/henrikDataProvider';
 
 const hmacKey = 'test-only-key-material-with-at-least-thirty-two-bytes';
 const input: MatchImportInput = {
   playerId: '11111111-1111-4111-8111-111111111111',
-  gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true, limit: 3,
+  gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true,
+  privacyVersion: PUBLIC_DATASET_PRIVACY_VERSION, limit: 3,
 };
 
 class PGliteDatabase implements SqlDatabase {
@@ -111,6 +114,7 @@ describe('durable database and consent foundation', () => {
       { version: '0002', applied: '1' },
       { version: '0003', applied: '1' },
       { version: '0004', applied: '1' },
+      { version: '0005', applied: '1' },
     ]);
     const cursorColumns = await database.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name='sync_cursors'`,
@@ -125,6 +129,65 @@ describe('durable database and consent foundation', () => {
   it('enforces database uniqueness independently of application checks', async () => {
     await database.query(`INSERT INTO squads (id, slug, display_name) VALUES ('00000000-0000-4000-8000-000000000001','unique-squad','Unique')`);
     await expect(database.query(`INSERT INTO squads (id, slug, display_name) VALUES ('00000000-0000-4000-8000-000000000002','unique-squad','Duplicate')`)).rejects.toThrow();
+  });
+
+  it('upgrades an existing 0001-0004 database through 0005 and reruns idempotently', async () => {
+    const existing = new PGliteDatabase(new PGlite());
+    try {
+      const migrations = await loadMigrations(resolve('migrations'));
+      expect(await applyMigrations(existing, migrations.slice(0, 4))).toEqual(['0001', '0002', '0003', '0004']);
+      await existing.query(`INSERT INTO players (id,public_id,display_name,display_tag)
+        VALUES ('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000102','Upgrade','TW')`);
+      await existing.query(`INSERT INTO consents (id,player_id,status,consent_method,privacy_version,consented_at)
+        VALUES ('00000000-0000-4000-8000-000000000103','00000000-0000-4000-8000-000000000101','active','self_asserted','old-v1',now())`);
+      expect(await applyMigrations(existing, migrations)).toEqual(['0005']);
+      expect(await applyMigrations(existing, migrations)).toEqual([]);
+    } finally {
+      await existing.close();
+    }
+  });
+
+  it('enforces at most one active consent per player across privacy versions', async () => {
+    await database.query(`INSERT INTO players (id,public_id,display_name,display_tag)
+      VALUES ('00000000-0000-4000-8000-000000000111','00000000-0000-4000-8000-000000000112','UniqueConsent','TW')`);
+    await database.query(`INSERT INTO consents (id,player_id,status,consent_method,privacy_version,consented_at)
+      VALUES ('00000000-0000-4000-8000-000000000113','00000000-0000-4000-8000-000000000111','active','self_asserted','old-v1',now())`);
+    await expect(database.query(`INSERT INTO consents (id,player_id,status,consent_method,privacy_version,consented_at)
+      VALUES ('00000000-0000-4000-8000-000000000114','00000000-0000-4000-8000-000000000111','active','self_asserted',$1,now())`,
+    [PUBLIC_DATASET_PRIVACY_VERSION])).rejects.toThrow();
+  });
+
+  it('atomically upgrades explicit old consent to the current public policy and issues a new credential', async () => {
+    const service = new DurableEvidenceService(database, hmacKey);
+    const first = await service.persistConnection(input, 'policy-upgrade-puuid', '2026-10-01T00:00:00.000Z');
+    expect(first.managementCredential).toBeDefined();
+    await database.query("UPDATE consents SET privacy_version='old-private-v1'");
+    const upgraded = await service.persistConnection(input, 'policy-upgrade-puuid', '2026-10-02T00:00:00.000Z');
+    expect(upgraded.managementCredential).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    const rows = await database.query<{ status: string; privacy_version: string; revoked_at: string | Date | null }>(
+      'SELECT status,privacy_version,revoked_at FROM consents ORDER BY consented_at',
+    );
+    expect(rows.rows).toHaveLength(2);
+    expect(rows.rows[0]).toMatchObject({ status: 'revoked', privacy_version: 'old-private-v1' });
+    expect(new Date(rows.rows[0]!.revoked_at!).toISOString()).toBe('2026-10-02T00:00:00.000Z');
+    expect(rows.rows[1]).toMatchObject({ status: 'active', privacy_version: PUBLIC_DATASET_PRIVACY_VERSION, revoked_at: null });
+    expect(rows.rows.filter((row) => row.status === 'active')).toHaveLength(1);
+  });
+
+  it('blocks an old-policy manual import before provider access', async () => {
+    const service = new DurableEvidenceService(database, hmacKey);
+    const connected = await service.persistConnection(input, 'old-policy-import-puuid', '2026-10-01T00:00:00.000Z');
+    await database.query("UPDATE consents SET privacy_version='old-private-v1' WHERE status='active'");
+    let providerCalls = 0;
+    const provider = new HenrikDataProvider('configured', {
+      durableWriter: service,
+      fetchImpl: async () => {
+        providerCalls += 1;
+        return new Response(JSON.stringify(rawPayload()), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      },
+    });
+    await expect(provider.importMatches({ ...input, playerId: connected.publicPlayerId! })).rejects.toMatchObject({ code: 'CONSENT_REVOKED' });
+    expect(providerCalls).toBe(0);
   });
 
   it('writes one consenting player, one active consent and one match idempotently', async () => {

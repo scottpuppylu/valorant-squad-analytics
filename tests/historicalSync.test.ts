@@ -7,9 +7,13 @@ import type { HistoricalMatchProvider } from '../server/henrikDataProvider';
 import { DurableEvidenceService } from '../server/persistence/durableEvidenceService';
 import { HistoricalSyncService } from '../server/sync/historicalSyncService';
 import { PostgresSyncStore } from '../server/sync/postgresSyncStore';
+import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy';
 
 const hmacKey = 'test-sync-hmac-key-with-at-least-32-bytes';
-const connection = { gameName: 'SyncGoblin', tag: 'TW', affinity: 'ap', consent: true } as const;
+const connection = {
+  gameName: 'SyncGoblin', tag: 'TW', affinity: 'ap', consent: true,
+  privacyVersion: PUBLIC_DATASET_PRIVACY_VERSION,
+} as const;
 
 class PGliteDatabase implements SqlDatabase {
   constructor(private readonly database: PGlite) {}
@@ -228,6 +232,14 @@ describe('bounded historical synchronization', () => {
 
   it('blocks a first sync without consent before any provider call', async () => {
     await database.query(`UPDATE consents SET status='revoked', revoked_at='2026-09-30T01:00:00.000Z' WHERE status='active'`);
+    const provider = new FixtureProvider(new Map());
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    await expect(service.start(publicPlayerId, 'backfill')).rejects.toMatchObject({ code: 'CONSENT_REVOKED' });
+    expect(provider.calls).toBe(0);
+  });
+
+  it('blocks an old-policy consent before any provider call', async () => {
+    await database.query("UPDATE consents SET privacy_version='old-private-v1' WHERE status='active'");
     const provider = new FixtureProvider(new Map());
     const service = new HistoricalSyncService(store, durable, provider, hmacKey);
     await expect(service.start(publicPlayerId, 'backfill')).rejects.toMatchObject({ code: 'CONSENT_REVOKED' });

@@ -12,6 +12,7 @@ import type {
   SyncSubject,
   SyncTerminationReason,
 } from './types.js';
+import { PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
 
 type SubjectRow = {
   player_id: string;
@@ -127,9 +128,9 @@ export class PostgresSyncStore {
     const result = await this.database.query<{ active: boolean }>(
       `SELECT EXISTS(
          SELECT 1 FROM consents
-         WHERE player_id=$1 AND status='active' AND consent_method='self_asserted'
+         WHERE player_id=$1 AND status='active' AND consent_method=$2 AND privacy_version=$3
        ) AS active`,
-      [playerId],
+      [playerId, PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION],
     );
     return result.rows[0]?.active === true;
   }
@@ -160,8 +161,9 @@ export class PostgresSyncStore {
   ): Promise<{ cursor: SyncCursorRecord; leaseToken: string } | undefined> {
     return this.database.transaction(async (transaction) => {
       const consent = await transaction.query<{ id: string }>(
-        `SELECT id FROM consents WHERE player_id=$1 AND status='active' FOR SHARE`,
-        [subject.playerId],
+        `SELECT id FROM consents WHERE player_id=$1 AND status='active'
+           AND consent_method=$2 AND privacy_version=$3 FOR SHARE`,
+        [subject.playerId, PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION],
       );
       if (!consent.rows[0]) {
         throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家同意目前不是有效狀態，未建立同步租約。');
@@ -288,8 +290,8 @@ export class PostgresSyncStore {
     await this.database.transaction(async (transaction) => {
       const consent = await transaction.query<{ id: string }>(
         `SELECT id FROM consents WHERE player_id=(SELECT player_id FROM sync_runs WHERE id=$1)
-         AND status='active' FOR SHARE`,
-        [input.runId],
+         AND status='active' AND consent_method=$2 AND privacy_version=$3 FOR SHARE`,
+        [input.runId, PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION],
       );
       if (!consent.rows[0]) {
         throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家已撤回同意，同步游標未前進。');

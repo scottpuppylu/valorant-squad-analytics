@@ -9,9 +9,13 @@ import { DurableEvidenceService } from '../server/persistence/durableEvidenceSer
 import { PostgresSyncStore } from '../server/sync/postgresSyncStore';
 import { HistoricalSyncService } from '../server/sync/historicalSyncService';
 import { HenrikDataProvider, type HistoricalMatchProvider } from '../server/henrikDataProvider';
+import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy';
 
 const hmacKey = 'test-revocation-key-with-at-least-thirty-two-bytes';
-const connection = { gameName: 'DeleteGoblin', tag: 'TW', affinity: 'ap', consent: true } as const;
+const connection = {
+  gameName: 'DeleteGoblin', tag: 'TW', affinity: 'ap', consent: true,
+  privacyVersion: PUBLIC_DATASET_PRIVACY_VERSION,
+} as const;
 
 class PGliteDatabase implements SqlDatabase {
   constructor(private readonly database: PGlite) {}

@@ -9,12 +9,19 @@ import type {
   DatasetRoundParticipantRow,
   DatasetRoundRow,
 } from './types.js';
+import { PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
 
 const activePlayers = `
   SELECT p.id, p.public_id, p.display_name, p.display_tag, p.default_emoji
   FROM players p
   WHERE p.anonymized_at IS NULL
-    AND EXISTS (SELECT 1 FROM consents c WHERE c.player_id=p.id AND c.status='active')
+    AND (SELECT count(*) FROM consents c WHERE c.player_id=p.id AND c.status='active') = 1
+    AND EXISTS (
+      SELECT 1 FROM consents c
+      WHERE c.player_id=p.id AND c.status='active'
+        AND c.consent_method='${PUBLIC_DATASET_CONSENT_METHOD}'
+        AND c.privacy_version='${PUBLIC_DATASET_PRIVACY_VERSION}'
+    )
     AND EXISTS (SELECT 1 FROM squad_memberships sm WHERE sm.player_id=p.id AND sm.status='active')`;
 
 const eligibleMatches = `

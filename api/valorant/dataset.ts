@@ -10,7 +10,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   try {
     requireMethod(request, 'GET');
     enforceRateLimit(`dataset-read:${clientKey(request)}`, Date.now(), 30);
-    if (datasetReadMode() !== 'enabled') {
+    if (datasetReadMode() !== 'public') {
       response.status(200).json({ ok: true, schemaVersion: datasetSchemaVersion, state: 'disabled', source: 'REAL_SERVER' });
       return;
     }

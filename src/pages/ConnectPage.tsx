@@ -15,6 +15,7 @@ import {
 import { BackendApiError, valorantBackendClient } from '../dataSources/server/ValorantBackendClient';
 import type { Affinity, ConnectionRequest, ImportSize, PublicAccount, PublicDeletionProgress, PublicSyncProgress } from '../dataSources/server/contracts';
 import { useDataset } from '../hooks/useDataset';
+import { PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy';
 
 type ProviderState = 'checking' | 'configured' | 'unconfigured' | 'unavailable';
 type FlowState = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'ACCOUNT_NOT_FOUND' | 'RATE_LIMITED' | 'PROVIDER_ERROR' | 'NO_MATCHES' | 'IMPORTING' | 'IMPORT_COMPLETE' | 'SYNCING' | 'REVOCING' | 'DELETION_WORKING' | 'REVOKED';
@@ -35,7 +36,9 @@ export function ConnectPage() {
   const { dataset: activeDataset, status: datasetStatus, source: datasetSource, refresh } = useDataset();
   const [provider, setProvider] = useState<ProviderState>('checking');
   const [flow, setFlow] = useState<FlowState>('IDLE');
-  const [form, setForm] = useState<ConnectionRequest>({ gameName: '', tag: '', affinity: 'ap', consent: false });
+  const [form, setForm] = useState<ConnectionRequest>({
+    gameName: '', tag: '', affinity: 'ap', consent: false, privacyVersion: PUBLIC_DATASET_PRIVACY_VERSION,
+  });
   const [account, setAccount] = useState<PublicAccount | null>(null);
   const [limit, setLimit] = useState<ImportSize>(10);
   const [message, setMessage] = useState('');
@@ -96,6 +99,7 @@ export function ConnectPage() {
         tag: account.tag,
         affinity: account.affinity,
         consent: form.consent,
+        privacyVersion: PUBLIC_DATASET_PRIVACY_VERSION,
       };
       const result = await valorantBackendClient.importMatches(verifiedConnection, account.playerId, limit);
       await refresh();
@@ -250,7 +254,7 @@ export function ConnectPage() {
           <label>Riot ID<input autoComplete="off" maxLength={32} required value={form.gameName} onChange={(event) => setForm((current) => ({ ...current, gameName: event.target.value }))} placeholder="Game Name" /></label>
           <label>Tag<input autoComplete="off" maxLength={10} required value={form.tag} onChange={(event) => setForm((current) => ({ ...current, tag: event.target.value }))} placeholder="Tag" /></label>
           <label>Region / affinity<select value={form.affinity} onChange={(event) => setForm((current) => ({ ...current, affinity: event.target.value as Affinity }))}>{affinities.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-          <label className="consent-row"><input type="checkbox" checked={form.consent} onChange={(event) => setForm((current) => ({ ...current, consent: event.target.checked }))} /><span>我同意哥布林大調查讀取我的 VALORANT 公開戰績，用於朋友群的統計、排名與分析。 <Link to="/privacy">查看隱私說明</Link></span></label>
+          <label className="consent-row"><input type="checkbox" checked={form.consent} onChange={(event) => setForm((current) => ({ ...current, consent: event.target.checked }))} /><span>我同意哥布林大調查讀取、保存並分析我的 VALORANT 公開戰績，並同意將我的 Riot ID、Tag、戰績統計、排名、地圖／特務分析等結果公開顯示於本站；任何取得網站網址的人都可以瀏覽。取消參與後將停止同步，並依資料刪除流程移除或匿名化資料。 <Link to="/privacy">查看隱私說明</Link></span></label>
           <button className="button-primary" type="submit" disabled={!form.consent || busy || provider !== 'configured'}>{flow === 'CONNECTING' ? '連接中…' : '連接戰績'}</button>
           {provider !== 'configured' && provider !== 'checking' ? <p className="connect-notice">此部署目前無法連接真實資料；Demo 分析仍可正常使用。</p> : null}
         </form>
@@ -286,11 +290,11 @@ export function ConnectPage() {
         <section className="surface-card connect-panel consent-management-panel">
           <p className="metric-label">同意管理</p>
           <h2>取消參與哥布林大調查</h2>
-          <p>這個瀏覽器保存了一次性核發的管理權限。玩家公開識別碼本身不能授權刪除。</p>
+          <p>這個瀏覽器保存了一次性核發的管理權限。玩家公開識別碼本身不能授權刪除；伺服器接受撤回後，玩家會立即停止出現在公開真實資料集。</p>
           {revokeConfirmation ? (
             <div className="revocation-warning" role="alert">
               <strong>取消後將停止同步，並刪除或匿名化伺服器上的個人戰績資料。此操作無法復原。</strong>
-              <p>請再次確認。共享比賽只會保留其他仍同意玩家所需的匿名事件結構。</p>
+              <p>請再次確認。公開顯示會在伺服器接受撤回後停止；較大量的刪除或匿名化可能繼續於可續跑背景工作中。共享比賽只會保留其他仍同意玩家所需的匿名事件結構。</p>
               <div className="connect-actions">
                 <button className="button-danger" type="button" disabled={busy} onClick={revokeConsent}>{flow === 'REVOCING' ? '撤回處理中…' : '確認撤回並刪除資料'}</button>
                 <button className="button-secondary" type="button" disabled={busy} onClick={() => setRevokeConfirmation(false)}>保留參與</button>

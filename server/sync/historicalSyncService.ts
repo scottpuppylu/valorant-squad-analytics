@@ -13,6 +13,7 @@ import type {
   SyncStatus,
   SyncTerminationReason,
 } from './types.js';
+import { PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
 
 const DEFAULT_PAGE_SIZE = 3;
 const DEFAULT_HISTORY_HORIZON = 300;
@@ -182,6 +183,7 @@ export class HistoricalSyncService {
         tag: run.subject.tag,
         affinity: run.subject.affinity as ValorantAffinity,
         consent: true,
+        privacyVersion: PUBLIC_DATASET_PRIVACY_VERSION,
         limit: 3,
       };
       const providerStarted = this.monotonicNow();

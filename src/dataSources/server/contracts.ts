@@ -1,4 +1,5 @@
 import type { NormalizedAnalyticsDataset } from '../types';
+import type { PUBLIC_DATASET_PRIVACY_VERSION } from '../../../shared/privacyPolicy';
 
 export type ProviderPublicErrorCode =
   | 'BAD_REQUEST'
@@ -29,6 +30,7 @@ export interface ConnectionRequest {
   tag: string;
   affinity: Affinity;
   consent: boolean;
+  privacyVersion: typeof PUBLIC_DATASET_PRIVACY_VERSION;
 }
 
 export interface PublicAccount {

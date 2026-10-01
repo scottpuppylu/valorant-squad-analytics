@@ -9,6 +9,7 @@ import {
 } from '../consentManagementCredential.js';
 import { PublicApiError } from '../errors.js';
 import { DEFAULT_SQUAD_ID, PostgresConsentRepository, PostgresMatchEvidenceRepository, PostgresPlayerRepository } from '../repositories/postgres.js';
+import { PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
 
 export interface DurableWriteSummary {
   playerWrites: number;
@@ -84,7 +85,7 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
       const consent = await this.consents.recordActiveSelfAssertedConsent(
         transaction,
         player.id,
-        '2026-09-30-v1',
+        PUBLIC_DATASET_PRIVACY_VERSION,
         at,
         { hmac: consentManagementCredentialHmac(candidate, this.hmacKey), version: consentCredentialVersion, issuedAt: at },
       );
@@ -100,9 +101,10 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
          JOIN provider_identities pi ON pi.player_id=p.id AND pi.provider='HenrikDev' AND pi.affinity=$2
          JOIN squad_memberships sm ON sm.player_id=p.id AND sm.status='active'
          JOIN consents c ON c.player_id=p.id AND c.status='active'
+           AND c.consent_method=$5 AND c.privacy_version=$6
          WHERE p.public_id=$1 AND p.display_name=$3 AND p.display_tag=$4 AND p.anonymized_at IS NULL
        ) AS active`,
-      [input.playerId, input.affinity, input.gameName, input.tag],
+      [input.playerId, input.affinity, input.gameName, input.tag, PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION],
     );
     if (result.rows[0]?.active !== true) {
       throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家同意目前不是有效狀態，未呼叫資料來源。');
@@ -144,8 +146,9 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
         };
         const player = await measuredTransaction.query<{ id: string }>(
           `SELECT p.id FROM players p JOIN consents c ON c.player_id=p.id AND c.status='active'
+             AND c.consent_method=$2 AND c.privacy_version=$3
            WHERE p.public_id=$1 AND p.anonymized_at IS NULL FOR UPDATE OF c`,
-          [input.playerId],
+          [input.playerId, PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION],
         );
         if (!player.rows[0]) throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家已撤回同意，未寫入戰績。');
         await this.matches.upsertMatch(measuredTransaction, DEFAULT_SQUAD_ID, player.rows[0].id, match, at);
@@ -200,8 +203,9 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
           },
         };
         const consent = await measuredTransaction.query<{ id: string }>(
-          `SELECT id FROM consents WHERE player_id=$1 AND status='active' FOR UPDATE`,
-          [playerId],
+          `SELECT id FROM consents WHERE player_id=$1 AND status='active'
+             AND consent_method=$2 AND privacy_version=$3 FOR UPDATE`,
+          [playerId, PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION],
         );
         if (!consent.rows[0]) throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家已撤回同意，未寫入戰績。');
         await this.matches.upsertMatch(measuredTransaction, DEFAULT_SQUAD_ID, playerId, match, at);

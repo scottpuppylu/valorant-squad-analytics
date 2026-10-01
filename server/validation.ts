@@ -2,6 +2,7 @@ import { PublicApiError } from './errors.js';
 import { supportedAffinities, type ConnectionInput, type ImportLimit, type MatchImportInput, type ValorantAffinity } from './contracts.js';
 import type { SyncKind } from './sync/types.js';
 import { isConsentManagementCredential } from './consentManagementCredential.js';
+import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy.js';
 
 const allowedLimits = new Set<number>([1, 3, 10, 20, 30]);
 
@@ -40,14 +41,15 @@ function parseAffinity(value: unknown): ValorantAffinity {
 
 export function parseConnectionInput(value: unknown): ConnectionInput {
   const body = asRecord(value);
-  if (body.consent !== true) {
-    throw new PublicApiError(400, 'CONSENT_REQUIRED', '必須先明確同意讀取公開戰績。');
+  if (body.consent !== true || body.privacyVersion !== PUBLIC_DATASET_PRIVACY_VERSION) {
+    throw new PublicApiError(400, 'CONSENT_REQUIRED', '必須先接受目前版本的公開顯示同意，才能連接戰績。');
   }
   return {
     gameName: cleanIdentifier(body.gameName, 'Riot ID', 32),
     tag: cleanIdentifier(body.tag, 'Tag', 10),
     affinity: parseAffinity(body.affinity),
     consent: true,
+    privacyVersion: PUBLIC_DATASET_PRIVACY_VERSION,
   };
 }
 

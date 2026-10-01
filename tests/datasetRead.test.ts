@@ -9,6 +9,8 @@ import { DurableEvidenceService } from '../server/persistence/durableEvidenceSer
 import { normalizeHenrikMatches } from '../server/normalizeHenrik';
 import datasetHandler from '../api/valorant/dataset';
 import type { ApiRequest, ApiResponse, MatchImportInput } from '../server/contracts';
+import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy';
+import { datasetReadMode } from '../server/dataset/runtime';
 
 const migrationsPath = resolve('migrations');
 const squadId = '00000000-0000-4000-8000-000000000001';
@@ -59,13 +61,19 @@ function placeholders(rows: number, width: number): string {
   return Array.from({ length: rows }, () => `(${Array.from({ length: width }, () => `$${index++}`).join(',')})`).join(',');
 }
 
+function objectKeys(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap(objectKeys);
+  if (typeof value !== 'object' || value === null) return [];
+  return Object.entries(value).flatMap(([key, nested]) => [key, ...objectKeys(nested)]);
+}
+
 async function seedProjection(database: SqlDatabase, playerCount: number, matchCount: number, nonConsentingParticipants = 0): Promise<void> {
   await database.query('INSERT INTO squads (id,slug,display_name) VALUES ($1,$2,$3)', [squadId, 'friends', 'Friends']);
   const playerRows = Array.from({ length: playerCount }, (_, index) => [uuid(1, index + 1), uuid(2, index + 1), `Player${index + 1}`, `T${index + 1}`, index % 2 === 0 ? '🐺' : '🦊']);
   await database.query(`INSERT INTO players (id,public_id,display_name,display_tag,default_emoji) VALUES ${placeholders(playerRows.length, 5)}`, playerRows.flat());
   const membershipRows = playerRows.map((row, index) => [uuid(3, index + 1), squadId, row[0], 'active']);
   await database.query(`INSERT INTO squad_memberships (id,squad_id,player_id,status) VALUES ${placeholders(membershipRows.length, 4)}`, membershipRows.flat());
-  const consentRows = playerRows.map((row, index) => [uuid(4, index + 1), row[0], 'active', 'self_asserted', 'test-v1', '2026-09-29T00:00:00.000Z']);
+  const consentRows = playerRows.map((row, index) => [uuid(4, index + 1), row[0], 'active', 'self_asserted', PUBLIC_DATASET_PRIVACY_VERSION, '2026-09-29T00:00:00.000Z']);
   await database.query(`INSERT INTO consents (id,player_id,status,consent_method,privacy_version,consented_at) VALUES ${placeholders(consentRows.length, 6)}`, consentRows.flat());
 
   const matchRows = Array.from({ length: matchCount }, (_, index) => {
@@ -123,8 +131,8 @@ function parityPayload() {
   }] };
 }
 
-describe('migration 0004', () => {
-  it('applies on a fresh database, backfills an existing database, and reruns without changing public ids', async () => {
+describe('dataset runtime migrations', () => {
+  it('applies 0004 and 0005 on a fresh database, upgrades an existing database, and reruns without changing public ids', async () => {
     const fresh = await migratedDatabase();
     expect((await fresh.query<{ version: string }>("SELECT version FROM schema_migrations WHERE version='0004'")).rows).toEqual([{ version: '0004' }]);
 
@@ -133,7 +141,7 @@ describe('migration 0004', () => {
     await existing.query(`INSERT INTO source_matches (id,squad_id,provider,provider_match_lookup_hmac,provider_schema_version,normalization_version,affinity,first_observed_at,last_observed_at)
       VALUES ($1,$2,'HenrikDev',$3,'v4','durable-evidence-v1','ap',now(),now())`, [uuid(5, 999), squadId, lookup(999)]);
     const all = await loadMigrations(migrationsPath);
-    expect(await applyMigrations(existing, all)).toEqual(['0004']);
+    expect(await applyMigrations(existing, all)).toEqual(['0004', '0005']);
     const before = (await existing.query<{ public_id: string }>('SELECT public_id FROM source_matches')).rows[0]!.public_id;
     expect(before).toMatch(/^[0-9a-f-]{36}$/u);
     expect(await applyMigrations(existing, all)).toEqual([]);
@@ -157,6 +165,22 @@ describe('durable dataset projection privacy and compatibility', () => {
     expect(serialized).not.toContain(uuid(8, 1));
     expect(serialized).not.toContain('puuid');
     expect(serialized).not.toContain('hmac');
+    const keys = objectKeys(result.payload);
+    for (const forbidden of [
+      'puuid', 'provider_match_lookup_hmac', 'participant_lookup_hmac', 'event_lookup_hmac',
+      'management_credential_hmac', 'internal_player_id', 'internal_match_id', 'source_match_id',
+      'DATABASE_URL', 'IDENTIFIER_HMAC_KEY', 'HENRIK_API_KEY',
+    ]) expect(keys).not.toContain(forbidden);
+  });
+
+  it('hides an old-policy player and every match visible solely through that player', async () => {
+    const database = await migratedDatabase();
+    await seedProjection(database, 1, 1);
+    await database.query("UPDATE consents SET privacy_version='old-private-v1' WHERE status='active'");
+    const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
+    expect(result.payload.state).toBe('empty');
+    expect(result.payload.dataset.players).toEqual([]);
+    expect(result.payload.dataset.matches).toEqual([]);
   });
 
   it('returns two active members once in a shared match and removes a revoked member from the projection', async () => {
@@ -178,7 +202,10 @@ describe('durable dataset projection privacy and compatibility', () => {
   it('matches the legacy normalizer for the explicitly supported projection metrics', async () => {
     const database = await migratedDatabase();
     const durable = new DurableEvidenceService(database, hmacKey);
-    const connection = { gameName: 'ParityPlayer', tag: 'TW', affinity: 'ap' as const, consent: true as const };
+    const connection = {
+      gameName: 'ParityPlayer', tag: 'TW', affinity: 'ap' as const, consent: true as const,
+      privacyVersion: PUBLIC_DATASET_PRIVACY_VERSION,
+    };
     const connected = await durable.persistConnection(connection, 'target');
     const input: MatchImportInput = { ...connection, playerId: connected.publicPlayerId!, limit: 1 };
     await durable.persistMatches(input, parityPayload());
@@ -320,15 +347,33 @@ describe('bounded projection performance', () => {
 });
 
 describe('dataset read gate', () => {
+  it.each([undefined, '', 'enabled', 'true', '1', 'PUBLIC', 'typo'])(
+    'fails closed unless mode is exact public: %s',
+    (value) => {
+      const previous = process.env.REAL_DATASET_READ_MODE;
+      try {
+        if (value === undefined) delete process.env.REAL_DATASET_READ_MODE;
+        else process.env.REAL_DATASET_READ_MODE = value;
+        expect(datasetReadMode()).toBe('disabled');
+        process.env.REAL_DATASET_READ_MODE = 'public';
+        expect(datasetReadMode()).toBe('public');
+      } finally {
+        if (previous === undefined) delete process.env.REAL_DATASET_READ_MODE;
+        else process.env.REAL_DATASET_READ_MODE = previous;
+      }
+    },
+  );
+
   it('fails closed with no private counts while exposure is disabled', async () => {
     const previous = process.env.REAL_DATASET_READ_MODE;
     delete process.env.REAL_DATASET_READ_MODE;
     let status = 0;
     let body: unknown;
+    const headers = new Map<string, string>();
     const response: ApiResponse = {
       status(code) { status = code; return this; },
       json(value) { body = value; },
-      setHeader() {},
+      setHeader(name, value) { headers.set(name.toLowerCase(), value); },
     };
     const request: ApiRequest = { method: 'GET', headers: {}, socket: { remoteAddress: 'dataset-test' } };
     try {
@@ -340,5 +385,7 @@ describe('dataset read gate', () => {
     expect(status).toBe(200);
     expect(body).toEqual({ ok: true, schemaVersion: 1, state: 'disabled', source: 'REAL_SERVER' });
     expect(JSON.stringify(body)).not.toMatch(/player|match|count/iu);
+    expect(headers.get('cache-control')).toBe('no-store');
+    expect(request.headers).toEqual({});
   });
 });

@@ -52,13 +52,13 @@ describe('dataset-aware routes', () => {
     window.location.hash = '#/leaderboard';
     await renderWith({ load: async () => response('ready') });
     expect(container.textContent).toContain('戰力排名');
-    expect(container.textContent).toContain('持久化真實戰績');
+    expect(container.textContent).toContain('公開真實戰績');
   });
 
   it('renders the dedicated empty state on an analysis route', async () => {
     window.location.hash = '#/matches';
     await renderWith({ load: async () => response('empty') });
-    expect(container.textContent).toContain('目前沒有可顯示的同意玩家戰績');
+    expect(container.textContent).toContain('目前尚無已加入的真實玩家');
     expect(container.textContent).toContain('前往加入調查');
   });
 
@@ -67,7 +67,7 @@ describe('dataset-aware routes', () => {
     const empty = response('empty');
     empty.dataset.players = demoDataSource.snapshot().players.slice(0, 2);
     await renderWith({ load: async () => empty });
-    expect(container.textContent).toContain('目前沒有可顯示的同意玩家戰績');
+    expect(container.textContent).toContain('目前尚無已加入的真實玩家');
   });
 
   it('renders a shared match containing only one projected performance', async () => {

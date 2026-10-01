@@ -12,5 +12,5 @@
     "noEmit": true,
     "strict": true
   },
-  "include": ["vite.config.ts", "eslint.config.js", "api", "server"]
+  "include": ["vite.config.ts", "eslint.config.js", "api", "server", "shared"]
 }

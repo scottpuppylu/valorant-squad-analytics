@@ -1,5 +1,6 @@
 import type { NormalizedAnalyticsDataset } from '../src/dataSources/types.js';
 import type { HenrikCapabilitySummary } from '../src/dataSources/thirdParty/henrikV4.js';
+import type { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy.js';
 
 export const supportedAffinities = ['ap', 'eu', 'na', 'kr', 'latam', 'br'] as const;
 export type ValorantAffinity = (typeof supportedAffinities)[number];
@@ -10,6 +11,7 @@ export interface ConnectionInput {
   tag: string;
   affinity: ValorantAffinity;
   consent: true;
+  privacyVersion: typeof PUBLIC_DATASET_PRIVACY_VERSION;
 }
 
 export interface MatchImportInput extends ConnectionInput {

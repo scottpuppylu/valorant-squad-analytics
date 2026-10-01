@@ -16,8 +16,12 @@ import {
   verifyConsentManagementCredential,
 } from '../server/consentManagementCredential';
 import { ValorantBackendClient } from '../src/dataSources/server/ValorantBackendClient';
+import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy';
 
-const connection = { gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true } as const;
+const connection = {
+  gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true,
+  privacyVersion: PUBLIC_DATASET_PRIVACY_VERSION,
+} as const;
 const publicPlayerId = '11111111-1111-4111-8111-111111111111';
 const importInput: MatchImportInput = { ...connection, playerId: publicPlayerId, limit: 3 };
 
@@ -100,6 +104,8 @@ describe('production connection validation', () => {
     expect(() => parseConnectionInput({ ...connection, consent: false })).toThrowError(expect.objectContaining({ code: 'CONSENT_REQUIRED' }));
     expect(() => parseConnectionInput({ ...connection, gameName: '../bad' })).toThrowError(expect.objectContaining({ code: 'BAD_REQUEST' }));
     expect(() => parseMatchImportInput({ ...connection, limit: 999 })).toThrowError(expect.objectContaining({ code: 'BAD_REQUEST' }));
+    expect(() => parseConnectionInput({ ...connection, privacyVersion: 'old-policy' })).toThrowError(expect.objectContaining({ code: 'CONSENT_REQUIRED' }));
+    expect(() => parseConnectionInput({ ...connection, privacyVersion: undefined })).toThrowError(expect.objectContaining({ code: 'CONSENT_REQUIRED' }));
   });
 
   it('accepts the single-match production validation limit', () => {
@@ -153,6 +159,36 @@ describe('production connection validation', () => {
     await resolveHandler(request, response);
     expect(status).toBe(400);
     expect(payload).toEqual(expect.objectContaining({ ok: false, error: expect.objectContaining({ code: 'CONSENT_REQUIRED' }) }));
+  });
+
+  it('rejects a stale privacy version before provider access', async () => {
+    const previousKey = process.env.HENRIK_API_KEY;
+    process.env.HENRIK_API_KEY = 'configured-test-key';
+    let providerCalls = 0;
+    vi.stubGlobal('fetch', async () => {
+      providerCalls += 1;
+      return jsonResponse({ status: 200, data: { name: 'must-not-run', tag: 'XX' } });
+    });
+    let status = 0;
+    let payload: unknown;
+    const response: ApiResponse = {
+      status(code) { status = code; return this; },
+      json(body) { payload = body; },
+      setHeader() {},
+    };
+    try {
+      await resolveHandler({
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-forwarded-for': '192.0.2.11' },
+        body: { ...connection, privacyVersion: '2026-09-30-v1' },
+      }, response);
+    } finally {
+      if (previousKey === undefined) delete process.env.HENRIK_API_KEY;
+      else process.env.HENRIK_API_KEY = previousKey;
+    }
+    expect(status).toBe(400);
+    expect(payload).toEqual(expect.objectContaining({ ok: false, error: expect.objectContaining({ code: 'CONSENT_REQUIRED' }) }));
+    expect(providerCalls).toBe(0);
   });
 
   it('applies a bounded server-side request rate', () => {
