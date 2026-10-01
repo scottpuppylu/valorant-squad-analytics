@@ -6,7 +6,7 @@ TASK-DATA-01A adds the first server-side evidence store without changing the pub
 
 Production uses `@neondatabase/serverless` and the server-only variables `DATABASE_URL` and `IDENTIFIER_HMAC_KEY`. Neither name may use a `VITE_` prefix or appear in `src/` or the browser build. CI uses in-memory PGlite and does not require production credentials.
 
-Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migrations`, applies each unapplied version in a transaction, and records its filename. Migration `0001_durable_evidence_foundation.sql` is the immutable initial schema; migration `0002_bounded_historical_sync.sql` adds executable run/cursor metrics, coverage and expiring lease state; migration `0003_consent_revocation_deletion.sql` adds consent-management HMAC, tombstone and deletion state; migration `0004_dataset_read_runtime.sql` adds an independent stable `source_matches.public_id` for the browser-safe read projection. Production migrations are run from a trusted server/operator environment, never from React or a permanent public migration endpoint.
+Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migrations`, applies each unapplied version in a transaction, and records its filename. Migration `0001_durable_evidence_foundation.sql` is the immutable initial schema; migration `0002_bounded_historical_sync.sql` adds executable run/cursor metrics, coverage and expiring lease state; migration `0003_consent_revocation_deletion.sql` adds consent-management HMAC, tombstone and deletion state; migration `0004_dataset_read_runtime.sql` adds an independent stable `source_matches.public_id`; migration `0005_public_dataset_consent.sql` replaces version-scoped active-consent uniqueness with one active consent per player across all policy versions. Production migrations are run from a trusted server/operator environment, never from React or a permanent public migration endpoint.
 
 ## Identity classes
 
@@ -18,9 +18,9 @@ Non-consenting participants receive a match-scoped HMAC. The same provider parti
 
 ## Consent and retention
 
-The current connection is unofficial HenrikDev data access, not Riot RSO ownership verification. Consent is stored as `self_asserted`; the schema separately allows a future `riot_rso_verified` method. An active record includes policy version and `consented_at`; revoked records require `revoked_at`.
+The current connection is unofficial HenrikDev data access, not Riot RSO ownership verification. Consent is stored as `self_asserted`; the schema separately allows a future `riot_rso_verified` method. The current public-display policy is `2026-10-02-public-v1`, defined once in `shared/privacyPolicy.ts`. An active record includes policy version and `consented_at`; revoked records require `revoked_at`. A player may have at most one active consent across all versions. An explicit current-policy connection reuses an already-current consent or transactionally revokes the older active consent and creates one new current consent with a new one-time management credential. Background sync, dataset reads and retries never upgrade policy.
 
-Normalized evidence may be persisted only while consent is active. `deletion_jobs` represents pending, running, paused, complete and failed work with a 45-second lease, explicit stage, safe aggregate counters and 90-day audit-retention target. TASK-DATA-01C implements the cascade and is production validated; every future destructive subject still requires a fresh explicit approval.
+Normalized evidence may be persisted only while the exact current public policy consent is active. `deletion_jobs` represents pending, running, paused, complete and failed work with a 45-second lease, explicit stage, safe aggregate counters and 90-day audit-retention target. TASK-DATA-01C implements the cascade and is production validated; every future destructive subject still requires a fresh explicit approval.
 
 ## Evidence and transaction boundary
 

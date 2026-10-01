@@ -153,7 +153,7 @@ The approved 2026-10-01 production run used a short-lived operator-only endpoint
 
 ## Task DATA-02 — dataset runtime rebase
 
-Status: **IN PROGRESS**
+Status: **COMPLETE — SDD STRICT**
 
 ### Task DATA-02A — durable read API and React dataset runtime foundation
 
@@ -171,7 +171,7 @@ Status: **COMPLETE — SDD STRICT**
 - [x] Retire the full browser REAL envelope from the active path and clean the legacy key without persisting server reads.
 - [x] Add disposable migration, privacy, shared/revoked, parity, provider-state, route and bounded-performance tests.
 
-`REAL_DATASET_READ_MODE` remains disabled in normal production deployment, so **PRIVATE REAL DATA EXPOSED = NO**. DATA-02A prepares the read path; it does not decide who may see a private squad dataset. See `docs/DATASET_RUNTIME.md`.
+DATA-02A prepared a fail-closed read path without deciding distribution. DATA-02B later selected PUBLIC REAL and enabled only the sanitized current-policy projection. See `docs/DATASET_RUNTIME.md`.
 
 ### Task DATA-02A.1 — evidence null semantics hardening
 
@@ -186,13 +186,24 @@ Status: **COMPLETE — SDD STRICT**
 - [x] Preserve schema version 1, snapshot content semantics and the existing legacy-normalizer parity fixture.
 - [x] Add disposable database and route regression tests without adding or changing a migration.
 
-This is a focused projection-correctness hardening. Production REAL visibility remains disabled, migrations `0001`–`0004` remain immutable, and DATA-02B has not started.
+This is a focused projection-correctness hardening. Migrations `0001`–`0004` remain immutable; DATA-02B later added the separate consent-governance migration `0005` without changing projection semantics.
 
 ### Task DATA-02B — visibility, distribution and revalidation policy
 
-Status: **NOT STARTED**
+Status: **COMPLETE — SDD STRICT**
 
-Decide the explicit private-squad read authorization model, cache/revalidation policy and operator-controlled production enablement. Do not reuse the destructive consent-management credential as a read token. DATA-02B must not silently begin TASK-METRICS-01, TASK-002B or Synergy.
+- [x] Adopt the explicit PUBLIC REAL decision with no login, password, access code, session, cookie or read credential.
+- [x] Add the single browser-safe privacy version `2026-10-02-public-v1` and require it on every explicit connection request before provider access.
+- [x] Add migration `0005_public_dataset_consent.sql` so each player has at most one active consent across policy versions.
+- [x] Transactionally revoke an older active consent and create one current active consent only after explicit current-policy connection consent.
+- [x] Require current-policy consent for manual import, historical/incremental sync, cursor lease/commit and public visibility.
+- [x] Make exact `REAL_DATASET_READ_MODE=public` the only value enabling sanitized REAL reads; every other value fails closed.
+- [x] Keep the public route same-origin, rate-limited and `Cache-Control: no-store` without broad CORS.
+- [x] Keep GitHub Pages Demo-only and make Vercel the canonical PUBLIC REAL runtime.
+- [x] Preserve the newest-300-match bound, DATA-02A.1 missing-evidence semantics and the existing sanitized schema 1 projection.
+- [x] Update Chinese consent, Privacy and revocation copy for public publication and resumable deletion semantics.
+
+The current production dataset is validly `empty` because DATA-01C deleted the former test player and no player was reconnected. Public non-empty production content path is **NOT YET EXERCISED AFTER DATA-01C DELETION**; disposable database tests validate current-policy visibility, obsolete-policy exclusion, revocation exclusion and sanitized serialization. TASK-METRICS-01, TASK-002B and Synergy were not started.
 
 ## Task 002B — evidence-aware scoring correctness
 

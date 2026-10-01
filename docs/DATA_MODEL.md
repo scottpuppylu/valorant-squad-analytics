@@ -111,7 +111,9 @@ Server routes validate explicit consent and keep `HENRIK_API_KEY` outside the br
 
 The old phase-1 envelope `goblin-survey:real-dataset:v1` is retired from the active product path. `DatasetProvider` deletes that legacy value on startup, never reads it as the source of truth, and never writes server-read REAL data to localStorage. Emoji overrides and the separate consent-management/deletion credential remain browser-local.
 
-TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. TASK-DATA-01B adds durable historical and incremental synchronization behind the same consent boundary. TASK-DATA-01C provides production-validated credential-authorized revocation and durable deletion. TASK-DATA-02A adds the versioned durable read projection and explicit React runtime states; private REAL visibility remains disabled by default pending DATA-02B policy.
+TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. TASK-DATA-01B adds durable historical and incremental synchronization behind the same consent boundary. TASK-DATA-01C provides production-validated credential-authorized revocation and durable deletion. TASK-DATA-02 adds the versioned public durable read projection and explicit React runtime states. Vercel exposes only sanitized current-policy consenting-player analytics without viewer authentication; GitHub Pages remains Demo-only.
+
+The single current policy constant is `PUBLIC_DATASET_PRIVACY_VERSION = 2026-10-02-public-v1` in `shared/privacyPolicy.ts`. Connection requests must carry this exact version. Only explicit current-policy connection consent can replace an older active consent; it revokes the old row and creates one new active row in one transaction. Manual import, historical/incremental sync, cursor commits and dataset visibility all require the exact current active version and never auto-upgrade it.
 
 DATA-02A.1 hardens the durable read boundary without changing this schema. Match-level `stats_evidence_status='observed'` means the provider supplied a stats object; individual nullable columns can still be missing and therefore remain `NULL`. The projection requires observed finite K/D/A, score and damage plus an agent, at least one durable round, and complete round-presence evidence before emitting a legacy-compatible `MatchPerformance`. An unusable performance is omitted, and a match with no usable visible performance is omitted. Active player profiles remain governed by consent and membership rather than by whether one match is usable.
 
@@ -121,7 +123,7 @@ Shot-location fields preserve the same distinction: all three observed zero coun
 
 ## Neon durable evidence schema
 
-Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0002_bounded_historical_sync.sql` adds public run IDs, sync kinds, cumulative metrics, termination/error fields, cursor coverage and expiring lease fields. Migration `0003_consent_revocation_deletion.sql` adds consent-credential HMACs, player tombstones and the leased staged deletion audit. Migration `0004_dataset_read_runtime.sql` adds a distinct immutable public match UUID used by the sanitized read API. Applied migrations are never edited.
+Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0002_bounded_historical_sync.sql` adds public run IDs, sync kinds, cumulative metrics, termination/error fields, cursor coverage and expiring lease fields. Migration `0003_consent_revocation_deletion.sql` adds consent-credential HMACs, player tombstones and the leased staged deletion audit. Migration `0004_dataset_read_runtime.sql` adds a distinct immutable public match UUID used by the sanitized read API. Migration `0005_public_dataset_consent.sql` changes active-consent uniqueness to one active consent per player across all versions. Applied migrations are never edited.
 
 | Table | Required purpose and key fields |
 |---|---|
@@ -129,7 +131,7 @@ Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, U
 | `players` | internal UUID, public display label, emoji default; no provider secret |
 | `squad_memberships` | squad/player role, joined/left timestamps, visibility state |
 | `provider_identities` | player/provider/affinity plus keyed or encrypted provider identifier; never returned publicly |
-| `consents` | player, scope, policy version, granted/revoked timestamps, actor and provenance |
+| `consents` | player, scope, policy version, granted/revoked timestamps, actor and provenance; at most one active row per player |
 | `sync_runs` | provider, player, trigger, status, started/finished, request counts, error class and coverage window |
 | `sync_cursors` | player/queue endpoint, newest/oldest observed time, boundary match fingerprint, last success |
 | `source_matches` | internal UUID, independent public application UUID, keyed provider-match fingerprint, queue/map/start/duration/version/completion, source schema version |

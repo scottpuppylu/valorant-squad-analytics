@@ -1,6 +1,6 @@
 # Durable dataset runtime
 
-Status: **TASK-DATA-02A + DATA-02A.1 IMPLEMENTED — production exposure disabled by default**
+Status: **TASK-DATA-02 COMPLETE — SDD STRICT**
 
 ## Boundary
 
@@ -14,13 +14,13 @@ Neon durable evidence
   -> existing routes and analysis UI
 ```
 
-`REAL_DATASET_READ_MODE` must equal `enabled` before the route reads Neon. Missing, misspelled or any other value returns a small `state: disabled` response with no player, match or count information. The consent-management credential is never a read credential. Enabling private REAL visibility is a separate operator decision and is not part of TASK-DATA-02A deployment.
+`REAL_DATASET_READ_MODE` must equal the exact value `public` before the route reads Neon. Missing, `enabled`, `true`, `1`, misspelled or any other value returns a small `state: disabled` response with no player, match or count information. Public visitors need no login, cookie, Authorization header, access code or consent-management credential. That credential remains destructive management authority only.
 
-GitHub Pages deliberately uses `DemoDataSource` without calling `/api`. Vercel in disabled mode also deliberately uses Demo. Demo and REAL are never merged. An initial API error remains an explicit REAL-server error; a refresh error retains the last successful REAL snapshot as `stale`.
+Vercel is the canonical PUBLIC REAL runtime. GitHub Pages deliberately uses `DemoDataSource` without calling production `/api`. Demo and REAL are never merged. An initial API error remains an explicit REAL-server error; a refresh error retains the last successful REAL snapshot as `stale`.
 
 ## Active visibility
 
-An exposed player must be non-anonymized and have both an active consent and active squad membership. A match enters the bounded window only when at least one such player participated. Browser performances include only active consenting squad players. The projection may use anonymous event topology server-side to reconstruct a consenting player's KAST/opening events, but it does not return non-consenting participant rows, team topology, provider identifiers or event rows.
+An exposed player must be non-anonymized, have active squad membership, and have exactly one active consent whose method is `self_asserted` and whose version equals `2026-10-02-public-v1`. A match enters the bounded window only when at least one such player participated. Browser performances include only those current-policy players. An obsolete-policy player and a match visible solely through that player are omitted. The projection may use anonymous event topology server-side to reconstruct a consenting player's KAST/opening events, but it does not return non-consenting participant rows, team topology, provider identifiers or event rows.
 
 The response excludes PUUIDs, provider match IDs, lookup HMACs, database internal UUIDs, consent-management material and round/kill/assistant/economy/location detail. Player IDs and migration `0004` match `public_id` values are independent public application IDs.
 
@@ -40,6 +40,8 @@ The successful versioned response contains:
 
 The snapshot version hashes only browser-visible dataset, coverage and evidence content. It changes when that projected content changes and does not expose a database timestamp or internal ID. The window is the most recent 300 durable matches across currently visible members. It is an operational bound, not a lifetime-history claim.
 
+The REAL response is `Cache-Control: no-store`. Revocation therefore takes effect on the next server request without a configured browser/CDN TTL. The React provider performs an initial load and explicit refresh; route reloads create a new load. It does not poll and does not persist a full REAL dataset in localStorage. An already-open page may retain the last in-memory snapshot until refresh/reload.
+
 ## Compatibility projection
 
 - A browser `MatchPerformance` is emitted only when match-level stats evidence is `observed`, the agent and K/D/A/score/damage fields are observed finite numbers, at least one durable round exists, and the player has round-presence evidence for every durable round in the match.
@@ -54,7 +56,7 @@ The snapshot version hashes only browser-visible dataset, coverage and evidence 
 
 KAST/FK/FD are marked `partial` when any eligible candidate lacks complete round-presence evidence, including when that candidate is omitted and another member keeps the shared match visible. Observed numeric zeros remain zeros: zero kills, assists, score, damage, shots, FK, FD or a completely reconstructed zero KAST are not treated as missing. DATA-02A.1 changes projection correctness only; it does not change scoring formulas or introduce Trade, Clutch, Economy, Impact or Role Value.
 
-Because the snapshot hashes the corrected browser-visible dataset and evidence availability, omitting an unusable performance or match changes `snapshot.version`. The public response remains schema version 1 and no migration is required; applied migrations `0001` through `0004` remain unchanged.
+Because the snapshot hashes the corrected browser-visible dataset and evidence availability, omitting an unusable performance or match changes `snapshot.version`. The public response remains schema version 1. DATA-02A.1 required no migration; DATA-02B adds only consent-governance migration `0005` and does not change the dataset schema.
 
 ## React states
 
@@ -73,6 +75,10 @@ Disposable PGlite fixtures exercise the same repository and projection service:
 
 Times are one local test-run observation, not a Neon latency promise. The constant six-query plan avoids per-player and per-match N+1 reads.
 
-## Deferred DATA-02B
+## Public consent policy
 
-TASK-DATA-02B may decide authorization/distribution policy, cache/revalidation policy, private squad selection and deliberate REAL production enablement. It must not silently enable `REAL_DATASET_READ_MODE`, reconnect the deleted production subject, or begin TASK-METRICS-01/TASK-002B/Synergy.
+`shared/privacyPolicy.ts` is the single browser-safe source of truth for `PUBLIC_DATASET_PRIVACY_VERSION = 2026-10-02-public-v1`. Connection parsing requires both `consent=true` and that exact version before provider access. Explicit connection may transactionally replace an older active consent; import, sync, retries and dataset reads may not upgrade policy. Migration `0005` enforces one active consent per player across versions.
+
+## Production state
+
+The former test player was deleted by DATA-01C and was not reconnected. Public mode therefore validly returns `state=empty`, `dataset.mode=REAL`, `dataset.isDemo=false`, zero players and zero matches. The non-empty public production path is **NOT YET EXERCISED AFTER DATA-01C DELETION**; current-policy non-empty projection is covered by disposable database tests.

@@ -4,9 +4,10 @@ Decision date: 2026-09-29
 
 ## Deployment status
 
-- Production application: <https://valorant-squad-analytics.vercel.app/>
+- Production application and canonical PUBLIC REAL runtime: <https://valorant-squad-analytics.vercel.app/>
 - Same-origin provider status endpoint: deployed and verified in configured mode; the credential remains server-only.
-- GitHub Pages rollback: still active in Demo mode.
+- Public dataset read: no login, cookie, Authorization header or access code; only sanitized current-policy consenting-player projections.
+- GitHub Pages rollback: still active in Demo-only mode and never calls the production dataset API.
 - Live account resolution and bounded import: verified with one explicitly consenting account.
 - Durable history sync: verified with 54 bounded backfill chunks plus one newest-overlap incremental chunk.
 - Real-data field coverage: verified only for the bounded, sanitized 2026-09-30 sample documented in `REAL_DATA_FIELD_AUDIT.md`; lifetime completeness is **NOT VERIFIED**.
@@ -23,7 +24,7 @@ Browser
   -> HenrikDataProvider
   -> HenrikDev
   -> Henrik adapter and normalized Neon evidence
-  -> versioned /api/valorant/dataset projection (disabled by default)
+  -> versioned /api/valorant/dataset projection (exact public-mode gate)
   -> DatasetProvider
   -> existing TASK-003 query/scoring/UI layers
 ```
@@ -58,9 +59,9 @@ HenrikDev is an unofficial provider. A controlled structural audit observed matc
 
 ## Browser runtime and durable foundation
 
-TASK-DATA-02A replaces the active browser REAL envelope with a versioned durable read boundary. `DatasetProvider` removes the legacy key on startup, never writes server-read REAL data to localStorage, and exposes explicit loading/ready/stale/empty/error/demo states. GitHub Pages remains deliberately Demo-only.
+TASK-DATA-02 replaces the active browser REAL envelope with a versioned public durable read boundary. `DatasetProvider` removes the legacy key on startup, never writes server-read REAL data to localStorage, and exposes explicit loading/ready/stale/empty/error/demo states. Vercel serves PUBLIC REAL without viewer authentication when `REAL_DATASET_READ_MODE=public`; any other value fails closed. GitHub Pages remains deliberately Demo-only.
 
-TASK-DATA-01A adds a production-validated Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. TASK-DATA-01B migration `0002` adds executable sync state, public run IDs, aggregate performance/coverage fields and expiring leases. DATA-01C migration `0003` and its revoke/deletion runtime are production validated. DATA-02A migration `0004` adds a stable independent public match UUID. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production.
+TASK-DATA-01A adds a production-validated Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. TASK-DATA-01B migration `0002` adds executable sync state, public run IDs, aggregate performance/coverage fields and expiring leases. DATA-01C migration `0003` and its revoke/deletion runtime are production validated. DATA-02A migration `0004` adds a stable independent public match UUID. DATA-02B migration `0005` enforces player-scoped active-consent uniqueness. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production.
 
 ### DATA-01A production validation
 
@@ -70,12 +71,12 @@ Both writes ended with the same aggregates: one player, one active consent, one 
 
 ## Current architecture limitations
 
-- Private REAL visibility remains fail-closed; TASK-DATA-02B must choose authorization/distribution before the operator enables it.
+- Public non-empty production content has not yet been exercised after the DATA-01C player deletion; disposable databases validate the same current-policy projection.
 - The read projection is capped at the newest 300 eligible matches and must not be described as complete lifetime history.
 - Only legacy-compatible ACS, ADR, HS%, KAST, FK and FD are projected; later metric engines remain deferred.
 - A server consent ledger, durable cursor execution and production-validated credential-authorized deletion state machine exist. Automatic 90-day audit expiry execution and cross-device recovery without the browser credential remain pending/operator-assisted.
 - Historical sync uses a durable 45-second per-player Postgres lease. The older bounded-import in-memory guard remains only for its separate one-request path.
-- The opaque snapshot covers browser-visible content; production cache/revalidation policy remains DATA-02B work.
+- The opaque snapshot covers browser-visible content. The dataset API is `no-store`; the browser loads initially and on explicit refresh/reload without polling or localStorage persistence.
 
 ## Persistence architecture
 
@@ -113,10 +114,10 @@ Revocation disables provider access in the same transaction, cancels unfinished 
 
 The explicitly approved 2026-10-01 run gated on exactly one active legacy production candidate, provisioned its management credential only inside the server boundary, and verified manual import, reconnect, backfill and incremental sync stopped before any provider fetch. The worker completed in three attempts: 154 exclusive matches deleted, zero shared matches anonymized, one provider identity and membership removed, two cursors removed and two sync runs anonymized. Rank and shared-match counts were zero. The tombstone, zero personal sync residue and zero orphan checks all passed. The temporary operator route and three temporary secrets were then removed, followed by a clean production redeploy whose removed route returned 404.
 
-## Dataset runtime rebase — DATA-02A complete, DATA-02B pending
+## Dataset runtime rebase — DATA-02 complete
 
-The frontend now uses `DatasetProvider` with loading, ready, stale, empty, error and demo states. `GET /api/valorant/dataset` returns only public application IDs, evidence availability, projection version, bounded coverage and an opaque content snapshot. The route returns disabled without private counts unless `REAL_DATASET_READ_MODE=enabled`. Demo remains deliberate on Pages and disabled Vercel; it is never merged with REAL. Full details and performance evidence are in `DATASET_RUNTIME.md`.
+The frontend uses `DatasetProvider` with loading, ready, stale, empty, error and demo states. `GET /api/valorant/dataset` returns only public application IDs, evidence availability, projection version, bounded coverage and an opaque content snapshot. Exact `REAL_DATASET_READ_MODE=public` exposes the sanitized dataset with no viewer authentication; every other value returns disabled without counts. Public visibility requires active membership and one active `self_asserted` consent on `2026-10-02-public-v1`. Migration `0005` enforces one active consent per player across versions. Demo remains deliberate on Pages and is never merged with REAL. Full details and performance evidence are in `DATASET_RUNTIME.md`.
 
 ## Rollback
 
-The DATA-02A rollback state is tagged `checkpoint-before-data-02a` at commit `1d2b522`. GitHub Pages continues in deliberate Demo mode. Vercel keeps private REAL reads disabled until a separate visibility decision; no deleted player is reconnected.
+The DATA-02A rollback state is tagged `checkpoint-before-data-02a` at commit `1d2b522`. GitHub Pages continues in deliberate Demo-only mode. Vercel is the PUBLIC REAL canonical runtime; no deleted player was reconnected.

@@ -1,6 +1,6 @@
 # Code map
 
-This map records the active DATA-02A runtime, durable evidence/sync/deletion foundations and the intentionally disabled private REAL visibility gate.
+This map records the completed DATA-02 PUBLIC REAL runtime and durable evidence/sync/deletion foundations.
 
 ## Current runtime
 
@@ -22,10 +22,10 @@ React routes/components
   -> normalized durable evidence in Neon
 
 GET /api/valorant/dataset
-  -> REAL_DATASET_READ_MODE fail-closed gate
+  -> exact REAL_DATASET_READ_MODE=public fail-closed gate
   -> PostgresDatasetReadRepository (six set-based reads)
   -> DatasetProjectionService (legacy-browser-projection-v1)
-  -> browser-safe REAL dataset, coverage and opaque snapshot
+  -> public browser-safe REAL dataset, coverage and opaque snapshot
 
 #/connect durable sync controls
   -> /api/valorant/sync/start | continue | status
@@ -38,7 +38,8 @@ GET /api/valorant/dataset
 
 Current limitations:
 
-- private REAL exposure is disabled until the operator deliberately selects a DATA-02B policy;
+- Vercel REAL reads are public without viewer authentication, while all non-`public` mode values fail closed;
+- only current `2026-10-02-public-v1` self-asserted consent plus active membership authorizes visibility or provider writes;
 - the projection is bounded to the newest 300 eligible durable matches and is not lifetime history;
 - compatibility metrics exist, but final Trade/Clutch/Economy/Impact/Role Value reconstruction remains deferred;
 - the legacy browser REAL envelope remains only for cleanup/tests/rollback and is not read by the product;
@@ -49,6 +50,7 @@ Current limitations:
 | Area | Files | Responsibility |
 |---|---|---|
 | Public routes | `src/App.tsx`, `src/routes.ts`, `src/components/AppShell.tsx` | Hash routes and product navigation |
+| Public privacy policy | `shared/privacyPolicy.ts` | One browser-safe current public consent version shared by request and server validation |
 | Active dataset | `src/contexts/DatasetProvider.tsx`, `src/data/analytics.ts` | Own runtime state and build deterministic analysis from an injected dataset |
 | Durable read API | `api/valorant/dataset.ts`, `server/dataset/**` | Fail-closed gate, bounded set-based rows, privacy-safe projection and snapshot |
 | Legacy browser dataset | `src/dataSources/real/BrowserRealDatasetRepository.ts` | Cleanup/tests/rollback only; not a production source of truth |
@@ -110,9 +112,11 @@ scheduled/manual sync command
 ### TASK-DATA-02 — dataset runtime rebase
 
 - DATA-02A complete: migration `0004`, versioned read endpoint, six-query bounded projection, opaque snapshot and React DatasetProvider.
-- DATA-02A complete: explicit loading/ready/stale/empty/error/demo states, deliberate Pages Demo and disabled-Vercel Demo.
+- DATA-02A complete: explicit loading/ready/stale/empty/error/demo states and deliberate Pages Demo; DATA-02B later enabled public Vercel REAL.
 - DATA-02A complete: legacy REAL localStorage cleanup, page migration, privacy/parity/performance tests.
-- DATA-02B pending: explicit read authorization/distribution, cache/revalidation and deliberate production visibility decision.
+- DATA-02B complete: PUBLIC REAL without login/access code, current-policy consent-only projection, `no-store`, explicit refresh/reload and deliberate production enablement.
+- Migration `0005` guarantees at most one active consent per player across policy versions.
+- GitHub Pages stays Demo-only; Vercel is the canonical PUBLIC REAL runtime.
 
 ### TASK-METRICS-01 — event reconstruction
 

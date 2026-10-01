@@ -39,6 +39,8 @@ All three responses use `Cache-Control: no-store`. The status endpoint is POST r
 
 The transaction locks the active consent, verifies the credential, marks the consent revoked with its UTC timestamp, deactivates squad membership, cancels pending/running/paused/failed sync runs, releases cursor leases, clears retry scheduling and creates or reuses one open deletion job. A repeated authenticated revoke returns the existing job instead of duplicating work.
 
+Vercel's public REAL projection requires both current-version active consent and active membership. The accepted revocation transaction therefore removes the player from public read eligibility immediately, before the heavier evidence deletion or shared-match anonymization stages finish. `GET /api/valorant/dataset` uses `Cache-Control: no-store`, so the next request is not served from a browser/CDN dataset cache. An already-open page may retain its in-memory snapshot until refresh or reload.
+
 Manual import checks the active public player before Henrik access and again in the evidence transaction. Sync checks consent before start/continue, in lease acquisition, before provider access, inside each match write and before cursor/run success commit. Account resolution is blocked before provider access while a deletion job is open. A revocation that commits while a provider response is in flight therefore prevents the later database write and cursor advance; cancellation cannot be overwritten by failure/success bookkeeping.
 
 ## Durable deletion state machine
@@ -103,6 +105,8 @@ Sync cursors are deleted. Sync runs retain only privacy-safe operational aggrega
 ## Re-consent
 
 Re-consent is allowed only after the prior deletion job completes. Because provider identity was removed, the next explicit consent creates a new player public ID, consent record and management credential. Old match tombstones and deletion audit cannot be relinked to that new identity.
+
+A material future publication-policy change must use a new privacy version. Only an explicit connection submission accepting that current version may transactionally revoke an older active consent and create a new active consent; background sync, retries and public reads never upgrade consent.
 
 ## Disposable validation matrix
 
