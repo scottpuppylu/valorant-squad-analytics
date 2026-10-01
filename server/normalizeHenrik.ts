@@ -1,17 +1,12 @@
 import { createHash } from 'node:crypto';
 import type { NormalizedAnalyticsDataset } from '../src/dataSources/types.js';
-import type { AgentName, GameMode, MatchPerformance, MatchRecord, Player, PlayerRole } from '../src/types/valorant.js';
+import type { AgentName, MatchPerformance, MatchRecord, Player } from '../src/types/valorant.js';
 import type { MatchImportInput } from './contracts.js';
 import { PublicApiError } from './errors.js';
+import { primaryRoleForAgents } from '../src/utils/agentRoles.js';
+import { normalizeGameMode } from '../src/utils/gameMode.js';
 
 type JsonRecord = Record<string, unknown>;
-
-const agentRoles: Record<string, PlayerRole> = {
-  Jett: 'Duelist', Raze: 'Duelist', Phoenix: 'Duelist', Reyna: 'Duelist', Yoru: 'Duelist', Neon: 'Duelist', Iso: 'Duelist', Waylay: 'Duelist',
-  Sova: 'Initiator', Breach: 'Initiator', Skye: 'Initiator', 'KAY/O': 'Initiator', Fade: 'Initiator', Gekko: 'Initiator', Tejo: 'Initiator',
-  Omen: 'Controller', Brimstone: 'Controller', Viper: 'Controller', Astra: 'Controller', Harbor: 'Controller', Clove: 'Controller',
-  Sage: 'Sentinel', Cypher: 'Sentinel', Killjoy: 'Sentinel', Chamber: 'Sentinel', Deadlock: 'Sentinel', Vyse: 'Sentinel', Veto: 'Sentinel',
-};
 
 function record(value: unknown, label: string): JsonRecord {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) malformed(label);
@@ -52,15 +47,9 @@ function opaqueId(value: string): string {
   return `real-${createHash('sha256').update(value).digest('hex').slice(0, 20)}`;
 }
 
-function queueMode(metadata: JsonRecord): GameMode {
+function queueMode(metadata: JsonRecord) {
   const queue = record(metadata.queue, '對戰模式');
-  const label = typeof queue.name === 'string' && queue.name ? queue.name : textValue(queue.id, '對戰模式');
-  const normalized = label.toLowerCase();
-  if (normalized.includes('competitive')) return 'Competitive';
-  if (normalized.includes('premier')) return 'Premier';
-  if (normalized.includes('unrated')) return 'Unrated';
-  if (normalized.includes('custom')) return 'Custom';
-  return label as GameMode;
+  return normalizeGameMode(typeof queue.id === 'string' ? queue.id : undefined, typeof queue.name === 'string' ? queue.name : undefined);
 }
 
 function deriveRoundEvidence(match: JsonRecord, targetPuuid: string, targetTeam: string) {
@@ -162,17 +151,6 @@ function normalizeMatch(match: JsonRecord, input: MatchImportInput, playerId: st
   };
 }
 
-function primaryRole(agents: AgentName[]): PlayerRole {
-  const counts = new Map<PlayerRole, number>();
-  for (const agent of agents) {
-    const role = agentRoles[agent];
-    if (role) counts.set(role, (counts.get(role) ?? 0) + 1);
-  }
-  const winner = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0];
-  if (!winner) malformed('特務角色對應');
-  return winner;
-}
-
 export function normalizeHenrikMatches(payload: unknown, input: MatchImportInput): NormalizedAnalyticsDataset {
   const envelope = record(payload, '回應');
   numberValue(envelope.status, '回應狀態');
@@ -187,7 +165,7 @@ export function normalizeHenrikMatches(payload: unknown, input: MatchImportInput
     id: playerId,
     handle: `${input.gameName}#${input.tag}`,
     displayName: input.gameName,
-    role: primaryRole(agents),
+    role: primaryRoleForAgents(agents),
     agents,
     accent: '#6ee7b7',
     tagline: '已連接真實戰績',

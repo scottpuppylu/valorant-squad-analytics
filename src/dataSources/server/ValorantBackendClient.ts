@@ -10,6 +10,7 @@ import type {
   SyncResponse,
   RevocationResponse,
   DeletionResponse,
+  DatasetResponse,
 } from './contracts';
 
 export class BackendApiError extends Error {
@@ -48,6 +49,10 @@ function post(body: unknown): RequestInit {
 export class ValorantBackendClient {
   providerStatus(): Promise<ProviderStatusResponse> {
     return requestJson('/api/valorant/provider/status');
+  }
+
+  dataset(signal?: AbortSignal): Promise<DatasetResponse> {
+    return requestJson('/api/valorant/dataset', { signal });
   }
 
   resolveAccount(input: ConnectionRequest): Promise<AccountResponse> {
