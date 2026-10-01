@@ -199,6 +199,109 @@ describe('durable dataset projection privacy and compatibility', () => {
     expect(projected.id).not.toBe(legacy.id);
     expect(projected.performances[0]!.playerId).not.toBe(legacy.performances[0]!.playerId);
   });
+
+  it('omits a performance and match when round presence is incomplete', async () => {
+    const database = await migratedDatabase();
+    await seedProjection(database, 1, 1);
+    const service = new DatasetProjectionService(new PostgresDatasetReadRepository(database));
+    const completeSnapshot = (await service.read()).payload.snapshot.version;
+    await database.query(
+      'INSERT INTO rounds (id,source_match_id,round_number,plant_status,defuse_status) VALUES ($1,$2,2,$3,$4)',
+      [uuid(11, 1), uuid(5, 1), 'missing', 'missing'],
+    );
+
+    const result = await service.read();
+    expect(result.payload.dataset.players).toHaveLength(1);
+    expect(result.payload.dataset.matches).toEqual([]);
+    expect(result.payload.state).toBe('empty');
+    expect(result.payload.evidence).toMatchObject({ kast: 'partial', firstKills: 'partial', firstDeaths: 'partial' });
+    expect(result.payload.snapshot.version).not.toBe(completeSnapshot);
+  });
+
+  it('omits combat stats when there are no durable round rows', async () => {
+    const database = await migratedDatabase();
+    await seedProjection(database, 1, 1);
+    await database.query('DELETE FROM rounds WHERE source_match_id=$1', [uuid(5, 1)]);
+
+    const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
+    expect(result.payload.state).toBe('empty');
+    expect(result.payload.dataset.matches).toEqual([]);
+    expect(JSON.stringify(result.payload.dataset)).not.toMatch(/"(?:acs|adr|kast)":0/iu);
+  });
+
+  it('omits a performance when a required combat aggregate is missing', async () => {
+    const database = await migratedDatabase();
+    await seedProjection(database, 1, 1);
+    await database.query('UPDATE match_participants SET score=NULL WHERE id=$1', [uuid(8, 1)]);
+
+    const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
+    expect(result.payload.state).toBe('empty');
+    expect(result.payload.dataset.matches).toEqual([]);
+  });
+
+  it('keeps a shared match with only its complete consenting performance', async () => {
+    const database = await migratedDatabase();
+    await seedProjection(database, 2, 1);
+    await database.query(
+      'INSERT INTO rounds (id,source_match_id,round_number,plant_status,defuse_status) VALUES ($1,$2,2,$3,$4)',
+      [uuid(11, 2), uuid(5, 1), 'missing', 'missing'],
+    );
+    await database.query(
+      `INSERT INTO round_participants
+        (id,round_id,match_participant_id,stats_evidence_status,loadout_evidence_status,weapon_evidence_status,armor_evidence_status)
+       VALUES ($1,$2,$3,'observed','missing','missing','missing')`,
+      [uuid(12, 1), uuid(11, 2), uuid(8, 1)],
+    );
+
+    const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
+    expect(result.payload.dataset.players).toHaveLength(2);
+    expect(result.payload.dataset.matches).toHaveLength(1);
+    expect(result.payload.dataset.matches[0]!.performances).toEqual([
+      expect.objectContaining({ playerId: uuid(2, 1) }),
+    ]);
+    expect(result.payload.evidence).toMatchObject({ kast: 'partial', firstKills: 'partial', firstDeaths: 'partial' });
+  });
+
+  it('preserves legitimate observed zero values with complete evidence', async () => {
+    const database = await migratedDatabase();
+    await seedProjection(database, 1, 1, 1);
+    await database.query(
+      `UPDATE match_participants SET kills=0,deaths=1,assists=0,score=0,damage_dealt=0,
+        headshots=0,bodyshots=0,legshots=0 WHERE id=$1`,
+      [uuid(8, 1)],
+    );
+    await database.query("UPDATE match_participants SET team_key='Red' WHERE id=$1", [uuid(8, 2)]);
+    await database.query(
+      `INSERT INTO kill_events
+        (id,source_match_id,round_id,event_lookup_hmac,event_sequence,time_in_round_ms,killer_participant_id,victim_participant_id)
+       VALUES ($1,$2,$3,$4,0,1000,$5,$6)`,
+      [uuid(13, 1), uuid(5, 1), uuid(9, 1), lookup(50_001), uuid(8, 2), uuid(8, 1)],
+    );
+
+    const performance = (await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read())
+      .payload.dataset.matches[0]!.performances[0]!;
+    expect(performance).toMatchObject({
+      kills: 0,
+      assists: 0,
+      acs: 0,
+      adr: 0,
+      kast: 0,
+      headshotPercentage: 0,
+      firstKills: 0,
+      firstDeaths: 1,
+    });
+  });
+
+  it('omits HS percentage instead of converting a missing shot count to zero', async () => {
+    const database = await migratedDatabase();
+    await seedProjection(database, 1, 1);
+    await database.query('UPDATE match_participants SET headshots=NULL WHERE id=$1', [uuid(8, 1)]);
+
+    const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
+    const performance = result.payload.dataset.matches[0]!.performances[0]!;
+    expect(performance).not.toHaveProperty('headshotPercentage');
+    expect(result.payload.evidence.headshotPercentage).toBe('partial');
+  });
 });
 
 describe('bounded projection performance', () => {

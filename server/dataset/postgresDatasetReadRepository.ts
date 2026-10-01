@@ -65,7 +65,8 @@ export class PostgresDatasetReadRepository implements DatasetReadRepository {
         JOIN rounds r ON r.source_match_id=em.id
         JOIN round_participants rp ON rp.round_id=r.id
         JOIN match_participants mp ON mp.id=rp.match_participant_id
-        JOIN active_players ap ON ap.id=mp.player_id`, [windowSize]),
+        JOIN active_players ap ON ap.id=mp.player_id
+        WHERE rp.present IS TRUE`, [windowSize]),
       query<DatasetEventRow>(`${eligibleMatches}
         SELECT ke.source_match_id AS internal_match_id, ke.round_id AS internal_round_id,
                ke.event_sequence, ke.time_in_round_ms,

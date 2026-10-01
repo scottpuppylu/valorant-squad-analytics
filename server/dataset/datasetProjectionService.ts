@@ -138,6 +138,7 @@ export class DatasetProjectionService {
       grouped.set(row.internal_match_id, list);
     }
     let completeRoundEvidence = true;
+    let completeHeadshotEvidence = true;
     const matches: MatchRecord[] = [];
     for (const performanceRows of grouped.values()) {
       const first = performanceRows[0];
@@ -147,27 +148,36 @@ export class DatasetProjectionService {
       const roundIds = roundIdsByMatch.get(first.internal_match_id) ?? [];
       const performances = performanceRows.flatMap((row): MatchPerformance[] => {
         const player = playerRowByInternalId.get(row.internal_player_id);
+        const observedRounds = roundIds.length;
+        const roundMetrics = observedRounds > 0
+          ? reconstructRoundMetrics(row.internal_participant_id, row.team_key, roundIds, participantRoundPresence, eventsByRound)
+          : null;
+        if (!roundMetrics) completeRoundEvidence = false;
         if (!player || row.stats_evidence_status !== 'observed' || !row.agent_name
           || !finite(row.kills) || !finite(row.deaths) || !finite(row.assists)
-          || !finite(row.score) || !finite(row.damage_dealt)) return [];
-        const roundMetrics = reconstructRoundMetrics(row.internal_participant_id, row.team_key, roundIds, participantRoundPresence, eventsByRound);
-        if (!roundMetrics) completeRoundEvidence = false;
-        const shotTotal = (row.headshots ?? 0) + (row.bodyshots ?? 0) + (row.legshots ?? 0);
-        const observedRounds = roundIds.length;
+          || !finite(row.score) || !finite(row.damage_dealt) || !roundMetrics) return [];
+        let headshotPercentage: number | undefined;
+        if (finite(row.headshots) && finite(row.bodyshots) && finite(row.legshots)) {
+          const shotTotal = row.headshots + row.bodyshots + row.legshots;
+          headshotPercentage = shotTotal === 0 ? 0 : row.headshots / shotTotal;
+        } else {
+          completeHeadshotEvidence = false;
+        }
         return [{
           playerId: player.public_id,
           agent: row.agent_name,
           kills: row.kills,
           deaths: row.deaths,
           assists: row.assists,
-          acs: observedRounds === 0 ? 0 : row.score / observedRounds,
-          adr: observedRounds === 0 ? 0 : row.damage_dealt / observedRounds,
-          kast: roundMetrics?.kast ?? 0,
-          headshotPercentage: shotTotal === 0 ? 0 : (row.headshots ?? 0) / shotTotal,
-          firstKills: roundMetrics?.firstKills,
-          firstDeaths: roundMetrics?.firstDeaths,
+          acs: row.score / observedRounds,
+          adr: row.damage_dealt / observedRounds,
+          kast: roundMetrics.kast,
+          ...(headshotPercentage === undefined ? {} : { headshotPercentage }),
+          firstKills: roundMetrics.firstKills,
+          firstDeaths: roundMetrics.firstDeaths,
         }];
       });
+      if (performances.length === 0) continue;
       matches.push({
         id: first.public_match_id,
         playedAt,
@@ -186,7 +196,7 @@ export class DatasetProjectionService {
     const evidence = {
       acs: 'derived' as const,
       adr: 'derived' as const,
-      headshotPercentage: 'derived' as const,
+      headshotPercentage: completeHeadshotEvidence ? 'derived' as const : 'partial' as const,
       kast: completeRoundEvidence ? 'reconstructed' as const : 'partial' as const,
       firstKills: completeRoundEvidence ? 'reconstructed' as const : 'partial' as const,
       firstDeaths: completeRoundEvidence ? 'reconstructed' as const : 'partial' as const,

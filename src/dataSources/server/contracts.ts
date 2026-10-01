@@ -153,7 +153,7 @@ export interface DatasetCoverageContract {
 export interface DatasetEvidenceContract {
   acs: 'derived';
   adr: 'derived';
-  headshotPercentage: 'derived';
+  headshotPercentage: 'derived' | 'partial';
   kast: 'reconstructed' | 'partial';
   firstKills: 'reconstructed' | 'partial';
   firstDeaths: 'reconstructed' | 'partial';

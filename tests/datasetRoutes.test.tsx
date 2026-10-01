@@ -62,6 +62,26 @@ describe('dataset-aware routes', () => {
     expect(container.textContent).toContain('前往加入調查');
   });
 
+  it('renders the empty state when active profiles exist without usable matches', async () => {
+    window.location.hash = '#/players';
+    const empty = response('empty');
+    empty.dataset.players = demoDataSource.snapshot().players.slice(0, 2);
+    await renderWith({ load: async () => empty });
+    expect(container.textContent).toContain('目前沒有可顯示的同意玩家戰績');
+  });
+
+  it('renders a shared match containing only one projected performance', async () => {
+    window.location.hash = '#/matches';
+    const ready = response('ready');
+    ready.dataset.matches = [{
+      ...ready.dataset.matches[0]!,
+      performances: ready.dataset.matches[0]!.performances.slice(0, 1),
+    }];
+    await renderWith({ load: async () => ready });
+    expect(container.textContent).toContain('對戰紀錄');
+    expect(container.textContent).toContain('NovaHex');
+  });
+
   it('handles an invalid player route without throwing', async () => {
     window.location.hash = '#/players/not-a-player';
     await renderWith({ load: async () => response('ready') });
