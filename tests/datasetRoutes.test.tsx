@@ -46,6 +46,9 @@ describe('dataset-aware routes', () => {
     await act(async () => {
       root.render(<DatasetProvider client={client} forceDemo={false}><AvatarProvider><App /></AvatarProvider></DatasetProvider>);
     });
+    for (let attempt = 0; attempt < 100 && container.textContent?.includes('正在載入頁面'); attempt += 1) {
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 10)); });
+    }
   }
 
   it('renders an analysis route from a ready REAL dataset', async () => {
@@ -58,8 +61,8 @@ describe('dataset-aware routes', () => {
   it('renders the dedicated empty state on an analysis route', async () => {
     window.location.hash = '#/matches';
     await renderWith({ load: async () => response('empty') });
-    expect(container.textContent).toContain('目前尚無已加入的真實玩家');
-    expect(container.textContent).toContain('前往加入調查');
+    expect(container.textContent).toContain('目前尚無可分析的真實對戰');
+    expect(container.textContent).toContain('加入調查');
   });
 
   it('renders the empty state when active profiles exist without usable matches', async () => {
@@ -67,7 +70,7 @@ describe('dataset-aware routes', () => {
     const empty = response('empty');
     empty.dataset.players = demoDataSource.snapshot().players.slice(0, 2);
     await renderWith({ load: async () => empty });
-    expect(container.textContent).toContain('目前尚無已加入的真實玩家');
+    expect(container.textContent).toContain('目前尚無可分析的真實對戰');
   });
 
   it('renders a shared match containing only one projected performance', async () => {
@@ -92,7 +95,7 @@ describe('dataset-aware routes', () => {
   it('renders Synergy empty REAL without Demo fallback', async () => {
     window.location.hash = '#/synergy';
     await renderWith({ load: async () => response('empty') });
-    expect(container.textContent).toContain('目前尚無已加入的真實玩家');
+    expect(container.textContent).toContain('目前尚無可分析的真實對戰');
     expect(container.textContent).not.toContain('NovaHex');
   });
 
@@ -130,6 +133,6 @@ describe('dataset-aware routes', () => {
     performances[1]={...performances[1]!,teamGroup:'B'};
     ready.dataset.matches=[{...ready.dataset.matches[0]!,performances,synergyEvidence:undefined}];
     await renderWith({load:async()=>ready});
-    expect(container.querySelector('#pair-detail')?.textContent).toBe('沒有共同同隊樣本');
+    expect(container.querySelector('#pair-detail')?.textContent).toContain('沒有共同同隊樣本');
   });
 });

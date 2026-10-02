@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { primaryNavigation } from '../src/i18n/zhTW';
+import { primaryNavigation, secondaryNavigation } from '../src/i18n/zhTW';
 import { publicRoutePaths } from '../src/routes';
 
 describe('public analytical routes', () => {
@@ -7,7 +7,7 @@ describe('public analytical routes', () => {
     expect(Object.values(publicRoutePaths)).toEqual(expect.arrayContaining([
       '/', '/leaderboard', '/compare', '/maps', '/agents', '/matches', '/connect', '/players/:playerId', '/dictionary', '/about', '/privacy',
     ]));
-    expect(primaryNavigation.map(({ to }) => to)).toEqual(expect.arrayContaining(['/leaderboard', '/compare', '/maps', '/agents', '/matches', '/connect']));
+    expect([...primaryNavigation,...secondaryNavigation].map(({ to }) => to)).toEqual(expect.arrayContaining(['/leaderboard', '/compare', '/maps', '/agents', '/matches', '/connect']));
   });
 
   it('does not expose deferred product routes in primary navigation', () => {

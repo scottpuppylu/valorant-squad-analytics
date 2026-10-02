@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useAvatars } from '../hooks/useAvatars';
 import { playerEmojiOptions, type PlayerEmoji } from '../types/avatar';
 import type { Player } from '../types/valorant';
@@ -11,6 +11,7 @@ interface EmojiAvatarPickerProps {
 
 export function EmojiAvatarPicker({ player }: EmojiAvatarPickerProps) {
   const { avatars, saveAvatar, resetAvatar, storageError } = useAvatars();
+  const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -29,6 +30,7 @@ export function EmojiAvatarPicker({ player }: EmojiAvatarPickerProps) {
         setMessage(`已將 ${player.handle} 的頭像設為 ${emoji}`);
       }
       setOpen(false);
+      trigger.current?.focus();
     } catch {
       setMessage('儲存失敗，請確認瀏覽器允許本站使用本機儲存空間。');
     } finally {
@@ -50,8 +52,9 @@ export function EmojiAvatarPicker({ player }: EmojiAvatarPickerProps) {
   }
 
   return (
-    <section className="avatar-editor" aria-labelledby="avatar-editor-title">
+    <section className="avatar-editor" aria-labelledby="avatar-editor-title" onKeyDown={(event) => { if (event.key === 'Escape' && open) { setOpen(false); trigger.current?.focus(); } }}>
       <button
+        ref={trigger}
         className="player-avatar-button"
         type="button"
         aria-expanded={open}

@@ -126,11 +126,7 @@ describe('zh-TW localization', () => {
       zhTW.navigation.players,
       zhTW.navigation.compare,
       '搭檔分析',
-      zhTW.navigation.maps,
-      zhTW.navigation.agents,
       zhTW.navigation.matches,
-      zhTW.navigation.connect,
-      zhTW.navigation.dictionary,
     ]);
     expect(primaryNavigation.every(({ label }) => /[\u3400-\u9fff]/u.test(label))).toBe(true);
   });

@@ -39,7 +39,7 @@ describe('selected evidence and presentation integration',()=>{
   it('80 percent component evidence produces partial without masking it',()=>{
     const result=score(mutate((p)=>{p.advancedMetrics!.evidence.trade='unavailable';}));
     expect(result.roundImpact.status).toBe('partial');expect(result.roundImpact.coverage.ratio).toBeCloseTo(.8);
-    expect(formatScore(result.roundImpact)).toContain('部分 80%');
+    expect(formatScore(result.roundImpact)).toContain('部分證據 80%');
     expect(renderToStaticMarkup(<ScoreExplanation score={result.roundImpact}/>)).toContain('評分依據');
   });
   it('complete-domain subset coverage preserves partial status and confidence',()=>{

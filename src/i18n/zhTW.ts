@@ -4,16 +4,16 @@ export const zhTW = {
   brand: {
     name: '哥布林大調查',
     subtitle: '社群透明指標',
-    demo: '示範資料',
+    demo: '虛構示範資料',
   },
   navigation: {
-    dashboard: '總覽',
+    dashboard: '首頁',
     leaderboard: '戰力排名',
-    players: '玩家分析',
-    compare: '玩家比較',
+    players: '玩家',
+    compare: '比較',
     maps: '地圖分析',
     agents: '特務／角色分析',
-    matches: '對戰紀錄',
+    matches: '對戰',
     connect: '加入調查',
     dictionary: '數據字典',
     about: '關於本站',
@@ -47,17 +47,17 @@ export const zhTW = {
 export const primaryNavigation = [
   { to: '/', label: zhTW.navigation.dashboard },
   { to: '/leaderboard', label: zhTW.navigation.leaderboard },
-  { to: '/players/nova-hex', label: zhTW.navigation.players },
+  { to: '/players', label: zhTW.navigation.players },
   { to: '/compare', label: zhTW.navigation.compare },
   { to: '/synergy', label: '搭檔分析' },
-  { to: '/maps', label: zhTW.navigation.maps },
-  { to: '/agents', label: zhTW.navigation.agents },
   { to: '/matches', label: zhTW.navigation.matches },
-  { to: '/connect', label: zhTW.navigation.connect },
-  { to: '/dictionary', label: zhTW.navigation.dictionary },
 ] as const;
 
 export const secondaryNavigation = [
+  { to: '/maps', label: zhTW.navigation.maps },
+  { to: '/agents', label: zhTW.navigation.agents },
+  { to: '/dictionary', label: zhTW.navigation.dictionary },
+  { to: '/connect', label: zhTW.navigation.connect },
   { to: '/about', label: zhTW.navigation.about },
   { to: '/privacy', label: zhTW.navigation.privacy },
 ] as const;

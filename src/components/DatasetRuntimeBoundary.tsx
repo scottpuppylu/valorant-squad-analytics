@@ -1,18 +1,15 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { useDataset } from '../hooks/useDataset';
+import { EmptyState, LoadingPanel } from './EmptyState';
 
 export function DatasetRuntimeBoundary() {
-  const { status, message, refresh, dataset } = useDataset();
+  const { status, refresh, dataset } = useDataset();
   const { pathname } = useLocation();
-  if (status === 'loading') {
-    return <section className="surface-card p-8" role="status"><p className="metric-label">資料載入中</p><h1 className="mt-3 text-2xl font-semibold text-white">正在準備分析資料</h1><p className="mt-3 text-slate-400">請稍候，頁面不會以 Demo 假裝真實資料讀取成功。</p></section>;
-  }
+  if (status === 'loading') return <LoadingPanel />;
   if (status === 'empty') {
     if (pathname === '/synergy' && dataset.players.length > 0) return <Outlet />;
-    return <section className="surface-card p-8"><p className="metric-label">公開真實戰績</p><h1 className="mt-3 text-2xl font-semibold text-white">目前尚無已加入的真實玩家</h1><p className="mt-3 text-slate-400">公開資料集讀取成功，但目前沒有同時具備最新版公開顯示同意、有效小隊成員資格與可用對戰證據的玩家。</p><div className="mt-6 flex flex-wrap gap-3"><Link className="button-primary" to="/connect">前往加入調查</Link><button className="button-secondary" type="button" onClick={() => void refresh()}>重新整理</button></div></section>;
+    return <EmptyState page title="目前尚無可分析的真實對戰" description="公開真實戰績已讀取，目前沒有符合資格的可用對戰。加入調查或查看資料說明，了解如何開始。" actions={<><Link className="button-primary" to="/connect">加入調查</Link><Link className="button-secondary" to="/about">查看資料說明</Link><button className="text-link" type="button" onClick={() => void refresh()}>重新整理資料</button></>} />;
   }
-  if (status === 'error') {
-    return <section className="surface-card p-8" role="alert"><p className="metric-label">資料服務錯誤</p><h1 className="mt-3 text-2xl font-semibold text-white">無法讀取持久化戰績</h1><p className="mt-3 text-slate-400">{message}</p><button className="button-primary mt-6" type="button" onClick={() => void refresh()}>再試一次</button></section>;
-  }
-  return <>{status === 'stale' ? <div className="sample-warning mb-6" role="status">{message} <button type="button" className="text-link" onClick={() => void refresh()}>重新整理</button></div> : null}<Outlet /></>;
+  if (status === 'error') return <div role="alert"><EmptyState page title="暫時無法讀取戰績" description="請稍後重新整理資料。本站不會以虛構示範資料取代真實戰績。" actions={<button className="button-primary" type="button" onClick={() => void refresh()}>重新整理資料</button>} /></div>;
+  return <>{status === 'stale' ? <div className="runtime-notice" role="status">保留上次成功載入的資料。<button type="button" className="text-link" onClick={() => void refresh()}>重新整理資料</button></div> : null}<Outlet /></>;
 }

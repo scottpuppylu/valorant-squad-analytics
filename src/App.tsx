@@ -1,20 +1,23 @@
+import { lazy, Suspense } from 'react';
+import { LoadingPanel } from './components/EmptyState';
+import { PageErrorBoundary } from './components/PageErrorBoundary';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
-import { AboutPage } from './pages/AboutPage';
+const AboutPage = lazy(() => import('./pages/AboutPage').then((module) => ({ default: module.AboutPage })));
 import { DashboardPage } from './pages/DashboardPage';
-import { DictionaryPage } from './pages/DictionaryPage';
-import { LeaderboardPage } from './pages/LeaderboardPage';
-import { ComparePage } from './pages/ComparePage';
-import { MapsPage } from './pages/MapsPage';
-import { AgentsPage } from './pages/AgentsPage';
-import { MatchesPage } from './pages/MatchesPage';
-import { PlayerProfilePage } from './pages/PlayerProfilePage';
-import { PrivacyPage } from './pages/PrivacyPage';
-import { ConnectPage } from './pages/ConnectPage';
+const DictionaryPage = lazy(() => import('./pages/DictionaryPage').then((module) => ({ default: module.DictionaryPage })));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then((module) => ({ default: module.LeaderboardPage })));
+const ComparePage = lazy(() => import('./pages/ComparePage').then((module) => ({ default: module.ComparePage })));
+const MapsPage = lazy(() => import('./pages/MapsPage').then((module) => ({ default: module.MapsPage })));
+const AgentsPage = lazy(() => import('./pages/AgentsPage').then((module) => ({ default: module.AgentsPage })));
+const MatchesPage = lazy(() => import('./pages/MatchesPage').then((module) => ({ default: module.MatchesPage })));
+const PlayerProfilePage = lazy(() => import('./pages/PlayerProfilePage').then((module) => ({ default: module.PlayerProfilePage })));
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then((module) => ({ default: module.PrivacyPage })));
+const ConnectPage = lazy(() => import('./pages/ConnectPage').then((module) => ({ default: module.ConnectPage })));
 import { publicRoutePaths } from './routes';
 import { DatasetRuntimeBoundary } from './components/DatasetRuntimeBoundary';
 import { useDataset } from './hooks/useDataset';
-import { SynergyPage } from './pages/SynergyPage';
+const SynergyPage = lazy(() => import('./pages/SynergyPage').then((module) => ({ default: module.SynergyPage })));
 
 function DefaultPlayerRoute() {
   const { analytics } = useDataset();
@@ -26,7 +29,7 @@ export default function App() {
   return (
     <HashRouter>
       <AppShell>
-        <Routes>
+        <PageErrorBoundary><Suspense fallback={<LoadingPanel title="正在載入頁面" />}><Routes>
           <Route element={<DatasetRuntimeBoundary />}>
             <Route path={publicRoutePaths.dashboard} element={<DashboardPage />} />
             <Route path={publicRoutePaths.leaderboard} element={<LeaderboardPage />} />
@@ -43,7 +46,7 @@ export default function App() {
           <Route path={publicRoutePaths.about} element={<AboutPage />} />
           <Route path={publicRoutePaths.privacy} element={<PrivacyPage />} />
           <Route path="*" element={<Navigate replace to="/" />} />
-        </Routes>
+        </Routes></Suspense></PageErrorBoundary>
       </AppShell>
     </HashRouter>
   );
