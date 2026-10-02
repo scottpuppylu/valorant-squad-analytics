@@ -35,7 +35,7 @@ describe('metric dictionary', () => {
   });
 
   it('clearly marks future concepts as not implemented', () => {
-    for (const id of ['round-impact', 'economy', 'role-value', 'impact-kill', 'duo-synergy']) {
+    for (const id of ['round-impact', 'economy', 'role-value', 'frag-quality', 'duo-synergy']) {
       const definition = metricDefinitionById.get(id);
       expect(definition?.type).toBe('FUTURE');
       expect(definition?.currentAvailability).toBe('PLANNED');

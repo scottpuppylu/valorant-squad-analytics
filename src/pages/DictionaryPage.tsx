@@ -6,6 +6,8 @@ import type { MetricAvailability, MetricCategory, MetricDataSource, MetricType }
 const availabilityLabels: Record<MetricAvailability, string> = {
   IMPLEMENTED: '已實作',
   PROTOTYPE: '原型',
+  RECONSTRUCTED: '已重建',
+  PARTIAL: '部分證據',
   PLANNED: '規劃中',
   UNAVAILABLE: '目前不可用',
 };
@@ -18,6 +20,8 @@ const sourceLabels: Record<MetricDataSource, string> = {
   DEMO: '示範資料',
   RIOT_CONFIRMED: 'Riot 官方直接欄位',
   RIOT_REQUIRES_DERIVATION: 'Riot 官方欄位可推導',
+  HENRIK_OBSERVED: 'HenrikDev 樣本曾觀察',
+  DURABLE_RECONSTRUCTION: '持久化證據重建',
   NOT_CURRENTLY_AVAILABLE: '官方資料目前不足',
   FUTURE: '未來資料模型',
   UNKNOWN_REQUIRES_VERIFICATION: '需要進一步官方驗證',

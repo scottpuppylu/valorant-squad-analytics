@@ -7,12 +7,14 @@ export type MetricCategory =
   | '進階分析'
   | '樣本資訊';
 
-export type MetricAvailability = 'IMPLEMENTED' | 'PROTOTYPE' | 'PLANNED' | 'UNAVAILABLE';
+export type MetricAvailability = 'IMPLEMENTED' | 'PROTOTYPE' | 'RECONSTRUCTED' | 'PARTIAL' | 'PLANNED' | 'UNAVAILABLE';
 
 export type MetricDataSource =
   | 'DEMO'
   | 'RIOT_CONFIRMED'
   | 'RIOT_REQUIRES_DERIVATION'
+  | 'HENRIK_OBSERVED'
+  | 'DURABLE_RECONSTRUCTION'
   | 'NOT_CURRENTLY_AVAILABLE'
   | 'FUTURE'
   | 'UNKNOWN_REQUIRES_VERIFICATION';
