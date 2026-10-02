@@ -23,25 +23,48 @@ interface DatasetProviderProps {
 }
 
 function emptyRealDataset(): NormalizedAnalyticsDataset {
-  return { players: [], matches: [], sourceId: 'durable-neon-v1', isDemo: false, mode: 'REAL' };
+  return { players: [], matches: [], sourceId: 'durable-neon-v2', isDemo: false, mode: 'REAL' };
 }
 
 function githubPagesRuntime(): boolean {
   return typeof window !== 'undefined' && window.location.hostname.endsWith('.github.io');
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isFiniteOptionalNumber(value: unknown): boolean {
+  return value === undefined || (typeof value === 'number' && Number.isFinite(value));
+}
+
+function isAdvancedMetrics(value: unknown): boolean {
+  if (!isRecord(value) || value.ruleVersion !== 'event-metrics-v1' || !isRecord(value.coverage) || !isRecord(value.evidence)) return false;
+  if (!isFiniteOptionalNumber(value.coverage.eligibleRounds)
+    || !isFiniteOptionalNumber(value.coverage.reconstructedRounds)
+    || !isFiniteOptionalNumber(value.coverage.omittedRounds)) return false;
+  const validStatuses = new Set(['reconstructed', 'derived', 'partial', 'unavailable']);
+  const statuses = value.evidence;
+  return ['trade', 'clutch', 'objectives', 'abilityCasts', 'economy', 'impactContext', 'roleValueInputs']
+    .every((key) => typeof statuses[key] === 'string' && validStatuses.has(statuses[key]));
+}
+
 function isDatasetResponse(value: unknown): value is DatasetReadyResponse {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Partial<DatasetReadyResponse>;
   return candidate.ok === true
-    && candidate.schemaVersion === 1
+    && candidate.schemaVersion === 2
     && (candidate.state === 'ready' || candidate.state === 'empty')
     && typeof candidate.snapshot?.version === 'string'
-    && candidate.snapshot.projectionVersion === 'legacy-browser-projection-v1'
+    && candidate.snapshot.projectionVersion === 'event-metrics-projection-v1'
     && candidate.dataset?.mode === 'REAL'
     && candidate.dataset.isDemo === false
     && Array.isArray(candidate.dataset.players)
-    && Array.isArray(candidate.dataset.matches);
+    && Array.isArray(candidate.dataset.matches)
+    && candidate.dataset.matches.every((match) => isRecord(match)
+      && Array.isArray(match.performances)
+      && match.performances.every((performance) => isRecord(performance)
+        && (performance.advancedMetrics === undefined || isAdvancedMetrics(performance.advancedMetrics))));
 }
 
 export function DatasetProvider({ children, client = serverDatasetApiClient, forceDemo }: DatasetProviderProps) {

@@ -1,8 +1,8 @@
 import type { NormalizedAnalyticsDataset } from '../../src/dataSources/types.js';
 import type { SqlExecutor } from '../db/types.js';
 
-export const datasetSchemaVersion = 1 as const;
-export const datasetProjectionVersion = 'legacy-browser-projection-v1' as const;
+export const datasetSchemaVersion = 2 as const;
+export const datasetProjectionVersion = 'event-metrics-projection-v1' as const;
 export const datasetWindowSize = 300;
 
 export interface DatasetPlayerRow extends Record<string, unknown> {
@@ -34,6 +34,19 @@ export interface DatasetPerformanceRow extends Record<string, unknown> {
   headshots: number | null;
   bodyshots: number | null;
   legshots: number | null;
+  normalization_version: string;
+  rounds_evidence_status: string;
+  kills_evidence_status: string;
+  ability_evidence_status: string;
+  ability_1_casts: number | null;
+  ability_2_casts: number | null;
+  grenade_casts: number | null;
+  ultimate_casts: number | null;
+  economy_evidence_status: string;
+  loadout_value_total: number | null;
+  loadout_value_average: number | null;
+  spent_total: number | null;
+  spent_average: number | null;
   team_won: boolean | null;
   rounds_won: number | null;
   rounds_lost: number | null;
@@ -43,11 +56,19 @@ export interface DatasetRoundRow extends Record<string, unknown> {
   internal_match_id: string;
   internal_round_id: string;
   round_number: number;
+  winning_team: string | null;
+  participants_evidence_status: string;
+  plant_status: string;
+  plant_participant_id: string | null;
+  defuse_status: string;
+  defuse_participant_id: string | null;
 }
 
 export interface DatasetRoundParticipantRow extends Record<string, unknown> {
   internal_round_id: string;
   internal_participant_id: string;
+  team_key: string;
+  present: boolean;
 }
 
 export interface DatasetEventRow extends Record<string, unknown> {
@@ -103,7 +124,7 @@ export interface DatasetEvidenceAvailability {
 
 export interface DatasetSnapshot {
   version: string;
-  generation: 'dataset-read-v1';
+  generation: 'dataset-read-v2';
   source: 'durable-neon';
   projectionVersion: typeof datasetProjectionVersion;
 }
@@ -130,8 +151,12 @@ export type DatasetApiPayload = DatasetReadPayload | DatasetReadDisabledPayload;
 export interface DatasetProjectionMetrics {
   sqlQueryCount: number;
   databaseMs: number;
+  metricReconstructionMs: number;
   projectionMs: number;
   serializedBytes: number;
+  roundCount: number;
+  roundParticipantCount: number;
+  eventCount: number;
 }
 
 export interface DatasetProjectionResult {

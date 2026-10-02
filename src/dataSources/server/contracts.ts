@@ -138,9 +138,9 @@ export interface ErrorResponse {
 
 export interface DatasetSnapshotContract {
   version: string;
-  generation: 'dataset-read-v1';
+  generation: 'dataset-read-v2';
   source: 'durable-neon';
-  projectionVersion: 'legacy-browser-projection-v1';
+  projectionVersion: 'event-metrics-projection-v1';
 }
 
 export interface DatasetCoverageContract {
@@ -163,7 +163,7 @@ export interface DatasetEvidenceContract {
 
 export interface DatasetReadyResponse {
   ok: true;
-  schemaVersion: 1;
+  schemaVersion: 2;
   state: 'ready' | 'empty';
   snapshot: DatasetSnapshotContract;
   coverage: DatasetCoverageContract;
@@ -173,7 +173,7 @@ export interface DatasetReadyResponse {
 
 export interface DatasetDisabledResponse {
   ok: true;
-  schemaVersion: 1;
+  schemaVersion: 2;
   state: 'disabled';
   source: 'REAL_SERVER';
 }

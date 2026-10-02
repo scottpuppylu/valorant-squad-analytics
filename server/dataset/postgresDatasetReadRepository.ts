@@ -55,6 +55,11 @@ export class PostgresDatasetReadRepository implements DatasetReadRepository {
                mp.id AS internal_participant_id, mp.player_id AS internal_player_id, mp.team_key,
                mp.agent_name, mp.stats_evidence_status, mp.kills, mp.deaths, mp.assists, mp.score,
                mp.damage_dealt, mp.headshots, mp.bodyshots, mp.legshots,
+               sm.normalization_version, sm.rounds_evidence_status, sm.kills_evidence_status,
+               mp.ability_evidence_status, mp.ability_1_casts, mp.ability_2_casts,
+               mp.grenade_casts, mp.ultimate_casts,
+               mp.economy_evidence_status, mp.loadout_value_total, mp.loadout_value_average,
+               mp.spent_total, mp.spent_average,
                mt.won AS team_won, mt.rounds_won, mt.rounds_lost
         FROM eligible_matches em
         JOIN source_matches sm ON sm.id=em.id
@@ -63,16 +68,18 @@ export class PostgresDatasetReadRepository implements DatasetReadRepository {
         LEFT JOIN match_teams mt ON mt.source_match_id=sm.id AND mt.team_key=mp.team_key
         ORDER BY sm.started_at DESC NULLS LAST, sm.id, ap.public_id`, [windowSize]),
       query<DatasetRoundRow>(`${eligibleMatches}
-        SELECT r.source_match_id AS internal_match_id, r.id AS internal_round_id, r.round_number
+        SELECT r.source_match_id AS internal_match_id, r.id AS internal_round_id, r.round_number,
+               r.winning_team, r.participants_evidence_status, r.plant_status,
+               r.plant_participant_id, r.defuse_status, r.defuse_participant_id
         FROM eligible_matches em JOIN rounds r ON r.source_match_id=em.id
         ORDER BY r.source_match_id, r.round_number`, [windowSize]),
       query<DatasetRoundParticipantRow>(`${eligibleMatches}
-        SELECT rp.round_id AS internal_round_id, rp.match_participant_id AS internal_participant_id
+        SELECT rp.round_id AS internal_round_id, rp.match_participant_id AS internal_participant_id,
+               mp.team_key, rp.present
         FROM eligible_matches em
         JOIN rounds r ON r.source_match_id=em.id
         JOIN round_participants rp ON rp.round_id=r.id
         JOIN match_participants mp ON mp.id=rp.match_participant_id
-        JOIN active_players ap ON ap.id=mp.player_id
         WHERE rp.present IS TRUE`, [windowSize]),
       query<DatasetEventRow>(`${eligibleMatches}
         SELECT ke.source_match_id AS internal_match_id, ke.round_id AS internal_round_id,

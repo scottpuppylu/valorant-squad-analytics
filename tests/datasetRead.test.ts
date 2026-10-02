@@ -79,35 +79,44 @@ async function seedProjection(database: SqlDatabase, playerCount: number, matchC
   const matchRows = Array.from({ length: matchCount }, (_, index) => {
     const id = uuid(5, index + 1);
     const playedAt = new Date(Date.UTC(2026, 8, 29) - index * 60_000).toISOString();
-    return [id, squadId, 'HenrikDev', lookup(index + 1), 'v4', 'durable-evidence-v1', 'ap', 'Ascent', 'competitive', 'Competitive', playedAt, 120_000, playedAt, playedAt, uuid(6, index + 1)];
+    return [id, squadId, 'HenrikDev', lookup(index + 1), 'v4', 'durable-evidence-v2', 'ap', 'Ascent', 'competitive', 'Competitive', playedAt, 120_000, playedAt, playedAt, uuid(6, index + 1), 'observed', 'observed'];
   });
   if (matchRows.length === 0) return;
-  await database.query(`INSERT INTO source_matches (id,squad_id,provider,provider_match_lookup_hmac,provider_schema_version,normalization_version,affinity,map_name,queue_id,queue_name,started_at,game_length_ms,first_observed_at,last_observed_at,public_id) VALUES ${placeholders(matchRows.length, 15)}`, matchRows.flat());
+  await database.query(`INSERT INTO source_matches (id,squad_id,provider,provider_match_lookup_hmac,provider_schema_version,normalization_version,affinity,map_name,queue_id,queue_name,started_at,game_length_ms,first_observed_at,last_observed_at,public_id,rounds_evidence_status,kills_evidence_status) VALUES ${placeholders(matchRows.length, 17)}`, matchRows.flat());
   const teamRows = matchRows.map((row, index) => [uuid(7, index + 1), row[0], 'Blue', true, 1, 0]);
   await database.query(`INSERT INTO match_teams (id,source_match_id,team_key,won,rounds_won,rounds_lost) VALUES ${placeholders(teamRows.length, 6)}`, teamRows.flat());
   const participantRows: unknown[][] = [];
   const roundRows: unknown[][] = [];
   const roundParticipantRows: unknown[][] = [];
+  const killRows: unknown[][] = [];
   let participantSequence = 1;
   for (let matchIndex = 0; matchIndex < matchRows.length; matchIndex += 1) {
     const matchId = matchRows[matchIndex]![0];
     const roundId = uuid(9, matchIndex + 1);
-    roundRows.push([roundId, matchId, 1, 'missing', 'missing']);
+    const matchParticipantIds: string[] = [];
+    roundRows.push([roundId, matchId, 1, 'observed', 'missing', 'missing']);
     for (let playerIndex = 0; playerIndex < playerRows.length; playerIndex += 1) {
       const participantId = uuid(8, participantSequence);
+      matchParticipantIds.push(participantId);
       participantRows.push([participantId, matchId, playerRows[playerIndex]![0], lookup(10_000 + participantSequence), 'Blue', playerIndex % 2 === 0 ? 'Jett' : 'Sova', 'observed', 1, 0, 1, 300, 150, 1, 1, 0]);
       roundParticipantRows.push([uuid(10, participantSequence), roundId, participantId, 'observed', 'missing', 'missing', 'missing']);
       participantSequence += 1;
     }
     for (let privateIndex = 0; privateIndex < nonConsentingParticipants; privateIndex += 1) {
       const participantId = uuid(8, participantSequence);
+      matchParticipantIds.push(participantId);
       participantRows.push([participantId, matchId, null, lookup(10_000 + participantSequence), privateIndex < 4 ? 'Blue' : 'Red', 'Cypher', 'observed', 0, 1, 0, 100, 50, 0, 1, 0]);
+      roundParticipantRows.push([uuid(10, participantSequence), roundId, participantId, 'observed', 'missing', 'missing', 'missing']);
       participantSequence += 1;
+    }
+    if (nonConsentingParticipants > 0 && matchParticipantIds.length > 1) {
+      killRows.push([uuid(13, matchIndex + 1), matchId, roundId, lookup(50_000 + matchIndex), 0, 1000, matchParticipantIds[0], matchParticipantIds.at(-1)]);
     }
   }
   await database.query(`INSERT INTO match_participants (id,source_match_id,player_id,participant_lookup_hmac,team_key,agent_name,stats_evidence_status,kills,deaths,assists,score,damage_dealt,headshots,bodyshots,legshots) VALUES ${placeholders(participantRows.length, 15)}`, participantRows.flat());
-  await database.query(`INSERT INTO rounds (id,source_match_id,round_number,plant_status,defuse_status) VALUES ${placeholders(roundRows.length, 5)}`, roundRows.flat());
+  await database.query(`INSERT INTO rounds (id,source_match_id,round_number,participants_evidence_status,plant_status,defuse_status) VALUES ${placeholders(roundRows.length, 6)}`, roundRows.flat());
   await database.query(`INSERT INTO round_participants (id,round_id,match_participant_id,stats_evidence_status,loadout_evidence_status,weapon_evidence_status,armor_evidence_status) VALUES ${placeholders(roundParticipantRows.length, 7)}`, roundParticipantRows.flat());
+  if (killRows.length > 0) await database.query(`INSERT INTO kill_events (id,source_match_id,round_id,event_lookup_hmac,event_sequence,time_in_round_ms,killer_participant_id,victim_participant_id) VALUES ${placeholders(killRows.length, 8)}`, killRows.flat());
 }
 
 function parityPayload() {
@@ -120,8 +129,16 @@ function parityPayload() {
     ],
     teams: [{ team_id: 'Blue', won: true, rounds: { won: 1, lost: 1 } }, { team_id: 'Red', won: false, rounds: { won: 1, lost: 1 } }],
     rounds: [
-      { id: 1, winning_team: 'Blue', result: 'Eliminated', plant: null, defuse: null, stats: [{ player: { puuid: 'target' }, stats: { kills: 1, score: 250 }, economy: {} }] },
-      { id: 2, winning_team: 'Blue', result: 'Eliminated', plant: null, defuse: null, stats: [{ player: { puuid: 'target' }, stats: { kills: 0, score: 150 }, economy: {} }] },
+      { id: 1, winning_team: 'Blue', result: 'Eliminated', plant: null, defuse: null, stats: [
+        { player: { puuid: 'target' }, stats: { kills: 1, score: 250 }, economy: {} },
+        { player: { puuid: 'friend' }, stats: { kills: 0, score: 0 }, economy: {} },
+        { player: { puuid: 'enemy' }, stats: { kills: 0, score: 0 }, economy: {} },
+      ] },
+      { id: 2, winning_team: 'Blue', result: 'Eliminated', plant: null, defuse: null, stats: [
+        { player: { puuid: 'target' }, stats: { kills: 0, score: 150 }, economy: {} },
+        { player: { puuid: 'friend' }, stats: { kills: 1, score: 200 }, economy: {} },
+        { player: { puuid: 'enemy' }, stats: { kills: 1, score: 200 }, economy: {} },
+      ] },
     ],
     kills: [
       { round: 1, time_in_round_in_ms: 1000, killer: { puuid: 'target', team: 'Blue' }, victim: { puuid: 'enemy', team: 'Red' }, assistants: [], weapon: {}, player_locations: [] },
@@ -132,7 +149,7 @@ function parityPayload() {
 }
 
 describe('dataset runtime migrations', () => {
-  it('applies 0004 and 0005 on a fresh database, upgrades an existing database, and reruns without changing public ids', async () => {
+  it('applies 0004 through 0006 on a fresh database, upgrades an existing database, and reruns without changing public ids', async () => {
     const fresh = await migratedDatabase();
     expect((await fresh.query<{ version: string }>("SELECT version FROM schema_migrations WHERE version='0004'")).rows).toEqual([{ version: '0004' }]);
 
@@ -141,7 +158,7 @@ describe('dataset runtime migrations', () => {
     await existing.query(`INSERT INTO source_matches (id,squad_id,provider,provider_match_lookup_hmac,provider_schema_version,normalization_version,affinity,first_observed_at,last_observed_at)
       VALUES ($1,$2,'HenrikDev',$3,'v4','durable-evidence-v1','ap',now(),now())`, [uuid(5, 999), squadId, lookup(999)]);
     const all = await loadMigrations(migrationsPath);
-    expect(await applyMigrations(existing, all)).toEqual(['0004', '0005']);
+    expect(await applyMigrations(existing, all)).toEqual(['0004', '0005', '0006']);
     const before = (await existing.query<{ public_id: string }>('SELECT public_id FROM source_matches')).rows[0]!.public_id;
     expect(before).toMatch(/^[0-9a-f-]{36}$/u);
     expect(await applyMigrations(existing, all)).toEqual([]);
@@ -222,6 +239,11 @@ describe('durable dataset projection privacy and compatibility', () => {
       headshotPercentage: legacy.performances[0]!.headshotPercentage,
       firstKills: legacy.performances[0]!.firstKills,
       firstDeaths: legacy.performances[0]!.firstDeaths,
+      advancedMetrics: {
+        ruleVersion: 'event-metrics-v1',
+        evidence: { trade: 'reconstructed', clutch: 'reconstructed' },
+        trade: { tradedDeaths: 1 },
+      },
     });
     expect(projected.id).not.toBe(legacy.id);
     expect(projected.performances[0]!.playerId).not.toBe(legacy.performances[0]!.playerId);
@@ -270,8 +292,8 @@ describe('durable dataset projection privacy and compatibility', () => {
     const database = await migratedDatabase();
     await seedProjection(database, 2, 1);
     await database.query(
-      'INSERT INTO rounds (id,source_match_id,round_number,plant_status,defuse_status) VALUES ($1,$2,2,$3,$4)',
-      [uuid(11, 2), uuid(5, 1), 'missing', 'missing'],
+      'INSERT INTO rounds (id,source_match_id,round_number,participants_evidence_status,plant_status,defuse_status) VALUES ($1,$2,2,$3,$4,$5)',
+      [uuid(11, 2), uuid(5, 1), 'observed', 'missing', 'missing'],
     );
     await database.query(
       `INSERT INTO round_participants
@@ -298,6 +320,7 @@ describe('durable dataset projection privacy and compatibility', () => {
       [uuid(8, 1)],
     );
     await database.query("UPDATE match_participants SET team_key='Red' WHERE id=$1", [uuid(8, 2)]);
+    await database.query('DELETE FROM kill_events WHERE source_match_id=$1', [uuid(5, 1)]);
     await database.query(
       `INSERT INTO kill_events
         (id,source_match_id,round_id,event_lookup_hmac,event_sequence,time_in_round_ms,killer_participant_id,victim_participant_id)
@@ -334,7 +357,7 @@ describe('durable dataset projection privacy and compatibility', () => {
 describe('bounded projection performance', () => {
   it.each([[1, 30], [4, 300]])('uses six set-based queries for %i players and %i matches', async (players, matches) => {
     const database = await migratedDatabase();
-    await seedProjection(database, players, matches);
+    await seedProjection(database, players, matches, 1);
     const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
     expect(result.payload.dataset.matches).toHaveLength(matches);
     expect(result.payload.dataset.players).toHaveLength(players);
@@ -342,6 +365,7 @@ describe('bounded projection performance', () => {
     expect(result.metrics.databaseMs).toBeGreaterThanOrEqual(0);
     expect(result.metrics.projectionMs).toBeGreaterThanOrEqual(0);
     expect(result.metrics.serializedBytes).toBeGreaterThan(0);
+    expect(result.metrics.eventCount).toBe(matches);
     process.stdout.write(`DATASET_PERFORMANCE ${players}p/${matches}m ${JSON.stringify(result.metrics)}\n`);
   }, 30_000);
 });
@@ -383,7 +407,7 @@ describe('dataset read gate', () => {
       else process.env.REAL_DATASET_READ_MODE = previous;
     }
     expect(status).toBe(200);
-    expect(body).toEqual({ ok: true, schemaVersion: 1, state: 'disabled', source: 'REAL_SERVER' });
+    expect(body).toEqual({ ok: true, schemaVersion: 2, state: 'disabled', source: 'REAL_SERVER' });
     expect(JSON.stringify(body)).not.toMatch(/player|match|count/iu);
     expect(headers.get('cache-control')).toBe('no-store');
     expect(request.headers).toEqual({});

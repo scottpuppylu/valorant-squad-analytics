@@ -18,9 +18,9 @@ function realResponse(state: 'ready' | 'empty' = 'ready'): DatasetReadyResponse 
     : { players: demo.players.slice(0, 1), matches: demo.matches.slice(0, 1), sourceId: 'durable-neon-v1', isDemo: false as const, mode: 'REAL' as const };
   return {
     ok: true,
-    schemaVersion: 1,
+    schemaVersion: 2,
     state,
-    snapshot: { version: `snapshot-${state}`, generation: 'dataset-read-v1', source: 'durable-neon', projectionVersion: 'legacy-browser-projection-v1' },
+    snapshot: { version: `snapshot-${state}`, generation: 'dataset-read-v2', source: 'durable-neon', projectionVersion: 'event-metrics-projection-v1' },
     coverage: { completeForProviderWindow: false, boundedMatchLimit: 300, lifetimeComplete: false },
     evidence: { acs: 'derived', adr: 'derived', headshotPercentage: 'derived', kast: 'reconstructed', firstKills: 'reconstructed', firstDeaths: 'reconstructed' },
     dataset,
@@ -80,7 +80,7 @@ describe('DatasetProvider runtime states', () => {
     expect(container.textContent).toContain('demo|DEMO|32');
     await act(async () => root.unmount());
     root = createRoot(container);
-    const disabled: DatasetApiClient = { load: async () => ({ ok: true, schemaVersion: 1, state: 'disabled', source: 'REAL_SERVER' }) };
+    const disabled: DatasetApiClient = { load: async () => ({ ok: true, schemaVersion: 2, state: 'disabled', source: 'REAL_SERVER' }) };
     await act(async () => { root.render(<DatasetProvider client={disabled} forceDemo={false}><Probe /></DatasetProvider>); });
     expect(container.textContent).toContain('demo|DEMO|32');
     expect(container.textContent).toContain('刻意關閉');
@@ -105,14 +105,29 @@ describe('DatasetProvider runtime states', () => {
     expect(container.textContent).toContain('error|REAL_SERVER|0');
     await act(async () => root.unmount());
     root = createRoot(container);
-    const malformed: DatasetApiClient = { load: async () => ({ ...realResponse(), schemaVersion: 2 }) as unknown as DatasetResponse };
+    const malformed: DatasetApiClient = { load: async () => ({ ...realResponse(), schemaVersion: 1 }) as unknown as DatasetResponse };
     await act(async () => { root.render(<DatasetProvider client={malformed} forceDemo={false}><Probe /></DatasetProvider>); });
+    expect(container.textContent).toContain('error|REAL_SERVER|0');
+  });
+
+  it('rejects a malformed advanced metric evidence envelope', async () => {
+    const malformed = realResponse();
+    malformed.dataset.matches[0]!.performances[0]!.advancedMetrics = {
+      ruleVersion: 'unexpected-version',
+      coverage: {},
+      evidence: {
+        trade: 'reconstructed', clutch: 'reconstructed', objectives: 'reconstructed',
+        abilityCasts: 'reconstructed', economy: 'derived', impactContext: 'reconstructed', roleValueInputs: 'partial',
+      },
+    } as never;
+    const client: DatasetApiClient = { load: async () => malformed };
+    await act(async () => { root.render(<DatasetProvider client={client} forceDemo={false}><Probe /></DatasetProvider>); });
     expect(container.textContent).toContain('error|REAL_SERVER|0');
   });
 
   it('deletes the retired browser REAL envelope on startup', async () => {
     localStorage.setItem(realDatasetStorageKey, '{"legacy":true}');
-    const client: DatasetApiClient = { load: async () => ({ ok: true, schemaVersion: 1, state: 'disabled', source: 'REAL_SERVER' }) };
+    const client: DatasetApiClient = { load: async () => ({ ok: true, schemaVersion: 2, state: 'disabled', source: 'REAL_SERVER' }) };
     await act(async () => { root.render(<DatasetProvider client={client} forceDemo={false}><Probe /></DatasetProvider>); });
     expect(localStorage.getItem(realDatasetStorageKey)).toBeNull();
   });

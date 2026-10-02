@@ -15,9 +15,9 @@ function response(state: 'ready' | 'empty'): DatasetReadyResponse {
   const demo = demoDataSource.snapshot();
   return {
     ok: true,
-    schemaVersion: 1,
+    schemaVersion: 2,
     state,
-    snapshot: { version: state, generation: 'dataset-read-v1', source: 'durable-neon', projectionVersion: 'legacy-browser-projection-v1' },
+    snapshot: { version: state, generation: 'dataset-read-v2', source: 'durable-neon', projectionVersion: 'event-metrics-projection-v1' },
     coverage: { completeForProviderWindow: false, boundedMatchLimit: 300, lifetimeComplete: false },
     evidence: { acs: 'derived', adr: 'derived', headshotPercentage: 'derived', kast: 'reconstructed', firstKills: 'reconstructed', firstDeaths: 'reconstructed' },
     dataset: state === 'ready'
