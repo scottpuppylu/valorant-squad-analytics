@@ -47,7 +47,9 @@ export function aggregateAdvancedMetrics(performances: MatchPerformance[]): Aggr
     if (!invalidClutch && inputs.every(({advanced}) => complete(advanced.evidence.clutch))) {
       clutch.value.clutchWins = inputs.reduce((sum,{advanced}) => sum+(advanced.clutch?.clutchWins ?? 0),0);
       clutch.value.attemptsByOpponents = sumBreakdown('attemptsByOpponents');
-      clutch.value.winsByOpponents = sumBreakdown('winsByOpponents');
+      const winsByOpponents=sumBreakdown('winsByOpponents');
+      // A positive win total cannot prove a missing difficulty distribution is zero.
+      if (Object.values(winsByOpponents).reduce((sum,n)=>sum+n,0) === clutch.value.clutchWins) clutch.value.winsByOpponents=winsByOpponents;
     }
   }
   const economy = domain<EconomyMetrics>('economy',['loadoutValueTotal','spentTotal','damage','kills']);
@@ -61,8 +63,8 @@ export function aggregateAdvancedMetrics(performances: MatchPerformance[]): Aggr
     economy.value.loadoutValueAverage = average('loadoutValueAverage');
     economy.value.spentAverage = average('spentAverage');
     const spent = economy.value.spentTotal;
-    const validDamage = allComplete && spent !== undefined && spent > 0 && economy.value.damage !== undefined;
-    const validKills = allComplete && spent !== undefined && spent > 0 && economy.value.kills !== undefined;
+    const validDamage = allComplete && inputs.every(({advanced})=>advanced.economy?.damagePer1000SpentStatus==='derived') && spent !== undefined && spent > 0 && economy.value.damage !== undefined;
+    const validKills = allComplete && inputs.every(({advanced})=>advanced.economy?.killsPer1000SpentStatus==='derived') && spent !== undefined && spent > 0 && economy.value.kills !== undefined;
     economy.value.damagePer1000SpentStatus = validDamage ? 'derived' : 'unavailable';
     economy.value.killsPer1000SpentStatus = validKills ? 'derived' : 'unavailable';
     if (validDamage) economy.value.damagePer1000Spent = 1000*economy.value.damage!/spent!;

@@ -157,7 +157,10 @@ export function calculatePlayerScores(player: Player, _stats: RawPlayerStats, ma
     scores[dimension].trace.selectedRole=dominant;
     scores[dimension].trace.roles=roleRounds;
     if(dimension==='clutch') {
-      const completeEntries=entries.filter(({performance}) => performance.advancedMetrics?.evidence.clutch==='reconstructed');
+      const completeEntries=entries.filter(({performance,rounds}) => {
+        const advanced=performance.advancedMetrics;
+        return advanced?.ruleVersion==='event-metrics-v1' && complete(advanced.evidence.clutch) && advanced.coverage.eligibleRounds===rounds && advanced.coverage.reconstructedRounds===rounds && advanced.coverage.omittedRounds===0;
+      });
       const clutch=aggregateAdvancedMetrics(completeEntries.map(({performance}) => performance)).clutch.value;
       if(clutch?.clutchAttempts && clutch.clutchWins!==undefined) scores[dimension].trace.prior={mean:.20,strength:5,wins:clutch.clutchWins,attempts:clutch.clutchAttempts,rawConversion:clutch.clutchWins/clutch.clutchAttempts,shrunkConversion:(clutch.clutchWins+1)/(clutch.clutchAttempts+5)};
     }

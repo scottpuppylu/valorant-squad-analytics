@@ -1,5 +1,6 @@
 import { describe,expect,it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { aggregateAdvancedMetrics } from '../src/analytics/advancedMetrics';
 import { benchmarkRegistry } from '../src/scoring/benchmarks';
 import { normalizeBenchmark } from '../src/scoring/normalize';
 import { GapRadarShape } from '../src/components/GapRadarShape';
@@ -49,6 +50,17 @@ describe('selected evidence and presentation integration',()=>{
   });
   it('malformed complete-domain count is not upgraded into measured zero',()=>{
     expect(score(mutate((p)=>{p.advancedMetrics!.trade!.tradeKills=NaN;})).teamplay.value).toBeUndefined();
+  });
+  it('missing difficulty distribution does not fabricate weighted wins',()=>{
+    const result=score(mutate((p)=>{p.advancedMetrics!.clutch={clutchAttempts:2,clutchWins:1};}));
+    expect(result.clutch.status).toBe('partial');expect(result.clutch.coverage.ratio).toBeCloseTo(.8);
+    expect(result.clutch.trace.components.filter((c)=>c.metric==='difficultWins').every((c)=>c.rawValue===undefined)).toBe(true);
+  });
+  it('unavailable economy ratio cannot be upgraded by complete enclosing status',()=>{
+    const matches=mutate((p)=>{delete p.advancedMetrics!.economy!.damage;p.advancedMetrics!.economy!.damagePer1000SpentStatus='unavailable';});
+    const result=aggregateAdvancedMetrics(matches.flatMap((m)=>m.performances.filter((p)=>p.playerId===player.id)));
+    expect(result.economy.value?.damagePer1000SpentStatus).toBe('unavailable');
+    expect(result.economy.value?.damagePer1000Spent).toBeUndefined();
   });
   it('one successful clutch is shrunk below twenty successful attempts',()=>{
     const make=(n:number)=>score(mutate((p)=>{p.agent='Jett';p.advancedMetrics!.clutch={clutchAttempts:n,clutchWins:n,winsByOpponents:{1:n}};},own.slice(0,1)));
