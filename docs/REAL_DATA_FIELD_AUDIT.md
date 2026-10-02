@@ -110,38 +110,38 @@ Current MMR exposed `data.current.tier.id/name`, `rr`, `elo`, `last_change`, pea
 | K/D, KPR, APR | DERIVABLE | K/D/A totals plus rounds | Zero denominators require the existing safe-division rule. |
 | HS% | DERIVABLE | headshots / (`headshots + bodyshots + legshots`) | Shot-location denominator is observed. |
 | First kills/deaths, FK/FD | RECONSTRUCTABLE | kill round, round time, killer, victim | Earliest kill per round is the product rule; ties need deterministic ordering. |
-| Trade participation | RECONSTRUCTABLE | ordered kills, killer, victim, assistants, teams | Requires an explicit time window and teammate rule; the current prototype uses 5 seconds. |
-| KAST | RECONSTRUCTABLE | kills, assistants, ordered deaths/trades, round participants | K/A/S are observable; T depends on the documented trade rule. Provider does not label KAST directly. |
-| Clutch attempts/wins | RECONSTRUCTABLE | ordered kills, teams, round winner, plant/defuse timing, round participants | Must define 1vX entry state, alive reconstruction and win condition. Not yet normalized or scored. |
-| Economy | PARTIAL | match economy totals; round loadout, remaining, weapon, armor; round outcome | Supports loadout efficiency and buy-state bands. Exact purchase/sale/drop ledger and utility purchase details were not observed. |
-| Impact Kill / Frag Quality | RECONSTRUCTABLE | ordered kills, round state, team state, plant/defuse, economy snapshot | A transparent product weighting can be built; no provider field is an authoritative impact score. |
-| Role Value | PARTIAL | agent, aggregate ability-cast counts, assists, damage, plants/defuses, round result | Cast counts exist, but round utility casts were 100% null and effect events such as flashes, reveals, smokes blocked or healing value were not observed. |
+| Trade participation | RECONSTRUCTABLE | ordered kills, killer, victim, assistants, teams | Implemented as `event-metrics-v1` with an explicit 5-second rule; it is not a provider label. |
+| KAST | RECONSTRUCTABLE | kills, assistants, ordered deaths/trades, round participants | Implemented as `event-metrics-v1`; provider does not label KAST directly. |
+| Clutch attempts/wins | RECONSTRUCTABLE | ordered kills, teams, round winner, round participants | 1v1–1v5 evidence is reconstructed in `event-metrics-v1`; no Clutch score or weighting exists yet. |
+| Economy | PARTIAL | match economy totals; round loadout, remaining, weapon, armor; round outcome | Match damage/kills per 1,000 spent is derived; exact purchase/sale/drop ledger, buy-state bands and utility costs remain unavailable. |
+| Impact Kill / Frag Quality | RECONSTRUCTABLE | ordered kills, round state, team state, plant/defuse, economy snapshot | Context components are reconstructed, but no provider-authoritative or product-weighted Impact Score exists. |
+| Role Value | PARTIAL | agent, aggregate ability-cast counts, assists, damage, plants/defuses, round result | Input availability is prepared; utility-effect evidence and Role Value scoring remain unavailable. |
 | Consistency | DERIVABLE | multiple player-match observations of ACS/KAST and timestamps | Meaningful only with a minimum sample and evidence-aware uncertainty. |
 | Current/peak rank and RR | DIRECT | MMR current/peak/seasonal fields | Displayable as provider observation; must remain separate from community scores. |
 
 ## Trade finding
 
-Trade evidence is **RECONSTRUCTABLE**, not direct. The event stream includes ordered kills, team membership and participant identifiers. A trade requires a product definition such as: a teammate kills the original killer within five seconds in the same round. That window is not an official label and must be configurable, tested and included in calculation traces.
+Trade evidence is **RECONSTRUCTABLE**, not direct. `event-metrics-v1` now applies the documented five-second teammate-retaliation rule with time/sequence ordering, one classification per death and one Trade Kill per physical retaliation event. That window is not an official provider label. Server-only traces and public evidence status retain the rule version.
 
 ## KAST finding
 
-KAST is **RECONSTRUCTABLE**. Kill and assist events are available; survival follows from whether a player died in the round; traded death follows from the explicit trade rule. The score must carry an evidence flag because the provider does not supply KAST as a direct field.
+KAST is **RECONSTRUCTABLE**. `event-metrics-v1` implements K/A/S/T at eligible-round grain and exposes evidence coverage because the provider does not supply KAST as a direct field. Missing topology yields partial/unavailable rather than a numeric substitute.
 
 ## Clutch finding
 
-Clutch is **RECONSTRUCTABLE** from the ordered event stream, team rosters, round winner and plant/defuse events. The future engine must specify when a clutch attempt begins, how simultaneous events are ordered, whether disconnected/missing participants invalidate a round and how 1v1 through 1v5 are weighted. The current normalized model does not retain enough evidence, so the public clutch value remains unavailable for real datasets until DATA-01/metric work is completed.
+Clutch is **RECONSTRUCTABLE** from the ordered event stream, full anonymous round presence and round winner. `event-metrics-v1` defines an attempt as the first post-event state where the player is the sole living teammate against 1–5 living opponents; invalid topology omits the round, and a missing winner preserves the attempt while making win evidence partial. No opponent-count weighting, shrinkage or Clutch score is implemented.
 
 ## Economy finding
 
-Economy is **PARTIAL**. Per-match spend/loadout aggregates and per-round loadout, remaining credits, weapon and armor are observed. This supports transparent buy-state and output-per-loadout analyses. It does not prove complete purchase history, dropped-weapon ownership, refunds or utility expenditure; those claims must remain unavailable.
+Economy is **PARTIAL**. Per-match spend/loadout aggregates and per-round loadout, remaining credits, weapon and armor are observed. TASK-METRICS-01 derives damage and kills per 1,000 spent only when total spend is positive. It does not prove complete purchase history, buy-state bands, dropped-weapon ownership, refunds or utility expenditure; those claims remain unavailable.
 
 ## Impact kill finding
 
-Impact Kill / Frag Quality is **RECONSTRUCTABLE** as a community definition using opening kills, trades, multi-kills, player-count state, round result, plant/defuse timing and round economy. It is not a direct Henrik or Riot metric and must expose every component weight.
+Impact Kill / Frag Quality is **RECONSTRUCTABLE** as a future community definition. TASK-METRICS-01 exposes opening, trade, man-disadvantage, clutch-state, won-round and multi-kill context counts, but deliberately assigns no component weight and creates no Impact Score. It is not a direct Henrik or Riot metric.
 
 ## Role value finding
 
-Role Value is **PARTIAL**. Agent identity, assists, damage, objective events and aggregate ability-cast counts are usable. Round-timed ability-cast fields were null throughout the sample, and no effect-quality events were observed. The first production version may use only evidenced components and must mark unavailable utility-effect components rather than replacing them with zero or neutral 50.
+Role Value is **PARTIAL**. Agent identity, assists, damage, objective events, Trade Assists, KAST/survival and aggregate ability-cast counts are usable inputs. Round-timed ability-cast fields were null throughout the sample, and no effect-quality events were observed. TASK-METRICS-01 records this availability but does not calculate Role Value; TASK-002B must keep unavailable utility-effect components distinct from zero or neutral 50.
 
 ## History, pagination and lifetime completeness
 

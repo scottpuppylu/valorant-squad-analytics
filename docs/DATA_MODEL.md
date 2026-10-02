@@ -111,7 +111,7 @@ Server routes validate explicit consent and keep `HENRIK_API_KEY` outside the br
 
 The old phase-1 envelope `goblin-survey:real-dataset:v1` is retired from the active product path. `DatasetProvider` deletes that legacy value on startup, never reads it as the source of truth, and never writes server-read REAL data to localStorage. Emoji overrides and the separate consent-management/deletion credential remain browser-local.
 
-TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. TASK-DATA-01B adds durable historical and incremental synchronization behind the same consent boundary. TASK-DATA-01C provides production-validated credential-authorized revocation and durable deletion. TASK-DATA-02 adds the versioned public durable read projection and explicit React runtime states. Vercel exposes only sanitized current-policy consenting-player analytics without viewer authentication; GitHub Pages remains Demo-only.
+TASK-DATA-01A provides production-validated server-side player, self-asserted consent and normalized evidence persistence. TASK-DATA-01B adds durable historical and incremental synchronization behind the same consent boundary. TASK-DATA-01C provides production-validated credential-authorized revocation and durable deletion. TASK-DATA-02 adds the versioned public durable read projection and explicit React runtime states. TASK-METRICS-01 adds independently versioned evidence reconstruction without changing the score engine. Vercel exposes only sanitized current-policy consenting-player analytics without viewer authentication; GitHub Pages remains Demo-only.
 
 The single current policy constant is `PUBLIC_DATASET_PRIVACY_VERSION = 2026-10-02-public-v1` in `shared/privacyPolicy.ts`. Connection requests must carry this exact version. Only explicit current-policy connection consent can replace an older active consent; it revokes the old row and creates one new active row in one transaction. Manual import, historical/incremental sync, cursor commits and dataset visibility all require the exact current active version and never auto-upgrade it.
 
@@ -123,7 +123,7 @@ Shot-location fields preserve the same distinction: all three observed zero coun
 
 ## Neon durable evidence schema
 
-Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0002_bounded_historical_sync.sql` adds public run IDs, sync kinds, cumulative metrics, termination/error fields, cursor coverage and expiring lease fields. Migration `0003_consent_revocation_deletion.sql` adds consent-credential HMACs, player tombstones and the leased staged deletion audit. Migration `0004_dataset_read_runtime.sql` adds a distinct immutable public match UUID used by the sanitized read API. Migration `0005_public_dataset_consent.sql` changes active-consent uniqueness to one active consent per player across all versions. Applied migrations are never edited.
+Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, UTC timestamps, foreign keys, uniqueness constraints and explicit source/normalization versions. Migration `0002_bounded_historical_sync.sql` adds public run IDs, sync kinds, cumulative metrics, termination/error fields, cursor coverage and expiring lease fields. Migration `0003_consent_revocation_deletion.sql` adds consent-credential HMACs, player tombstones and the leased staged deletion audit. Migration `0004_dataset_read_runtime.sql` adds a distinct immutable public match UUID used by the sanitized read API. Migration `0005_public_dataset_consent.sql` changes active-consent uniqueness to one active consent per player across all versions. Migration `0006_metric_evidence_status.sql` records observed/missing/unavailable state for match round/kill collections, round participant collections and match-level ability/economy values. Applied migrations are never edited.
 
 | Table | Required purpose and key fields |
 |---|---|
@@ -134,10 +134,10 @@ Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, U
 | `consents` | player, scope, policy version, granted/revoked timestamps, actor and provenance; at most one active row per player |
 | `sync_runs` | provider, player, trigger, status, started/finished, request counts, error class and coverage window |
 | `sync_cursors` | player/queue endpoint, newest/oldest observed time, boundary match fingerprint, last success |
-| `source_matches` | internal UUID, independent public application UUID, keyed provider-match fingerprint, queue/map/start/duration/version/completion, source schema version |
+| `source_matches` | internal UUID, independent public application UUID, keyed provider-match fingerprint, queue/map/start/duration/version/completion, source schema version, round/kill collection evidence status |
 | `match_teams` | match/team key, won, rounds won/lost |
-| `match_participants` | match/player/team/agent, K/D/A, score, damage, shots, aggregate ability and economy evidence |
-| `rounds` | match/round index, winner/result, plant/defuse actor and timing when observed |
+| `match_participants` | match/player/team/agent, K/D/A, score, damage, shots, aggregate ability/economy values and evidence status |
+| `rounds` | match/round index, winner/result, plant/defuse actor and timing, participant-collection evidence status |
 | `round_participants` | round/player kills, score, loadout, remaining credits, weapon/armor, evidence flags |
 | `kill_events` | match/round/sequence, time, killer/victim internal player keys, weapon and location |
 | `kill_assistants` | kill event and assistant player key |
@@ -164,7 +164,7 @@ Backfill is idempotent by keyed provider-match fingerprint plus source schema ve
 - Re-fetch a small overlap window so late corrections can update completed matches.
 - Store provider/OpenAPI version, normalizer version and response observation time.
 - Use a per-player distributed lock, request budget, exponential backoff and provider-aware rate limits.
-- Keep ingestion separate from future metric reconstruction; TASK-METRICS-01 remains deferred.
+- Keep ingestion separate from `event-metrics-v1` reconstruction; provider, normalization, reconstruction, public projection and scoring versions advance independently.
 - Expose only public run IDs, aggregate progress, coverage dates, safe error classes and performance totals through the status API.
 
 Production validation observed 159 match responses over 54 chunks, six overlap updates and zero retries before `empty_page`; a later incremental run observed three existing matches and stopped at `known_boundary`. The stored range is a provider-available window, not lifetime history. Exact mechanics and capacity are in `docs/HISTORICAL_SYNC.md`.
@@ -189,6 +189,8 @@ The first production validation processed 154 exclusive matches and no shared ma
 - A category with no usable inputs returns the documented neutral fallback of 50.
 - A zero denominator returns a finite fallback rather than `Infinity` or `NaN`.
 
-## Future-compatible fields
+## Advanced metric evidence
 
-Economy, utility, trade, impact, and synergy evidence are deliberately absent from TASK-001 because the fixture does not support them. Later tasks can add new raw fields and derived modules without placing calculation logic in React components.
+`MatchPerformance.advancedMetrics` is optional so deterministic Demo and legacy clients need not fabricate REAL evidence. REAL schema 2 performances may carry `event-metrics-v1` coverage plus compact Trade, clutch, objective, direct ability-cast, economy-efficiency and impact-context aggregates. Zero-valued domain objects may be omitted only when their domain evidence status proves a measured zero; missing data remains `partial` or `unavailable`.
+
+Full anonymous participant topology and ordered event evidence are read only on the server. The public response contains no raw timeline, coordinates, internal IDs, HMACs or non-consenting participant rows. `src/analytics/advancedMetrics.ts` aggregates counts and recomputes ratios from additive totals; it does not score them. Economy scoring, utility effects, Frag Quality/Impact scoring, Role Value scoring and Synergy remain future work.

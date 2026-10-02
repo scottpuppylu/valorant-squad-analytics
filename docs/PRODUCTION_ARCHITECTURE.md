@@ -61,7 +61,7 @@ HenrikDev is an unofficial provider. A controlled structural audit observed matc
 
 TASK-DATA-02 replaces the active browser REAL envelope with a versioned public durable read boundary. `DatasetProvider` removes the legacy key on startup, never writes server-read REAL data to localStorage, and exposes explicit loading/ready/stale/empty/error/demo states. Vercel serves PUBLIC REAL without viewer authentication when `REAL_DATASET_READ_MODE=public`; any other value fails closed. GitHub Pages remains deliberately Demo-only.
 
-TASK-DATA-01A adds a production-validated Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. TASK-DATA-01B migration `0002` adds executable sync state, public run IDs, aggregate performance/coverage fields and expiring leases. DATA-01C migration `0003` and its revoke/deletion runtime are production validated. DATA-02A migration `0004` adds a stable independent public match UUID. DATA-02B migration `0005` enforces player-scoped active-consent uniqueness. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production.
+TASK-DATA-01A adds a production-validated Neon durable write path behind the server provider. Versioned migration `0001` creates identity, consent, match, round, kill, rank, sync and deletion foundations. TASK-DATA-01B migration `0002` adds executable sync state, public run IDs, aggregate performance/coverage fields and expiring leases. DATA-01C migration `0003` and its revoke/deletion runtime are production validated. DATA-02A migration `0004` adds a stable independent public match UUID. DATA-02B migration `0005` enforces player-scoped active-consent uniqueness. METRICS-01 migration `0006` records evidence status used by `durable-evidence-v2` and `event-metrics-v1`. Each match normalizes in memory and commits in one transaction; raw provider JSON is discarded. The provider audit endpoint is disabled in production.
 
 ### DATA-01A production validation
 
@@ -73,7 +73,7 @@ Both writes ended with the same aggregates: one player, one active consent, one 
 
 - Public non-empty production content has not yet been exercised after the DATA-01C player deletion; disposable databases validate the same current-policy projection.
 - The read projection is capped at the newest 300 eligible matches and must not be described as complete lifetime history.
-- Only legacy-compatible ACS, ADR, HS%, KAST, FK and FD are projected; later metric engines remain deferred.
+- Schema 2 projects ACS, ADR, HS%, KAST, FK/FD plus compact Trade, clutch, objective, direct ability, economy-efficiency and impact-context evidence. Scores and weights for the new dimensions remain deferred to TASK-002B.
 - A server consent ledger, durable cursor execution and production-validated credential-authorized deletion state machine exist. Automatic 90-day audit expiry execution and cross-device recovery without the browser credential remain pending/operator-assisted.
 - Historical sync uses a durable 45-second per-player Postgres lease. The older bounded-import in-memory guard remains only for its separate one-request path.
 - The opaque snapshot covers browser-visible content. The dataset API is `no-store`; the browser loads initially and on explicit refresh/reload without polling or localStorage persistence.
@@ -116,7 +116,7 @@ The explicitly approved 2026-10-01 run gated on exactly one active legacy produc
 
 ## Dataset runtime rebase — DATA-02 complete
 
-The frontend uses `DatasetProvider` with loading, ready, stale, empty, error and demo states. `GET /api/valorant/dataset` returns only public application IDs, evidence availability, projection version, bounded coverage and an opaque content snapshot. Exact `REAL_DATASET_READ_MODE=public` exposes the sanitized dataset with no viewer authentication; every other value returns disabled without counts. Public visibility requires active membership and one active `self_asserted` consent on `2026-10-02-public-v1`. Migration `0005` enforces one active consent per player across versions. Demo remains deliberate on Pages and is never merged with REAL. Full details and performance evidence are in `DATASET_RUNTIME.md`.
+The frontend uses `DatasetProvider` with loading, ready, stale, empty, error and demo states. `GET /api/valorant/dataset` schema 2 returns only public application IDs, evidence availability, projection version, bounded coverage, compact advanced aggregates and an opaque content snapshot. Exact `REAL_DATASET_READ_MODE=public` exposes the sanitized dataset with no viewer authentication; every other value returns disabled without counts. Public visibility requires active membership and one active `self_asserted` consent on `2026-10-02-public-v1`. Migration `0005` enforces one active consent per player across versions. Demo remains deliberate on Pages and is never merged with REAL. Full details and performance evidence are in `DATASET_RUNTIME.md` and `METRICS_RECONSTRUCTION.md`.
 
 ## Rollback
 

@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。Vercel 是 [PUBLIC REAL canonical runtime](https://valorant-squad-analytics.vercel.app/)：任何訪客都能在無登入、無存取碼的情況下讀取已同意玩家的去敏感化分析。GitHub Pages 固定為 Demo-only rollback，不呼叫 production dataset API。公開投影最多包含最近 300 場符合資格的持久化對戰；目前 production 在 DATA-01C 刪除後沒有重新加入的玩家，所以公開 REAL dataset 預期為空。
+TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。TASK-METRICS-01 已實作，production migration、CI 與部署驗證仍待完成。Vercel 是 [PUBLIC REAL canonical runtime](https://valorant-squad-analytics.vercel.app/)：任何訪客都能在無登入、無存取碼的情況下讀取已同意玩家的去敏感化分析。GitHub Pages 固定為 Demo-only rollback，不呼叫 production dataset API。公開投影最多包含最近 300 場符合資格的持久化對戰；目前 production 在 DATA-01C 刪除後沒有重新加入的玩家，所以公開 REAL dataset 預期為空，非空 production 指標路徑仍是 **NOT VERIFIED**。
 
 ## V1 原則
 
@@ -26,7 +26,8 @@ TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。
 5. DATA-01C 已完成 disposable 與 production 不可逆撤回／刪除驗證
 6. DATA-02A／02A.1 已完成 durable read API、DatasetProvider 與 missing-evidence hardening
 7. DATA-02B 採用 PUBLIC REAL、無 viewer authentication、`no-store` 與最新版公開同意政策；migration `0005` 保證每位玩家最多一筆 active consent
-8. 下一步只建議 TASK-METRICS-01；TASK-002B 與 Synergy 仍未開始
+8. TASK-METRICS-01 已實作 `event-metrics-v1` 的 Trade、KAST、殘局、目標、技能施放、經濟效率與擊殺情境證據重建，production gates 待驗證；沒有新增或改寫任何計分權重
+9. 下一步只建議 TASK-002B；Synergy 仍未開始
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
 
@@ -52,7 +53,7 @@ npm run db:validate
 
 `npm test` 與 CI 只使用 mock／fixture，不會呼叫真實 provider 或 production Neon。`npm run build` 也會掃描 browser source 與 bundle，防止 server secret 名稱進入前端。公開政策唯一版本定義在 `shared/privacyPolicy.ts`；目前版本是 `2026-10-02-public-v1`。
 
-資料庫 migration 位於 `migrations/`；`npm run db:migrate` 僅可在受信任、具 server-only database configuration 的環境執行。所有 provider、資料庫、HMAC 與管理憑證都不得進入 React、公開 dataset response 或 browser bundle。完整 schema、身分類型、同意與 retention 語意見 [docs/DATABASE.md](docs/DATABASE.md)，撤回與刪除契約見 [docs/REVOCATION_AND_DELETION.md](docs/REVOCATION_AND_DELETION.md)。DATA-02 runtime 與公開政策見 [docs/DATASET_RUNTIME.md](docs/DATASET_RUNTIME.md)。
+資料庫 migration 位於 `migrations/`；`npm run db:migrate` 僅可在受信任、具 server-only database configuration 的環境執行。所有 provider、資料庫、HMAC、原始事件列與管理憑證都不得進入 React 或公開 dataset response。完整 schema、身分類型、同意與 retention 語意見 [docs/DATABASE.md](docs/DATABASE.md)，撤回與刪除契約見 [docs/REVOCATION_AND_DELETION.md](docs/REVOCATION_AND_DELETION.md)。DATA-02 runtime 與公開政策見 [docs/DATASET_RUNTIME.md](docs/DATASET_RUNTIME.md)，事件規則與證據狀態見 [docs/METRICS_RECONSTRUCTION.md](docs/METRICS_RECONSTRUCTION.md)。
 
 Vite 在 Vercel 使用 `/` base path，在 GitHub Pages rollback 使用 `/valorant-squad-analytics/`。應用程式保留 hash routing，讓兩種部署都能直接切換頁面。Vercel 的 `GET /api/valorant/dataset` 在 `REAL_DATASET_READ_MODE=public` 時提供同源、無 viewer authentication、`Cache-Control: no-store` 的去敏感化有界 dataset。GitHub Pages 仍維持 Demo-only rollback。
 

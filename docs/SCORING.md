@@ -161,9 +161,9 @@ Calculation values stay numeric and retain their existing internal precision. Th
 
 This display fix does not correct the documented pre-scoring aggregate rounding; that remains owned by TASK-002B.
 
-## DATA-02A legacy compatibility projection
+## METRICS-01 evidence projection
 
-The scoring formulas above are unchanged. When the durable dataset read gate is deliberately enabled, `legacy-browser-projection-v1` prepares compatible match-level inputs as follows:
+The scoring formulas, benchmarks and weights above are unchanged. When the durable dataset read gate is deliberately enabled, `event-metrics-projection-v1` prepares compatible match-level inputs through the versioned `event-metrics-v1` engine:
 
 - `ACS = durable participant score / observed durable rounds`
 - `ADR = durable participant damage dealt / observed durable rounds`
@@ -172,4 +172,4 @@ The scoring formulas above are unchanged. When the durable dataset read gate is 
 - reconstructed traded death = a teammate kills the original killer within 5,000 ms after the player's death in the same round
 - `HS% = headshots / (headshots + bodyshots + legshots)`
 
-The five-second trade rule is a transparent product rule, not an official provider label. Durable event topology is used only on the server to produce consenting-player compatibility metrics and is not returned to the browser. Missing complete round presence marks KAST/FK/FD evidence partial. Clutch, economy, Impact Kill, Role Value and final Trade scoring remain unavailable until later metric work. See `docs/DATASET_RUNTIME.md` and `docs/REAL_DATA_FIELD_AUDIT.md`.
+The five-second trade rule is a transparent product rule, not an official provider label. Durable full-match topology is used only on the server; the browser receives compact consenting-player aggregates and evidence status, never raw events. Missing complete round presence marks KAST/FK/FD evidence partial. TASK-METRICS-01 also reconstructs Trade counts, 1v1–1v5 clutch evidence, objectives, direct cast counts, positive-denominator economy ratios and impact context, but it creates no Trade, Economy, Impact or Role Value score and changes no Overall input. See `docs/METRICS_RECONSTRUCTION.md`, `docs/DATASET_RUNTIME.md` and `docs/REAL_DATA_FIELD_AUDIT.md`.

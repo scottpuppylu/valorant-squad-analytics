@@ -1,6 +1,6 @@
 # Code map
 
-This map records the completed DATA-02 PUBLIC REAL runtime and durable evidence/sync/deletion foundations.
+This map records the completed DATA-02 PUBLIC REAL runtime, durable evidence/sync/deletion foundations and TASK-METRICS-01 reconstruction boundary.
 
 ## Current runtime
 
@@ -24,7 +24,8 @@ React routes/components
 GET /api/valorant/dataset
   -> exact REAL_DATASET_READ_MODE=public fail-closed gate
   -> PostgresDatasetReadRepository (six set-based reads)
-  -> DatasetProjectionService (legacy-browser-projection-v1)
+  -> EventMetricEngine (event-metrics-v1)
+  -> DatasetProjectionService (event-metrics-projection-v1)
   -> public browser-safe REAL dataset, coverage and opaque snapshot
 
 #/connect durable sync controls
@@ -41,7 +42,7 @@ Current limitations:
 - Vercel REAL reads are public without viewer authentication, while all non-`public` mode values fail closed;
 - only current `2026-10-02-public-v1` self-asserted consent plus active membership authorizes visibility or provider writes;
 - the projection is bounded to the newest 300 eligible durable matches and is not lifetime history;
-- compatibility metrics exist, but final Trade/Clutch/Economy/Impact/Role Value reconstruction remains deferred;
+- versioned Trade/Clutch/Economy/Impact-context/Role-input evidence exists, but TASK-002B scores, weights, benchmarks and uncertainty remain deferred;
 - the legacy browser REAL envelope remains only for cleanup/tests/rollback and is not read by the product;
 - the provider audit endpoint emits only structural evidence outside production and is disabled in production.
 
@@ -53,6 +54,7 @@ Current limitations:
 | Public privacy policy | `shared/privacyPolicy.ts` | One browser-safe current public consent version shared by request and server validation |
 | Active dataset | `src/contexts/DatasetProvider.tsx`, `src/data/analytics.ts` | Own runtime state and build deterministic analysis from an injected dataset |
 | Durable read API | `api/valorant/dataset.ts`, `server/dataset/**` | Fail-closed gate, bounded set-based rows, privacy-safe projection and snapshot |
+| Metric reconstruction | `server/metrics/**`, `src/types/advancedMetrics.ts` | Versioned event rules, evidence states, coverage and safe internal trace |
 | Legacy browser dataset | `src/dataSources/real/BrowserRealDatasetRepository.ts` | Cleanup/tests/rollback only; not a production source of truth |
 | Deletion recovery | `src/dataSources/real/BrowserConsentCredentialRepository.ts`, `BrowserDeletionSessionService.ts` | Migrate active credential state, persist deletion-only job recovery, clear REAL immediately and destroy credential only on completion |
 | API client | `src/dataSources/server/ValorantBackendClient.ts`, `DatasetApiClient.ts` | Same-origin account/import/sync/deletion and dataset-read requests |
@@ -63,7 +65,7 @@ Current limitations:
 | Database/migrations | `server/db/**`, `migrations/**`, `scripts/migrate.ts` | Neon adapter, transactions and deterministic schema versions |
 | Persistence repositories | `server/repositories/**`, `server/persistence/**` | Player, consent and one-match idempotent durable writes |
 | Historical sync | `server/sync/**`, `api/valorant/sync/**` | Run/cursor state, leases, bounded pages, retries, coverage and safe status |
-| Analytics | `src/analytics/**`, `src/utils/aggregateStats.ts` | Selection, aggregation, rankings and summaries |
+| Analytics | `src/analytics/**`, `src/utils/aggregateStats.ts` | Selection, aggregation, rankings, advanced evidence aggregation and summaries |
 | Scoring | `src/scoring/**` | Benchmarks, category formulas, weights and confidence |
 | Presentation | `src/utils/format.ts`, `src/analytics/presentation.ts` | Display-only rounding and labels |
 
@@ -75,7 +77,7 @@ scheduled/manual sync command
   -> provider adapter with bounded cursor
   -> raw response validated and normalized in memory, then discarded
   -> normalized relational transaction
-  -> DATA-02A legacy compatibility projection
+  -> METRICS-01 versioned evidence reconstruction
   -> versioned read-only dataset API
   -> React DatasetProvider
   -> existing filters/rankings/pages
@@ -120,9 +122,12 @@ scheduled/manual sync command
 
 ### TASK-METRICS-01 — event reconstruction
 
-- Implement versioned trade, KAST, clutch, economy and impact event derivations from normalized evidence.
-- Emit calculation traces and evidence coverage.
-- Keep role-utility components unavailable when effects are absent.
+- Complete: `durable-evidence-v2` plus migration `0006` persist collection and direct-value evidence states without rewriting older migrations.
+- Complete: `server/metrics/EventMetricEngine` reconstructs Trade, KAST/opening, 1v1–1v5 clutch, objectives and impact context; direct ability/economy evidence uses explicit invalid-denominator handling.
+- Complete: public schema 2 / `dataset-read-v2` / `event-metrics-projection-v1` exposes compact aggregates, coverage and statuses without raw timelines or identifiers.
+- Complete: `src/analytics/advancedMetrics.ts` aggregates additive counts and recomputes ratios from totals.
+- Internal calculation traces remain server-only. Role-utility effects stay unavailable because they were not observed.
+- No score category, benchmark or weight changed; that remains TASK-002B.
 
 ### TASK-002B — evidence-aware scoring correctness
 

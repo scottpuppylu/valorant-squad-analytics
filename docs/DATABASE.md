@@ -1,12 +1,12 @@
 # Durable database foundation
 
-TASK-DATA-01A adds the first server-side evidence store without changing the public analytics runtime. The React application still reads `BrowserRealDatasetRepository` (or Demo); Neon becomes the frontend source of truth only in TASK-DATA-02.
+TASK-DATA-01A added the first server-side evidence store. TASK-DATA-02 later made Neon the PUBLIC REAL source of truth, and TASK-METRICS-01 added evidence-status columns needed by versioned reconstruction. The retired `BrowserRealDatasetRepository` is cleanup/test/rollback code only.
 
 ## Configuration and migrations
 
 Production uses `@neondatabase/serverless` and the server-only variables `DATABASE_URL` and `IDENTIFIER_HMAC_KEY`. Neither name may use a `VITE_` prefix or appear in `src/` or the browser build. CI uses in-memory PGlite and does not require production credentials.
 
-Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migrations`, applies each unapplied version in a transaction, and records its filename. Migration `0001_durable_evidence_foundation.sql` is the immutable initial schema; migration `0002_bounded_historical_sync.sql` adds executable run/cursor metrics, coverage and expiring lease state; migration `0003_consent_revocation_deletion.sql` adds consent-management HMAC, tombstone and deletion state; migration `0004_dataset_read_runtime.sql` adds an independent stable `source_matches.public_id`; migration `0005_public_dataset_consent.sql` replaces version-scoped active-consent uniqueness with one active consent per player across all policy versions. Production migrations are run from a trusted server/operator environment, never from React or a permanent public migration endpoint.
+Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migrations`, applies each unapplied version in a transaction, and records its filename. Migration `0001_durable_evidence_foundation.sql` is the immutable initial schema; migration `0002_bounded_historical_sync.sql` adds executable run/cursor metrics, coverage and expiring lease state; migration `0003_consent_revocation_deletion.sql` adds consent-management HMAC, tombstone and deletion state; migration `0004_dataset_read_runtime.sql` adds an independent stable `source_matches.public_id`; migration `0005_public_dataset_consent.sql` replaces version-scoped active-consent uniqueness with one active consent per player across all policy versions; migration `0006_metric_evidence_status.sql` adds observed/missing/unavailable status for round, kill, round-participant, ability and economy evidence. Production migrations are run from a trusted server/operator environment, never from React or a permanent public migration endpoint.
 
 ## Identity classes
 
@@ -26,7 +26,7 @@ Normalized evidence may be persisted only while the exact current public policy 
 
 One normalized source match is written in one database transaction. Player reuse, membership, active consent, source match, teams, match participants, rounds, round participants, kills, assistants, and location snapshots either commit together or roll back together. Raw Henrik JSON is validated and normalized in memory, then discarded; it is not stored.
 
-Observed numeric zero remains zero. Missing properties remain null with an explicit `missing` evidence status, and structurally unusable values use `unavailable`. Plant/defuse additionally distinguish a provider-observed `absent` value from a missing property.
+Observed numeric zero remains zero. Missing properties remain null with an explicit `missing` evidence status, and structurally unusable values use `unavailable`. Plant/defuse additionally distinguish a provider-observed `absent` value from a missing property. `durable-evidence-v2` writes the migration-0006 statuses; pre-existing v1 rows retain `missing` until a future authorized overlap/import observes them again.
 
 Source matches are unique by provider and keyed match HMAC. Participants, active consents, memberships, events, assistants, and locations have database uniqueness constraints. Re-import replaces a match's round/event children transactionally while preserving the source match and participant identities, so a repeated write does not increase row counts.
 
@@ -37,4 +37,4 @@ Source matches are unique by provider and keyed match HMAC. Participants, active
 - Active bounded match synchronization: `sync_runs`, `sync_cursors`; future rank observation synchronization: `rank_observations`
 - Future revocation execution: `deletion_jobs`
 
-No scoring table is introduced. Rank/MMR evidence remains separate and is never fed into the community score by this task.
+No scoring table is introduced. `event-metrics-v1` derives versioned evidence at read time and stores no score. Rank/MMR evidence remains separate and is never fed into the community score.
