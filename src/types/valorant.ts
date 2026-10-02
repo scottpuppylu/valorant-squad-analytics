@@ -1,4 +1,5 @@
 import type { PlayerEmoji } from './avatar';
+import type { AdvancedMetrics } from './advancedMetrics';
 
 export type PlayerRole = 'Duelist' | 'Initiator' | 'Controller' | 'Sentinel';
 
@@ -34,6 +35,7 @@ export interface MatchPerformance {
   firstDeaths?: number;
   clutchAttempts?: number;
   clutchWins?: number;
+  advancedMetrics?: AdvancedMetrics;
 }
 
 export interface MatchRecord {
