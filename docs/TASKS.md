@@ -203,7 +203,7 @@ Status: **COMPLETE — SDD STRICT**
 - [x] Preserve the newest-300-match bound, DATA-02A.1 missing-evidence semantics and the existing sanitized schema 1 projection.
 - [x] Update Chinese consent, Privacy and revocation copy for public publication and resumable deletion semantics.
 
-The current production dataset is validly `empty` because DATA-01C deleted the former test player and no player was reconnected. Public non-empty production content path is **NOT YET EXERCISED AFTER DATA-01C DELETION**; disposable database tests validate current-policy visibility, obsolete-policy exclusion, revocation exclusion and sanitized serialization. TASK-METRICS-01 is complete with empty-production validation; TASK-002B and Synergy remain unstarted.
+The current production dataset is validly `empty` because DATA-01C deleted the former test player and no player was reconnected. Public non-empty production content path is **NOT YET EXERCISED AFTER DATA-01C DELETION**; disposable database tests validate current-policy visibility, obsolete-policy exclusion, revocation exclusion and sanitized serialization. TASK-METRICS-01 is complete with empty-production validation; TASK-002B implementation is in progress; Synergy remains unstarted.
 
 ## Task METRICS-01 — versioned event reconstruction and advanced metric evidence
 
@@ -222,20 +222,20 @@ Existing `durable-evidence-v1` rows default to missing v2 evidence and are not s
 
 ## Task 002B — evidence-aware scoring correctness
 
-Status: **DEFERRED / NOT STARTED**
+Status: **IN PROGRESS — local engine and UI implemented; deployment gates pending**
 
 TASK-002B does not depend on live API completion. It may use the current deterministic demo evidence while keeping formulas transparent, representing unavailable evidence explicitly and avoiding claims about unverified real-provider coverage.
 
-The next scoring task must address all audit findings before adding new dimensions:
+The following historical audit findings are addressed by this versioned engine (pre-task behavior):
 
-- missing category evidence currently becomes the numeric score 50 and is indistinguishable from measured neutral performance;
+- missing category evidence previously became the numeric score 50 and is indistinguishable from measured neutral performance;
 - optional first-kill/death and clutch totals can use partial observations while their derived denominators still cover all rounds/matches;
 - one observed match can produce a perfect Consistency score because measured dispersion is zero;
 - tiny clutch samples can produce overly strong scores without shrinkage or a minimum sample rule;
 - score results do not provide component-level calculation traces;
 - role benchmarks are prototype constants without a versioned calibration source;
 - aggregate values are rounded before scoring, losing precision;
-- Teamplay currently includes a significant 25% Win Rate contribution.
+- Teamplay previously included a significant 25% Win Rate contribution.
 
 Required outcome: a transparent, role-aware, evidence-coverage-aware eight-dimension engine for Firepower, Round Impact, Entry, Teamplay, Clutch, Economy, Consistency and Role Value. Confidence remains separate from performance.
 
@@ -267,3 +267,7 @@ By explicit user decision, TASK-003 was executed before TASK-002B. It consumes t
 - Task 009: CSV and JSON import
 - Task 010: GitHub Pages v1.0 release
 - Official Riot integration: application readiness is now documented early, but live production player data remains dependent on Production API approval, RSO access and a secure backend.
+
+### TASK-002B execution evidence
+
+Starting HEAD bb2bdb87a3ed3041decb0552177552cc4b1bb558; checkpoint-before-task-002b. Versioned eight-dimensional engine, explicit missing/partial policy, precision preservation, selected-role context, trace UI, radar gaps and fictional Demo evidence implemented. See TASK_002B_PLAN.md and SCORING.md. No migration or provider fetch; non-empty production scoring NOT YET EXERCISED. Next only recommended task: TASK-SYNERGY-01, NOT STARTED.

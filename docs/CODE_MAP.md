@@ -139,3 +139,7 @@ scheduled/manual sync command
 ### Future Synergy
 
 Synergy remains after DATA-02B, durable shared match/membership evidence and TASK-002B. It must not be inferred from the legacy browser import or this compatibility projection.
+
+## TASK-002B scoring boundary
+
+`src/scoring/versions.ts`, `types.ts`, `profiles.ts`, `benchmarks.ts`, `weights.ts`, `normalize.ts`, `components.ts`, `calculateScores.ts` are the authoritative eight-dimensional scoring engine. `src/analytics/advancedMetrics.ts` aggregates evidence without scoring. `src/data/scoringDefinitions.ts` replaces obsolete dictionary definitions. `ScoreExplanation` is aggregate trace presentation; `GapRadarShape` prevents null vertices being drawn at zero. No database/provider module or migration changed.

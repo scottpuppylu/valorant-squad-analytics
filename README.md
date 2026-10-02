@@ -27,7 +27,7 @@ TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。
 6. DATA-02A／02A.1 已完成 durable read API、DatasetProvider 與 missing-evidence hardening
 7. DATA-02B 採用 PUBLIC REAL、無 viewer authentication、`no-store` 與最新版公開同意政策；migration `0005` 保證每位玩家最多一筆 active consent
 8. TASK-METRICS-01 已實作 `event-metrics-v1` 的 Trade、KAST、殘局、目標、技能施放、經濟效率與擊殺情境證據重建，production gates 已通過；沒有新增或改寫任何計分權重
-9. 下一步只建議 TASK-002B；Synergy 仍未開始
+9. TASK-002B 八維度證據感知計分已在本機實作，部署驗證進行中；缺值不補 0 或 50，部分證據顯示覆蓋率。下一步只建議 TASK-SYNERGY-01，不自動開始。
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
 
@@ -69,3 +69,5 @@ production 需求見 [docs/TASK_API_02_SPEC.md](docs/TASK_API_02_SPEC.md)，真�
 - 瀏覽器只呼叫同源 `/api/*`，不會直接呼叫 HenrikDev 或收到 provider secret。
 - 本專案為非官方社群分析工具，不隸屬或代表 Riot Games。
 - 不複製 Riot、VALORANT、VLR 或其他網站的視覺資產與版面。
+
+計分規則 `community-score-v2`／基準 `community-benchmarks-v1`／綜合設定 `overall-profile-v1`。完整公式、門檻與產品校準範圍見 [SCORING](docs/SCORING.md)。`npm run dev` 固定使用虛構 Demo 供本機介面驗證；production 行為不變，Vercel 使用 server dataset，GitHub Pages 固定 Demo。沒有新 migration；非空 production scoring **NOT YET EXERCISED**。

@@ -84,3 +84,7 @@ Times are one local test-run observation, not a Neon latency promise. Compared w
 ## Production state
 
 The former test player was deleted by DATA-01C and was not reconnected. Public mode therefore validly returns `state=empty`, `dataset.mode=REAL`, `dataset.isDemo=false`, zero players and zero matches. The non-empty public production advanced-metric path is **NOT VERIFIED AFTER DATA-01C DELETION**; current-policy non-empty projection is covered by disposable database tests.
+
+## Evidence-aware scoring runtime (TASK-002B)
+
+METRICS-01 supplies event-metrics-v1 aggregate evidence; community-score-v2 computes frontend-only ScoreResult values, independent confidence and aggregate-only traces. Benchmark/profile versions are community-benchmarks-v1 and overall-profile-v1. No score persistence or migration; public server response remains unchanged and bounded. Current full 4-player/300-match fixture remains 680,332 bytes with six SQL queries. GitHub Pages uses deterministic fictional advanced evidence. Vercel keeps PUBLIC REAL with no Demo fallback for read errors/empty data; only the local Vite development runtime explicitly uses Demo. Non-empty production scoring NOT YET EXERCISED; no deleted player was reconnected. See SCORING.md for exact missing/partial/Overall gates.

@@ -185,12 +185,12 @@ The first production validation processed 154 exclusive matches and no shared ma
 - Durable REAL performances with incomplete required compatibility evidence are omitted rather than projected with fabricated ACS, ADR or KAST values.
 - A durable match with zero usable browser-visible performances is omitted, and the dataset is `empty` when no usable matches remain.
 - Observed numeric zero remains a valid value and is not treated as missing.
-- A category renormalizes its available weights when one optional input is missing.
-- A category with no usable inputs returns the documented neutral fallback of 50.
-- A zero denominator returns a finite fallback rather than `Infinity` or `NaN`.
+- A dimension renormalizes only after >=70% configured component evidence; partial coverage is explicit.
+- A dimension with insufficient evidence has no numeric value; there is no neutral fallback.
+- A scored zero denominator is unavailable, never a numeric substitute or Infinity/NaN.
 
 ## Advanced metric evidence
 
 `MatchPerformance.advancedMetrics` is optional so deterministic Demo and legacy clients need not fabricate REAL evidence. REAL schema 2 performances may carry `event-metrics-v1` coverage plus compact Trade, clutch, objective, direct ability-cast, economy-efficiency and impact-context aggregates. Zero-valued domain objects may be omitted only when their domain evidence status proves a measured zero; missing data remains `partial` or `unavailable`.
 
-Full anonymous participant topology and ordered event evidence are read only on the server. The public response contains no raw timeline, coordinates, internal IDs, HMACs or non-consenting participant rows. `src/analytics/advancedMetrics.ts` aggregates counts and recomputes ratios from additive totals; it does not score them. Economy scoring, utility effects, Frag Quality/Impact scoring, Role Value scoring and Synergy remain future work.
+Full anonymous participant topology and ordered event evidence are read only on the server. The public response contains no raw timeline, coordinates, internal IDs, HMACs or non-consenting participant rows. `src/analytics/advancedMetrics.ts` aggregates counts and recomputes ratios from additive totals; it does not score them. Eight-dimension scoring is computed by the versioned frontend engine from these sanitized aggregates; no score is persisted. Utility effects, Frag Quality and Synergy remain future work.\n\n## Evidence-aware scores\n\nPlayerScores contains Overall and eight ScoreResult objects plus independent confidence. See src/scoring/types.ts and docs/SCORING.md for status/value, configured and observed coverage, sample gates and aggregate-only traces. Optional raw KD and FK/FD remain undefined for zero denominators. Demo now contains explicitly fictional advanced aggregates; REAL evidence is never synthesized. No public schema or database migration is required.\n
