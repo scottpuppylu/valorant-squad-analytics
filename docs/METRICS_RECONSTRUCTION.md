@@ -1,6 +1,6 @@
 # Versioned metric reconstruction
 
-Status: **IMPLEMENTED; PRODUCTION VALIDATION PENDING — SDD STRICT**
+Status: **COMPLETE — SDD STRICT; non-empty production metric path NOT VERIFIED**
 
 `event-metrics-v1` reconstructs evidence at player-match grain. It does not create a new Overall formula, an Impact Score, an Economy Score, a Role Value Score, MMR or Elo. Provider schema (`HenrikDev v4`), durable normalization (`durable-evidence-v2`), public projection (`event-metrics-projection-v1`) and future scoring versions are separate contracts.
 
