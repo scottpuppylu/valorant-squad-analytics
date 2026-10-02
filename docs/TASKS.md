@@ -203,11 +203,11 @@ Status: **COMPLETE — SDD STRICT**
 - [x] Preserve the newest-300-match bound, DATA-02A.1 missing-evidence semantics and the existing sanitized schema 1 projection.
 - [x] Update Chinese consent, Privacy and revocation copy for public publication and resumable deletion semantics.
 
-The current production dataset is validly `empty` because DATA-01C deleted the former test player and no player was reconnected. Public non-empty production content path is **NOT YET EXERCISED AFTER DATA-01C DELETION**; disposable database tests validate current-policy visibility, obsolete-policy exclusion, revocation exclusion and sanitized serialization. TASK-METRICS-01 is implemented with production validation pending; TASK-002B and Synergy remain unstarted.
+The current production dataset is validly `empty` because DATA-01C deleted the former test player and no player was reconnected. Public non-empty production content path is **NOT YET EXERCISED AFTER DATA-01C DELETION**; disposable database tests validate current-policy visibility, obsolete-policy exclusion, revocation exclusion and sanitized serialization. TASK-METRICS-01 is complete with empty-production validation; TASK-002B and Synergy remain unstarted.
 
 ## Task METRICS-01 — versioned event reconstruction and advanced metric evidence
 
-Status: **IMPLEMENTED / PRODUCTION VALIDATION PENDING — SDD STRICT**
+Status: **COMPLETE — SDD STRICT; non-empty production metric path NOT VERIFIED**
 
 - [x] Add append-only migration `0006_metric_evidence_status.sql` and `durable-evidence-v2` missing/observed/unavailable semantics.
 - [x] Implement deterministic `event-metrics-v1` Trade, KAST/opening, 1v1–1v5 clutch, objective, direct cast, economy-efficiency and kill-context reconstruction outside React.
@@ -216,7 +216,7 @@ Status: **IMPLEMENTED / PRODUCTION VALIDATION PENDING — SDD STRICT**
 - [x] Add pure multi-match aggregation that sums counts and recomputes ratios from additive totals.
 - [x] Add missing, malformed, observed-zero, order/tie, invalid-denominator, privacy, parity and bounded-performance regression tests.
 - [x] Keep all TASK-001 score categories, benchmarks and weights unchanged.
-- [ ] Verify production aggregate counts, migration-0006 apply/rerun, CI and both deployments.
+- [x] Verify production aggregate counts, migration-0006 apply/rerun, CI and both deployments.
 
 Existing `durable-evidence-v1` rows default to missing v2 evidence and are not silently upgraded; a future authorized overlap/import may rewrite them. Production remains validly empty, so the non-empty production advanced-metric path is **NOT VERIFIED**. Exact formulas, evidence states and compact-zero semantics are in `docs/METRICS_RECONSTRUCTION.md`.
 
