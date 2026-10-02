@@ -25,6 +25,10 @@ export interface Player {
 
 export interface MatchPerformance {
   playerId: string;
+  teamGroup?: 'A' | 'B';
+  teamWon?: boolean;
+  teamRoundsWon?: number;
+  teamRoundsLost?: number;
   agent: AgentName;
   kills: number;
   deaths: number;
@@ -51,6 +55,26 @@ export interface MatchRecord {
   won: boolean;
   durationMinutes: number;
   performances: MatchPerformance[];
+  synergyEvidence?: MatchPairTradeEvidence;
+}
+
+/** Only publicly visible same-team members; never an event timeline. */
+export interface PairTradeEvidence {
+  playerAId: string;
+  playerBId: string;
+  ruleVersion: 'event-metrics-v1';
+  status: 'reconstructed' | 'partial' | 'unavailable';
+  reconstructedRounds: number;
+  aTradedBDeaths?: number;
+  bTradedADeaths?: number;
+}
+
+export interface MatchPairTradeEvidence {
+  ruleVersion: 'event-metrics-v1';
+  status: 'reconstructed' | 'partial' | 'unavailable';
+  reconstructedRounds: number;
+  /** Indices refer only to this match's public performances; absent counters mean missing. */
+  pairs: ([aIndex: number, bIndex: number] | [aIndex: number, bIndex: number, aTradedB: number, bTradedA: number])[];
 }
 
 export interface RawPlayerStats {

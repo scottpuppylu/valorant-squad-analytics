@@ -104,8 +104,29 @@ function buildMatch(index: number): MatchRecord {
     scoreAgainst,
     won,
     durationMinutes: 31 + (index % 8) * 3,
-    performances: lineup.map((playerIndex) => buildPerformance(index, playerIndex, rounds)),
+    performances: lineup.map((playerIndex) => {
+      const performance = buildPerformance(index, playerIndex, rounds);
+      // Fictional match-local teams: Quartz and Moss meet as opponents, never as a public duo.
+      const teamGroup = playerIndex === 3 ? 'B' as const : 'A' as const;
+      const sameSide = teamGroup === 'A';
+      const hasNovaEcho = lineup.includes(0) && lineup.includes(2);
+      const hasBlitzPulse = lineup.includes(4) && lineup.includes(6);
+      const delta = hasNovaEcho && [0,2].includes(playerIndex) ? .09 : hasBlitzPulse && [4,6].includes(playerIndex) ? -.10 : 0;
+      return { ...performance, teamGroup, teamWon: sameSide ? won : !won,
+        teamRoundsWon: sameSide ? scoreFor : scoreAgainst, teamRoundsLost: sameSide ? scoreAgainst : scoreFor,
+        acs: performance.acs * (1 + delta), adr: performance.adr * (1 + delta),
+        kast: clamp(performance.kast + delta * .4, 0, 1) };
+    }),
   };
 }
 
-export const demoMatches: MatchRecord[] = Array.from({ length: 32 }, (_, index) => buildMatch(index));
+export const demoMatches: MatchRecord[] = Array.from({ length: 32 }, (_, index) => {
+  const match = buildMatch(index);
+  const visible = match.performances;
+  match.synergyEvidence = {ruleVersion:'event-metrics-v1',status:'reconstructed',reconstructedRounds:match.scoreFor+match.scoreAgainst,pairs:[]};
+  for (let i = 0; i < visible.length; i += 1) for (let j = i + 1; j < visible.length; j += 1) {
+    const a = visible[i]!; const b = visible[j]!;
+    if (a.teamGroup === b.teamGroup) match.synergyEvidence.pairs.push([i,j,(index+i)%2,(index+j)%3]);
+  }
+  return match;
+});

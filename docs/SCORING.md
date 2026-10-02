@@ -84,4 +84,17 @@ Overall rankings: available group, partial group, unavailable last without numbe
 
 Profile provides eight dimensions and reusable expandable 評分依據. Aggregate-only trace includes raw/normalized inputs, denominator, directions/endpoints, configured/used weights, status, coverage, samples and versions; no identifiers, timelines or coordinates. Recent form requires >=3 recent and >=3 baseline observations AND numeric gated Overall in both populations. Badges require numeric score and stated samples; HS badge is independent.
 
-Demo advanced aggregates are deterministic fictional illustration, not live provider validation or real event reconstruction. Real missing evidence remains missing. Non-empty production scoring is NOT YET EXERCISED; production intentionally remains empty after the previously approved deletion. No player reconnect, no new migration and no provider call in this task. Synergy is NOT STARTED.
+Demo advanced aggregates are deterministic fictional illustration, not live provider validation or real event reconstruction. Real missing evidence remains missing. Non-empty production scoring is NOT YET EXERCISED; production intentionally remains empty after the previously approved deletion. No player reconnect, no new migration and no provider call in this task.
+
+## Separate pair-level association
+
+TASK-SYNERGY-01 does not change any individual engine formula above. See [SYNERGY.md](SYNERGY.md) for `duo-synergy-v1` / `duo-synergy-benchmarks-v1`.
+Same selected-context teammate appearances are compared with each player's own appearances without the partner; opponents are excluded.
+Both member Overall lifts must exist. Mutual Overall/KAST lift is the mean of both directional deltas.
+Win-rate lift is shared per-performance team win rate minus the mean of the two baseline team win rates.
+Each signed delta is shrunk by n/(n+8), then mapped around 50 using ±8 Overall / ±.05 KAST / ±.15 win rate and clamped 0–100.
+Weights .60/.25/.15; numeric index requires >=75% available configured weight, shared >=3, each baseline >=5 and both Overall lifts.
+Shared 3–7 is partial; available requires shared >=8, both baselines >=8 and all complete components.
+Confidence = 100*sqrt(min(n/15,1)*min(min(bA,bB)/20,1))*availableWeight, independently clamped 0–100.
+Missing evidence never becomes 50. Direct pair trades/observed reconstructed rounds are supporting evidence, not an index component.
+These are descriptive product calibrations, not causal effects, population percentiles, official ranks or a ninth player dimension.
