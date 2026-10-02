@@ -7,6 +7,7 @@ import type { DatasetReadyResponse } from '../dataSources/server/contracts';
 import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 import type { DatasetContextValue, DatasetRuntimeSource, DatasetRuntimeStatus } from './DatasetContext';
 import { DatasetContext } from './DatasetContext';
+import { validSynergyContract } from '../dataSources/server/synergyContract';
 
 interface RuntimeState {
   status: DatasetRuntimeStatus;
@@ -53,10 +54,11 @@ function isDatasetResponse(value: unknown): value is DatasetReadyResponse {
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Partial<DatasetReadyResponse>;
   return candidate.ok === true
-    && candidate.schemaVersion === 2
+    && candidate.schemaVersion === 3
     && (candidate.state === 'ready' || candidate.state === 'empty')
     && typeof candidate.snapshot?.version === 'string'
-    && candidate.snapshot.projectionVersion === 'event-metrics-projection-v1'
+    && candidate.snapshot.projectionVersion === 'synergy-ready-projection-v1'
+    && candidate.snapshot.generation === 'dataset-read-v3'
     && candidate.dataset?.mode === 'REAL'
     && candidate.dataset.isDemo === false
     && Array.isArray(candidate.dataset.players)
@@ -64,7 +66,8 @@ function isDatasetResponse(value: unknown): value is DatasetReadyResponse {
     && candidate.dataset.matches.every((match) => isRecord(match)
       && Array.isArray(match.performances)
       && match.performances.every((performance) => isRecord(performance)
-        && (performance.advancedMetrics === undefined || isAdvancedMetrics(performance.advancedMetrics))));
+        && (performance.advancedMetrics === undefined || isAdvancedMetrics(performance.advancedMetrics)))
+      && validSynergyContract(match, new Set(candidate.dataset!.players.map((p) => p.id))));
 }
 
 export function DatasetProvider({ children, client = serverDatasetApiClient, forceDemo }: DatasetProviderProps) {

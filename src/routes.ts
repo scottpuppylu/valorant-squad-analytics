@@ -3,6 +3,7 @@ export const publicRoutePaths = {
   leaderboard: '/leaderboard',
   players: '/players/:playerId',
   compare: '/compare',
+  synergy: '/synergy',
   maps: '/maps',
   agents: '/agents',
   matches: '/matches',

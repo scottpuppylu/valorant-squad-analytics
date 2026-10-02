@@ -46,6 +46,7 @@ function completeRoundCollection(input: EventMetricMatchInput): boolean {
 }
 
 interface TradeState {
+  directTradeEdges: Map<string, { traderId: string; victimId: string; count: number }>;
   tradedDeathEvents: Set<string>;
   tradeKillEvents: Set<string>;
   tradeKillsByPlayer: Map<string, number>;
@@ -60,6 +61,7 @@ function increment(map: Map<string, number>, key: string): void {
 
 function reconstructTrades(eventsByRound: Map<string, MetricKillInput[]>, teams: Map<string, string>): TradeState {
   const state: TradeState = {
+    directTradeEdges: new Map(),
     tradedDeathEvents: new Set(), tradeKillEvents: new Set(), tradeKillsByPlayer: new Map(),
     tradedDeathsByPlayer: new Map(), tradeAssistsByPlayer: new Map(), deathsByPlayer: new Map(),
   };
@@ -78,6 +80,10 @@ function reconstructTrades(eventsByRound: Map<string, MetricKillInput[]>, teams:
       if (!retaliation) continue;
       state.tradedDeathEvents.add(eventKey(death));
       increment(state.tradedDeathsByPlayer, death.victimId);
+      const pairKey = JSON.stringify([retaliation.killerId, death.victimId]);
+      const edge = state.directTradeEdges.get(pairKey) ?? { traderId: retaliation.killerId, victimId: death.victimId, count: 0 };
+      edge.count += 1;
+      state.directTradeEdges.set(pairKey, edge);
       const retaliationKey = eventKey(retaliation);
       if (state.tradeKillEvents.has(retaliationKey)) continue;
       state.tradeKillEvents.add(retaliationKey);
@@ -289,6 +295,6 @@ export class EventMetricEngine {
         trace,
       });
     }
-    return { ruleVersion: EVENT_METRIC_RULE_VERSION, players };
+    return { ruleVersion: EVENT_METRIC_RULE_VERSION, players, directTradeEdges: [...trade.directTradeEdges.values()] };
   }
 }

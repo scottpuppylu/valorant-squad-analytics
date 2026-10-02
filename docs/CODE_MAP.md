@@ -25,7 +25,7 @@ GET /api/valorant/dataset
   -> exact REAL_DATASET_READ_MODE=public fail-closed gate
   -> PostgresDatasetReadRepository (six set-based reads)
   -> EventMetricEngine (event-metrics-v1)
-  -> DatasetProjectionService (event-metrics-projection-v1)
+  -> DatasetProjectionService (synergy-ready-projection-v1)
   -> public browser-safe REAL dataset, coverage and opaque snapshot
 
 #/connect durable sync controls
@@ -42,7 +42,7 @@ Current limitations:
 - Vercel REAL reads are public without viewer authentication, while all non-`public` mode values fail closed;
 - only current `2026-10-02-public-v1` self-asserted consent plus active membership authorizes visibility or provider writes;
 - the projection is bounded to the newest 300 eligible durable matches and is not lifetime history;
-- versioned Trade/Clutch/Economy/Impact-context/Role-input evidence exists, but TASK-002B scores, weights, benchmarks and uncertainty remain deferred;
+- versioned Trade/Clutch/Economy/Impact-context/Role-input evidence and TASK-002B eight-dimensional scores exist; non-empty production scoring and pair analytics remain NOT YET EXERCISED;
 - the legacy browser REAL envelope remains only for cleanup/tests/rollback and is not read by the product;
 - the provider audit endpoint emits only structural evidence outside production and is disabled in production.
 
@@ -136,9 +136,11 @@ scheduled/manual sync command
 - Add minimum samples, uncertainty, trace output and precision-safe aggregation.
 - Do not depend on lifetime-complete history.
 
-### Future Synergy
+### TASK-SYNERGY-01
 
-Synergy remains after DATA-02B, durable shared match/membership evidence and TASK-002B. It must not be inferred from the legacy browser import or this compatibility projection.
+Schema 3 supplies match-local same-team identity and per-performance outcome. EventMetricEngine retains internal direct-trade edges from the existing event-metrics-v1 classifier; DatasetProjectionService exposes compact consenting-only index tuples. No query or migration added.
+
+`src/synergy/{types,benchmarks,index,analytics,tradeEvidence,presentation}.ts` owns pure context selection, observed-pair enumeration, independent baselines, reusable individual Overall windows, calibrated index, sample gates, confidence and trace. `src/dataSources/server/synergyContract.ts` validates the browser trust boundary. `SynergyPage` and `SynergyDetail` render selectors, matrix, shortlist and directional details without scoring formulas. `tests/synergy.test.ts`, datasetRead, metricsReconstruction and datasetRoutes cover domain, projection, privacy, event edges and UI states. Synergy does not enter the individual scoring engine.
 
 ## TASK-002B scoring boundary
 

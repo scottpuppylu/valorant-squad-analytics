@@ -36,7 +36,7 @@ describe('metric dictionary', () => {
   });
 
   it('clearly marks future concepts as not implemented', () => {
-    for (const id of ['frag-quality', 'duo-synergy']) {
+    for (const id of ['frag-quality']) {
       const definition = metricDefinitionById.get(id);
       expect(definition?.type).toBe('FUTURE');
       expect(definition?.currentAvailability).toBe('PLANNED');
@@ -125,6 +125,7 @@ describe('zh-TW localization', () => {
       zhTW.navigation.leaderboard,
       zhTW.navigation.players,
       zhTW.navigation.compare,
+      '搭檔分析',
       zhTW.navigation.maps,
       zhTW.navigation.agents,
       zhTW.navigation.matches,

@@ -49,6 +49,7 @@ export const primaryNavigation = [
   { to: '/leaderboard', label: zhTW.navigation.leaderboard },
   { to: '/players/nova-hex', label: zhTW.navigation.players },
   { to: '/compare', label: zhTW.navigation.compare },
+  { to: '/synergy', label: '搭檔分析' },
   { to: '/maps', label: zhTW.navigation.maps },
   { to: '/agents', label: zhTW.navigation.agents },
   { to: '/matches', label: zhTW.navigation.matches },

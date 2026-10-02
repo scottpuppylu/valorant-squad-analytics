@@ -15,9 +15,9 @@ function response(state: 'ready' | 'empty'): DatasetReadyResponse {
   const demo = demoDataSource.snapshot();
   return {
     ok: true,
-    schemaVersion: 2,
+    schemaVersion: 3,
     state,
-    snapshot: { version: state, generation: 'dataset-read-v2', source: 'durable-neon', projectionVersion: 'event-metrics-projection-v1' },
+    snapshot: { version: state, generation: 'dataset-read-v3', source: 'durable-neon', projectionVersion: 'synergy-ready-projection-v1' },
     coverage: { completeForProviderWindow: false, boundedMatchLimit: 300, lifetimeComplete: false },
     evidence: { acs: 'derived', adr: 'derived', headshotPercentage: 'derived', kast: 'reconstructed', firstKills: 'reconstructed', firstDeaths: 'reconstructed' },
     dataset: state === 'ready'
@@ -76,6 +76,7 @@ describe('dataset-aware routes', () => {
     ready.dataset.matches = [{
       ...ready.dataset.matches[0]!,
       performances: ready.dataset.matches[0]!.performances.slice(0, 1),
+      synergyEvidence: undefined,
     }];
     await renderWith({ load: async () => ready });
     expect(container.textContent).toContain('對戰紀錄');
@@ -86,5 +87,49 @@ describe('dataset-aware routes', () => {
     window.location.hash = '#/players/not-a-player';
     await renderWith({ load: async () => response('ready') });
     expect(container.textContent).toContain('這個玩家連結不存在');
+  });
+
+  it('renders Synergy empty REAL without Demo fallback', async () => {
+    window.location.hash = '#/synergy';
+    await renderWith({ load: async () => response('empty') });
+    expect(container.textContent).toContain('目前尚無已加入的真實玩家');
+    expect(container.textContent).not.toContain('NovaHex');
+  });
+
+  it('renders an intentional one-player Synergy state', async () => {
+    window.location.hash = '#/synergy';
+    const ready = response('ready');
+    ready.dataset.players = ready.dataset.players.slice(0,1);
+    ready.dataset.matches = [{...ready.dataset.matches[0]!,performances:ready.dataset.matches[0]!.performances.slice(0,1),synergyEvidence:undefined}];
+    await renderWith({load:async () => ready});
+    expect(container.textContent).toContain('至少需要兩位公開玩家才能分析搭檔');
+  });
+
+  it('handles invalid pair URLs and exposes observed matrix selection', async () => {
+    window.location.hash = '#/synergy?a=invalid&b=invalid&map=unknown';
+    await renderWith({load:async () => response('ready')});
+    expect(container.querySelector('table')).not.toBeNull();
+    expect(container.querySelector('#pair-detail')?.textContent).toContain('共同');
+    const cell = container.querySelector<HTMLButtonElement>('td button');
+    await act(async () => {cell!.click();});
+    expect(window.location.hash).toContain('a=');
+    expect(window.location.hash).not.toContain('invalid');
+  });
+
+  it('shows one-player guidance even with no usable REAL matches', async () => {
+    window.location.hash='#/synergy';
+    const empty=response('empty'); empty.dataset.players=demoDataSource.snapshot().players.slice(0,1);
+    await renderWith({load:async()=>empty});
+    expect(container.textContent).toContain('至少需要兩位公開玩家才能分析搭檔');
+  });
+
+  it('shows missing teammate sample, not zero, for two opponents', async () => {
+    window.location.hash='#/synergy';
+    const ready=response('ready'); ready.dataset.players=ready.dataset.players.slice(0,2);
+    const performances=ready.dataset.matches[0]!.performances.slice(0,2);
+    performances[1]={...performances[1]!,teamGroup:'B'};
+    ready.dataset.matches=[{...ready.dataset.matches[0]!,performances,synergyEvidence:undefined}];
+    await renderWith({load:async()=>ready});
+    expect(container.querySelector('#pair-detail')?.textContent).toBe('沒有共同同隊樣本');
   });
 });

@@ -193,4 +193,20 @@ The first production validation processed 154 exclusive matches and no shared ma
 
 `MatchPerformance.advancedMetrics` is optional so deterministic Demo and legacy clients need not fabricate REAL evidence. REAL schema 2 performances may carry `event-metrics-v1` coverage plus compact Trade, clutch, objective, direct ability-cast, economy-efficiency and impact-context aggregates. Zero-valued domain objects may be omitted only when their domain evidence status proves a measured zero; missing data remains `partial` or `unavailable`.
 
-Full anonymous participant topology and ordered event evidence are read only on the server. The public response contains no raw timeline, coordinates, internal IDs, HMACs or non-consenting participant rows. `src/analytics/advancedMetrics.ts` aggregates counts and recomputes ratios from additive totals; it does not score them. Eight-dimension scoring is computed by the versioned frontend engine from these sanitized aggregates; no score is persisted. Utility effects, Frag Quality and Synergy remain future work.\n\n## Evidence-aware scores\n\nPlayerScores contains Overall and eight ScoreResult objects plus independent confidence. See src/scoring/types.ts and docs/SCORING.md for status/value, configured and observed coverage, sample gates and aggregate-only traces. Optional raw KD and FK/FD remain undefined for zero denominators. Demo now contains explicitly fictional advanced aggregates; REAL evidence is never synthesized. No public schema or database migration is required.\n
+Full anonymous participant topology and ordered event evidence are read only on the server. The public response contains no raw timeline, coordinates, internal IDs, HMACs or non-consenting participant rows. `src/analytics/advancedMetrics.ts` aggregates counts and recomputes ratios from additive totals; it does not score them. Eight-dimension scoring is computed by the versioned frontend engine from these sanitized aggregates; no score is persisted. Utility effects and a separately defined Frag Quality score remain future work. Pair Synergy is implemented separately below.
+
+## Evidence-aware scores
+
+PlayerScores contains Overall and eight ScoreResult objects plus independent confidence. See src/scoring/types.ts and docs/SCORING.md for status/value, configured and observed coverage, sample gates and aggregate-only traces. Optional raw KD and FK/FD remain undefined for zero denominators. Demo now contains explicitly fictional advanced aggregates; REAL evidence is never synthesized. TASK-002B required no schema or database migration; TASK-SYNERGY-01 advances the public contract without a database migration.
+
+
+## Pair analytics contract — TASK-SYNERGY-01
+
+Public schema 3 adds optional match-local teamGroup A/B and teamWon/teamRoundsWon/teamRoundsLost to each visible performance.
+Only same known group establishes teammates; same match alone does not. Outcome belongs to the specific member's side.
+Legacy MatchRecord outcome fields retain compatibility meaning for existing pages. No database migration.
+MatchRecord.synergyEvidence is compact shared event-metrics-v1 coverage plus public-performance-index directional trade tuples.
+Only observed visible same-team pairs are projected; anonymous topology stays internal. See SYNERGY.md for the exact tuple schema.
+DuoSynergyResult contains pair identity, status/value, separate confidence, shared samples, both paired/baseline windows,
+directional lifts, components, supporting trade evidence, aggregate trace and independent duo versions.
+No raw event or internal identity is public, and no pair score/ranking is persisted or added to individual Overall/radar.

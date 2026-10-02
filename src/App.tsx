@@ -14,6 +14,7 @@ import { ConnectPage } from './pages/ConnectPage';
 import { publicRoutePaths } from './routes';
 import { DatasetRuntimeBoundary } from './components/DatasetRuntimeBoundary';
 import { useDataset } from './hooks/useDataset';
+import { SynergyPage } from './pages/SynergyPage';
 
 function DefaultPlayerRoute() {
   const { analytics } = useDataset();
@@ -30,6 +31,7 @@ export default function App() {
             <Route path={publicRoutePaths.dashboard} element={<DashboardPage />} />
             <Route path={publicRoutePaths.leaderboard} element={<LeaderboardPage />} />
             <Route path={publicRoutePaths.compare} element={<ComparePage />} />
+            <Route path={publicRoutePaths.synergy} element={<SynergyPage />} />
             <Route path={publicRoutePaths.maps} element={<MapsPage />} />
             <Route path={publicRoutePaths.agents} element={<AgentsPage />} />
             <Route path={publicRoutePaths.matches} element={<MatchesPage />} />

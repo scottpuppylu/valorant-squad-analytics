@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { playerEmojiOptions, type PlayerEmoji } from '../../src/types/avatar.js';
 import type { AdvancedMetrics } from '../../src/types/advancedMetrics.js';
-import type { MatchPerformance, MatchRecord, Player } from '../../src/types/valorant.js';
+import type { MatchPairTradeEvidence, MatchPerformance, MatchRecord, Player } from '../../src/types/valorant.js';
 import { primaryRoleForAgents } from '../../src/utils/agentRoles.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
 import type { EvidenceStatus } from '../evidence/types.js';
@@ -234,6 +234,9 @@ export class DatasetProjectionService {
       const reconstruction = this.metricEngine.reconstruct(metricInput);
       metricReconstructionMs += performance.now() - metricStarted;
 
+      const visibleTeams = [...new Set(performanceRows.map((row) => row.team_key).filter((key) => key && key !== 'unknown'))].sort();
+      const teamGroups = new Map(visibleTeams.length <= 2 ? visibleTeams.map((key, index) => [key, index === 0 ? 'A' as const : 'B' as const]) : []);
+
       const performances = performanceRows.flatMap((row): MatchPerformance[] => {
         const player = playerRowByInternalId.get(row.internal_player_id);
         const reconstructed = reconstruction.players.get(row.internal_participant_id)?.metrics;
@@ -252,6 +255,10 @@ export class DatasetProjectionService {
         }
         return [{
           playerId: player.public_id,
+          ...(teamGroups.has(row.team_key) ? { teamGroup: teamGroups.get(row.team_key) } : {}),
+          ...(typeof row.team_won === 'boolean' ? { teamWon: row.team_won } : {}),
+          ...(finite(row.rounds_won) && row.rounds_won >= 0 ? { teamRoundsWon: row.rounds_won } : {}),
+          ...(finite(row.rounds_lost) && row.rounds_lost >= 0 ? { teamRoundsLost: row.rounds_lost } : {}),
           agent: row.agent_name,
           kills: row.kills,
           deaths: row.deaths,
@@ -266,6 +273,19 @@ export class DatasetProjectionService {
         }];
       });
       if (performances.length === 0) continue;
+      const internalByPublic = new Map(performanceRows.map((row) => [playerRowByInternalId.get(row.internal_player_id)?.public_id, row.internal_participant_id]));
+      const edgeCounts = new Map(reconstruction.directTradeEdges.map((edge) => [JSON.stringify([edge.traderId, edge.victimId]), edge.count]));
+      const complete = performances.every((p) => p.advancedMetrics?.evidence.trade === 'reconstructed');
+      const synergyEvidence: MatchPairTradeEvidence = {ruleVersion:'event-metrics-v1',status:complete ? 'reconstructed' : 'unavailable',
+        reconstructedRounds:complete ? matchRounds.length : 0,pairs:[]};
+      for (let i = 0; i < performances.length; i += 1) for (let j = i + 1; j < performances.length; j += 1) {
+        const a = performances[i]!; const b = performances[j]!;
+        if (!a.teamGroup || a.teamGroup !== b.teamGroup) continue;
+        synergyEvidence.pairs.push(complete ? [i,j,
+          edgeCounts.get(JSON.stringify([internalByPublic.get(a.playerId), internalByPublic.get(b.playerId)])) ?? 0,
+          edgeCounts.get(JSON.stringify([internalByPublic.get(b.playerId), internalByPublic.get(a.playerId)])) ?? 0,
+        ] : [i,j]);
+      }
       matches.push({
         id: first.public_match_id,
         playedAt,
@@ -277,10 +297,11 @@ export class DatasetProjectionService {
         won: first.team_won === true,
         durationMinutes: Math.max(1, Math.round((first.game_length_ms ?? 0) / 60_000)),
         performances,
+        ...(synergyEvidence.pairs.length ? { synergyEvidence } : {}),
       });
     }
     matches.sort((a, b) => b.playedAt.localeCompare(a.playedAt) || a.id.localeCompare(b.id));
-    const dataset = { players, matches, sourceId: 'durable-neon-v2', isDemo: false as const, mode: 'REAL' as const };
+    const dataset = { players, matches, sourceId: 'durable-neon-v3', isDemo: false as const, mode: 'REAL' as const };
     const availability = {
       acs: 'derived' as const,
       adr: 'derived' as const,
@@ -302,7 +323,7 @@ export class DatasetProjectionService {
       ok: true as const,
       schemaVersion: datasetSchemaVersion,
       state: matches.length === 0 ? 'empty' as const : 'ready' as const,
-      snapshot: { version, generation: 'dataset-read-v2' as const, source: 'durable-neon' as const, projectionVersion: datasetProjectionVersion },
+      snapshot: { version, generation: 'dataset-read-v3' as const, source: 'durable-neon' as const, projectionVersion: datasetProjectionVersion },
       coverage,
       evidence: availability,
       dataset,

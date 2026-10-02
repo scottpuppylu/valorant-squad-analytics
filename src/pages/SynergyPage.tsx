@@ -1,0 +1,77 @@
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { PlayerAvatar } from '../components/PlayerAvatar';
+import { SynergyDetail } from '../components/SynergyDetail';
+import { synergyStatusLabel } from '../synergy/presentation';
+import { useDataset } from '../hooks/useDataset';
+import { buildSynergy, canonicalPair, defaultSynergyFilters } from '../synergy/analytics';
+import { formatPercent, formatScore } from '../utils/format';
+
+const dateValue = (value: string | null) => value && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) ? value : '';
+
+export function SynergyPage() {
+  const { dataset } = useDataset();
+  const [params, setParams] = useSearchParams();
+  const maps = [...new Set(dataset.matches.map((m) => m.map))].sort();
+  const modes = [...new Set(dataset.matches.map((m) => m.gameMode))].sort();
+  const map = maps.includes(params.get('map') ?? '') ? params.get('map')! : 'all';
+  const gameMode = modes.includes(params.get('mode') ?? '') ? params.get('mode')! : 'all';
+  const from = dateValue(params.get('from')); const to = dateValue(params.get('to'));
+  const minimum = Number(params.get('min') ?? 0);
+  const minimumShared = Number.isSafeInteger(minimum) && minimum >= 0 && minimum <= 300 ? minimum : 0;
+  const results = useMemo(() => buildSynergy(dataset, { ...defaultSynergyFilters, map, gameMode, from, to }), [dataset,map,gameMode,from,to]);
+  const shortlist = results.filter((r) => r.sharedSample.matches >= minimumShared);
+  const validId = (id: string | null) => typeof id === 'string' && dataset.players.some((p) => p.id === id) ? id : undefined;
+  const a = validId(params.get('a')) ?? shortlist[0]?.pair.playerAId ?? dataset.players[0]?.id;
+  const b = [validId(params.get('b')),shortlist[0]?.pair.playerBId,...dataset.players.map((p) => p.id)].find((id) => id && id !== a);
+  const lookup = new Map(results.map((r) => [r.pair.key,r]));
+  const selected = a && b ? lookup.get(canonicalPair(a,b).key) : undefined;
+  function update(values: Record<string, string>) {
+    const next = new URLSearchParams();
+    for (const [key,value] of Object.entries({ a: a ?? '', b: b ?? '', map, mode: gameMode, from, to, min: String(minimumShared), ...values })) {
+      if (value !== '' && value !== 'all') next.set(key,value);
+    }
+    setParams(next, { replace: true });
+  }
+  function choose(playerAId: string, playerBId: string) {
+    update({ a:playerAId,b:playerBId });
+    document.getElementById('pair-detail')?.scrollIntoView({ behavior:'smooth',block:'start' });
+  }
+  const inputClass = 'mt-2 block w-full min-w-0 rounded-lg border border-white/10 bg-slate-900 p-2 text-slate-200';
+  return <div className="min-w-0 space-y-8">
+    <header className="page-heading"><div><p className="metric-label">共同出賽的樣本內關聯</p><h1>搭檔分析</h1><p>相對於各自其他場次，觀察雙方表現與賽果的差異。</p></div></header>
+    <p className="sample-warning">這是描述性關聯，不代表隊友造成改善、客觀最佳組合或溝通品質。指數不加入個人綜合表現。</p>
+    {dataset.isDemo ? <p className="text-sm text-slate-400">虛構 Demo：同隊、對手與補槍證據皆為固定示範，不是 provider 重建結果。</p> : null}
+    {dataset.players.length < 2 ? <section className="empty-panel surface-card">至少需要兩位公開玩家才能分析搭檔</section> : <>
+      <section className="surface-card grid min-w-0 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4" aria-label="搭檔篩選">
+        <label>玩家 A<select aria-label="玩家 A" className={inputClass} value={a} onChange={(e) => update({a:e.target.value,b:e.target.value === b ? dataset.players.find((p) => p.id !== e.target.value)!.id : b!})}>{dataset.players.map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
+        <label>玩家 B<select aria-label="玩家 B" className={inputClass} value={b} onChange={(e) => update({b:e.target.value})}>{dataset.players.filter((p) => p.id !== a).map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
+        <label>地圖<select aria-label="地圖" className={inputClass} value={map} onChange={(e) => update({map:e.target.value})}><option value="all">全部地圖</option>{maps.map((m) => <option key={m}>{m}</option>)}</select></label>
+        <label>模式<select aria-label="模式" className={inputClass} value={gameMode} onChange={(e) => update({mode:e.target.value})}><option value="all">全部模式</option>{modes.map((m) => <option key={m}>{m}</option>)}</select></label>
+        <label>開始日期<input aria-label="開始日期" className={inputClass} type="date" value={from} onChange={(e) => update({from:e.target.value})} /></label>
+        <label>結束日期<input aria-label="結束日期" className={inputClass} type="date" value={to} onChange={(e) => update({to:e.target.value})} /></label>
+        <label>排行最少共同場次<input aria-label="排行最少共同場次" className={inputClass} type="number" min="0" max="300" value={minimumShared} onChange={(e) => update({min:e.target.value})} /></label>
+        <button className="button-secondary self-end" type="button" onClick={() => setParams({})}>重設條件</button>
+      </section>
+      <p className="text-sm text-slate-400">日期、地圖與模式同時套用共同場次及雙方基準；不使用全域特務／角色或最近 N 場篩選，避免拆散配對。</p>
+      <section className="min-w-0"><h2 className="mb-4 text-xl text-white">搭檔矩陣</h2>
+        <div className="surface-card max-w-full overflow-x-auto" tabIndex={0} role="region" aria-label="可水平捲動的搭檔矩陣">
+          <table className="comparison-table"><caption className="p-3 text-left text-sm">同隊共同樣本；點選查看雙向差異。對角線不適用。</caption><thead><tr><th scope="col">玩家</th>{dataset.players.map((p) => <th scope="col" key={p.id}>{p.displayName}</th>)}</tr></thead>
+            <tbody>{dataset.players.map((row) => <tr key={row.id}><th scope="row">{row.displayName}</th>{dataset.players.map((column) => {
+              const r = row.id === column.id ? undefined : lookup.get(canonicalPair(row.id,column.id).key);
+              return <td key={column.id}>{row.id === column.id ? '不適用' : <button type="button" className="text-left" aria-label={`${row.displayName} 與 ${column.displayName}：${r?.value === undefined ? '資料不足' : formatScore(r.value)}，共同 ${r?.sharedSample.matches ?? 0} 場`} onClick={() => choose(row.id,column.id)}>
+                <span className="block text-white">{r?.value === undefined ? '資料不足' : formatScore(r.value)}</span><small>{r ? `${synergyStatusLabel[r.status]} · ${r.sharedSample.matches} 場` : '沒有共同同隊樣本'}</small></button>}</td>;
+            })}</tr>)}</tbody></table>
+        </div>
+      </section>
+      <section><h2 className="mb-4 text-xl text-white">目前樣本搭檔關聯</h2><div className="grid gap-3 md:grid-cols-2">
+        {shortlist.map((r) => <button key={r.pair.key} type="button" onClick={() => choose(r.pair.playerAId,r.pair.playerBId)} className="surface-card min-w-0 p-4 text-left">
+          <span className="flex flex-wrap items-center gap-2"><PlayerAvatar player={r.playerA.player} /><PlayerAvatar player={r.playerB.player} /><strong>{r.playerA.player.displayName} ＋ {r.playerB.player.displayName}</strong></span>
+          <span className="mt-2 block">{r.value === undefined ? '資料不足' : `指數 ${formatScore(r.value)}`} · {synergyStatusLabel[r.status]} · 共同 {r.sharedSample.matches} 場 · 信心 {formatPercent(r.confidence/100)}</span>
+        </button>)}
+        {!shortlist.length ? <p className="empty-panel">目前條件下沒有符合共同場次門檻的搭檔。</p> : null}
+      </div></section>
+      {selected ? <SynergyDetail result={selected} /> : <section id="pair-detail" className="empty-panel surface-card">沒有共同同隊樣本</section>}
+    </>}
+  </div>;
+}

@@ -11,6 +11,7 @@ import datasetHandler from '../api/valorant/dataset';
 import type { ApiRequest, ApiResponse, MatchImportInput } from '../server/contracts';
 import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy';
 import { datasetReadMode } from '../server/dataset/runtime';
+import { buildSynergy } from '../src/synergy/analytics';
 
 const migrationsPath = resolve('migrations');
 const squadId = '00000000-0000-4000-8000-000000000001';
@@ -149,6 +150,37 @@ function parityPayload() {
 }
 
 describe('dataset runtime migrations', () => {
+  it('projects opaque per-performance sides and preserves each correct team outcome', async () => {
+    const database = await migratedDatabase();
+    await seedProjection(database,2,1,1);
+    await database.query("INSERT INTO match_teams (id,source_match_id,team_key,won,rounds_won,rounds_lost) VALUES ($1,$2,'Red',false,0,1)",[uuid(7,999),uuid(5,1)]);
+    await database.query("UPDATE match_participants SET team_key='Red' WHERE id=$1",[uuid(8,2)]);
+    const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
+    expect(result.payload.schemaVersion).toBe(3);
+    const match = result.payload.dataset.matches[0]!;
+    expect(match.performances[0]).toMatchObject({teamGroup:'A',teamWon:true,teamRoundsWon:1,teamRoundsLost:0});
+    expect(match.performances[1]).toMatchObject({teamGroup:'B',teamWon:false,teamRoundsWon:0,teamRoundsLost:1});
+    expect(match.synergyEvidence).toBeUndefined();
+    expect(result.metrics.sqlQueryCount).toBe(6);
+  });
+
+  it('projects only consenting direct trade directions from the existing event rule', async () => {
+    const database = await migratedDatabase();
+    await seedProjection(database,2,1,1);
+    await database.query("UPDATE match_participants SET team_key='Red' WHERE id=$1",[uuid(8,3)]);
+    await database.query('UPDATE kill_events SET killer_participant_id=$1,victim_participant_id=$2 WHERE id=$3',[uuid(8,3),uuid(8,1),uuid(13,1)]);
+    await database.query(`INSERT INTO kill_events (id,source_match_id,round_id,event_lookup_hmac,event_sequence,time_in_round_ms,killer_participant_id,victim_participant_id)
+      VALUES ($1,$2,$3,$4,1,4000,$5,$6)`,[uuid(13,2),uuid(5,1),uuid(9,1),lookup(60000),uuid(8,2),uuid(8,3)]);
+    const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
+    expect(result.payload.dataset.matches[0]!.synergyEvidence).toEqual({ruleVersion:'event-metrics-v1',status:'reconstructed',reconstructedRounds:1,pairs:[[0,1,0,1]]});
+    const serialized = JSON.stringify(result.payload);
+    for (const privateValue of [uuid(8,1),uuid(8,2),uuid(8,3),lookup(60000)]) expect(serialized).not.toContain(privateValue);
+    await database.query("UPDATE consents SET status='revoked',revoked_at=now() WHERE player_id=$1",[uuid(1,2)]);
+    const revoked = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
+    expect(revoked.payload.dataset.matches[0]!.synergyEvidence).toBeUndefined();
+    expect(revoked.payload.dataset.matches[0]!.performances[0]!.kast).toBe(1);
+  });
+
   it('applies 0004 through 0006 on a fresh database, upgrades an existing database, and reruns without changing public ids', async () => {
     const fresh = await migratedDatabase();
     expect((await fresh.query<{ version: string }>("SELECT version FROM schema_migrations WHERE version='0004'")).rows).toEqual([{ version: '0004' }]);
@@ -366,6 +398,12 @@ describe('bounded projection performance', () => {
     expect(result.metrics.projectionMs).toBeGreaterThanOrEqual(0);
     expect(result.metrics.serializedBytes).toBeGreaterThan(0);
     expect(result.metrics.eventCount).toBe(matches);
+    const pairStarted = performance.now();
+    const pairs = buildSynergy(result.payload.dataset);
+    const pairMs = performance.now() - pairStarted;
+    expect(pairs.length).toBe(players * (players - 1) / 2);
+    expect(result.metrics.serializedBytes).toBeLessThan(players === 1 ? 27000 : 850000);
+    process.stdout.write(`SYNERGY_PERFORMANCE ${players}p/${matches}m ${JSON.stringify({pairMs,observedPairs:pairs.length,pairMatchRecords:result.payload.dataset.matches.reduce((n,m)=>n+(m.synergyEvidence?.pairs.length??0),0)})}\n`);
     process.stdout.write(`DATASET_PERFORMANCE ${players}p/${matches}m ${JSON.stringify(result.metrics)}\n`);
   }, 30_000);
 });
@@ -407,7 +445,7 @@ describe('dataset read gate', () => {
       else process.env.REAL_DATASET_READ_MODE = previous;
     }
     expect(status).toBe(200);
-    expect(body).toEqual({ ok: true, schemaVersion: 2, state: 'disabled', source: 'REAL_SERVER' });
+    expect(body).toEqual({ ok: true, schemaVersion: 3, state: 'disabled', source: 'REAL_SERVER' });
     expect(JSON.stringify(body)).not.toMatch(/player|match|count/iu);
     expect(headers.get('cache-control')).toBe('no-store');
     expect(request.headers).toEqual({});

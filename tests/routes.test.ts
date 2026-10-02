@@ -11,6 +11,7 @@ describe('public analytical routes', () => {
   });
 
   it('does not expose deferred product routes in primary navigation', () => {
-    expect(primaryNavigation.some(({ to }) => to.includes('synergy') || to.includes('live-data'))).toBe(false);
+    expect(primaryNavigation.some(({ to }) => to.includes('live-data'))).toBe(false);
+    expect(primaryNavigation.some(({ to }) => to === '/synergy')).toBe(true);
   });
 });

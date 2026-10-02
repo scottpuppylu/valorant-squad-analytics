@@ -261,7 +261,7 @@ By explicit user decision, TASK-003 was executed before TASK-002B. It consumes t
 
 ## Later roadmap
 
-- Task 004: teammate synergy matrix and Duo Synergy page
+- Task 004: absorbed by TASK-SYNERGY-01 (teammate matrix / Duo Synergy)
 - Task 005 evidence foundation: absorbed by TASK-METRICS-01; any Impact/Frag Quality score remains TASK-002B work
 - Task 006 evidence foundation: absorbed by TASK-METRICS-01; weighting and small-sample treatment remain TASK-002B work
 - Task 007 evidence foundation: absorbed by TASK-METRICS-01; buy-state bands and Economy score remain future work
@@ -273,4 +273,20 @@ By explicit user decision, TASK-003 was executed before TASK-002B. It consumes t
 ### TASK-002B execution evidence
 
 Starting HEAD bb2bdb87a3ed3041decb0552177552cc4b1bb558; checkpoint-before-task-002b. Versioned eight-dimensional engine, explicit missing/partial policy, precision preservation, selected-role context, trace UI, radar gaps and fictional Demo evidence implemented. See TASK_002B_PLAN.md and SCORING.md. No migration or provider fetch; non-empty production scoring NOT YET EXERCISED. Next only recommended task: TASK-SYNERGY-01, NOT STARTED.
-Eight dimensions, missing/partial gates, profile/benchmark versions, independent confidence, role-aware traces, eight-axis radar gaps, deterministic Demo and regression gates are complete. First release CI/Pages/Vercel succeeded; final commit release acceptance is reported at handoff. Public REAL remains empty, non-empty scoring NOT YET EXERCISED. No migration; no provider request; Synergy NOT STARTED.
+Eight dimensions, missing/partial gates, profile/benchmark versions, independent confidence, role-aware traces, eight-axis radar gaps, deterministic Demo and regression gates are complete. First release CI/Pages/Vercel succeeded; final commit release acceptance is reported at handoff. Public REAL remains empty, non-empty scoring NOT YET EXERCISED. No migration; no provider request. Synergy was not started at this historical checkpoint and is now tracked below.
+
+## TASK-SYNERGY-01 — evidence-aware teammate analytics
+
+Status: **IMPLEMENTATION COMPLETE — RELEASE ACCEPTANCE PENDING**
+
+- [x] Schema 3 / dataset-read-v3 / synergy-ready-projection-v1; opaque same-team groups and correct per-performance outcomes.
+- [x] Context-first observed-pair enumeration; opponents excluded from shared and independent baselines.
+- [x] Reuse unchanged individual community-score-v2; versioned pair index with both directional lifts, shrinkage, gates and separate confidence.
+- [x] Compact consenting-only direct Trade projection from event-metrics-v1; six SQL queries; no migration.
+- [x] Chinese matrix, shortlist, pair detail, expandable trace, date/map/mode/minimum-shared filters and public-ID URL selection.
+- [x] Varied deterministic Demo and intentional empty/one-player/no-shared REAL states; no persistent pair cache.
+- [x] Regression tests for evidence/neutral/asymmetric/filter/trade/privacy semantics and measured bounded payload.
+- [ ] Final worktree quality gates and deployment acceptance (see TASK_SYNERGY_01_PLAN.md).
+
+Non-empty production Synergy **NOT YET EXERCISED**. Do not reconnect the deleted player, change consent policy or perform Henrik calls for this task.
+Task 004 is absorbed. Recommended next step is TASK-UI-01 / V1 refinement only; **NOT STARTED**.

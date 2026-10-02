@@ -84,4 +84,6 @@ export interface ReconstructedAdvancedMetrics {
 export interface MatchMetricReconstruction {
   ruleVersion: string;
   players: Map<string, PlayerMetricReconstruction>;
+  /** Internal participant IDs, consumed only by the privacy projection. */
+  directTradeEdges: { traderId: string; victimId: string; count: number }[];
 }

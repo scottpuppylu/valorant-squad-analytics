@@ -8,6 +8,15 @@ import type { EventMetricMatchInput, MetricKillInput, MetricParticipantInput, Me
 
 const engine = new EventMetricEngine();
 
+describe('direct pair edges retain the single event-metrics-v1 classification', () => {
+  it('counts a direct retaliation once in the correct direction at 5000ms', () => {
+    const result = engine.reconstruct(match({kills:[kill('r1',0,1000,'B1','A1'),kill('r1',1,6000,'A2','B1',['A3','A3'])]}));
+    expect(result.directTradeEdges).toEqual([{traderId:'A2',victimId:'A1',count:1}]);
+    expect(result.players.get('A1')!.metrics.kast.value!.rate).toBe(1);
+    expect(engine.reconstruct(match({kills:[kill('r1',0,1000,'B1','A1'),kill('r1',1,6001,'A2','B1')]})).directTradeEdges).toEqual([]);
+  });
+});
+
 function participant(id: string, teamKey: string, overrides: Partial<MetricParticipantInput> = {}): MetricParticipantInput {
   return {
     id, teamKey, agent: 'Test Agent', kills: 2, assists: 1, damage: 300,

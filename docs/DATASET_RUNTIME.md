@@ -8,8 +8,8 @@ Status: **TASK-DATA-02 COMPLETE — SDD STRICT**
 Neon durable evidence
   -> PostgresDatasetReadRepository (six set-based queries, newest 300 matches)
   -> EventMetricEngine (`event-metrics-v1`)
-  -> DatasetProjectionService (`event-metrics-projection-v1`)
-  -> GET /api/valorant/dataset (schema version 2)
+  -> DatasetProjectionService (`synergy-ready-projection-v1`)
+  -> GET /api/valorant/dataset (schema version 3)
   -> DatasetProvider
   -> buildAnalytics(dataset)
   -> existing routes and analysis UI
@@ -29,12 +29,12 @@ The response excludes PUUIDs, provider match IDs, lookup HMACs, database interna
 
 The successful versioned response contains:
 
-- `schemaVersion: 2`;
+- `schemaVersion: 3`;
 - `state: ready | empty`;
 - opaque content-derived `snapshot.version`;
-- `snapshot.generation: dataset-read-v2`;
+- `snapshot.generation: dataset-read-v3`;
 - `snapshot.source: durable-neon`;
-- `snapshot.projectionVersion: event-metrics-projection-v1`;
+- `snapshot.projectionVersion: synergy-ready-projection-v1`;
 - bounded coverage metadata with `lifetimeComplete: false`;
 - explicit compatibility and advanced-metric evidence availability;
 - one normalized `mode: REAL`, `isDemo: false` dataset.
@@ -87,4 +87,22 @@ The former test player was deleted by DATA-01C and was not reconnected. Public m
 
 ## Evidence-aware scoring runtime (TASK-002B)
 
+The following payload measurement is the historical pre-Synergy baseline; schema 3 supersedes its unchanged-contract statement.
+
 METRICS-01 supplies event-metrics-v1 aggregate evidence; community-score-v2 computes frontend-only ScoreResult values, independent confidence and aggregate-only traces. Benchmark/profile versions are community-benchmarks-v1 and overall-profile-v1. No score persistence or migration; public server response remains unchanged and bounded. Current full 4-player/300-match fixture remains 680,332 bytes with six SQL queries. GitHub Pages uses deterministic fictional advanced evidence. Vercel keeps PUBLIC REAL with no Demo fallback for read errors/empty data; only the local Vite development runtime explicitly uses Demo. Non-empty production scoring NOT YET EXERCISED; no deleted player was reconnected. See SCORING.md for exact missing/partial/Overall gates.
+
+## Synergy-ready contract (TASK-SYNERGY-01)
+
+Schema 3 adds opaque match-local A/B teamGroup and optional per-performance teamWon/teamRoundsWon/teamRoundsLost.
+Only already public usable consenting performances receive these values; native team keys remain server-only.
+MatchRecord legacy outcome fields keep their existing compatibility meaning, not universal teammate semantics.
+Compact synergyEvidence shares event rule/status/reconstructed-round coverage once per match and contains only
+observed same-team public-performance index tuples. Browser validation rejects unknown/duplicate/opposite-team
+or malformed edges. No anonymous topology, raw timeline, provider/internal IDs or HMAC is returned.
+See SYNERGY.md for tuple semantics, missing-evidence gates and in-memory-only pair derivation.
+
+Six queries are unchanged. Local fixture sizes: 24,843 bytes (1p/30m, +2,040 / 8.9%) and
+813,532 bytes (4p/300m, +133,200 / 19.6%) versus pre-task 22,803 / 680,332.
+The latter contains six observed pairs and 1,800 pair-match tuples; one run calculated pairs in 87.23ms.
+These are local fixture observations, not production Neon latency promises. No migration or provider call.
+Production non-empty Synergy remains NOT YET EXERCISED; empty REAL never falls back to Demo.
