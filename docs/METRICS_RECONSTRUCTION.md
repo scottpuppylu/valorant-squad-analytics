@@ -70,6 +70,10 @@ For each kill the engine may classify:
 
 Player-match aggregates include opening, trade, man-disadvantage, clutch-state and won-round kill counts plus multi-kill, exactly-two-kill and three-plus-kill rounds. These are transparent context components, not a validated Impact Score.
 
+If a player's kill occurs in a round with a missing or unresolved winning team, the impact-context domain is partial and its value is omitted. This conservative domain-level gate prevents unknown won-round kill evidence from appearing as measured zero.
+
+Clutch win evidence likewise requires a winner that resolves to a participant team; an unresolved team preserves the attempt but omits wins.
+
 Role-value evidence availability is prepared from agent, assists, damage, objectives, trade assists, KAST/survival and direct cast counts. Utility-effect evidence remains unavailable. TASK-002B—not this task—owns role benchmarks, weights, score availability, confidence and final calculation traces.
 
 ## Persistence and backfill semantics
@@ -97,3 +101,5 @@ Implementation checks: lint passed; 17 test files / 167 tests passed in 23.91 se
 Database validation: 1 file / 15 tests passed in 17.22 seconds. After operator verification on 2026-10-02, the pre-migration read-only aggregate counts were all zero: source matches, participants, rounds, round participants, kill events and active consents. The existing production build applied migration `0006`; repeated build invocations reported `Production database is already up to date.` Read-only schema verification found exactly one `0006` record and all five evidence-status columns.
 
 Implementation deployment checkpoint `be473ba`: [CI](https://github.com/scottpuppylu/valorant-squad-analytics/actions/runs/37025882306) succeeded (88 seconds elapsed), [GitHub Pages](https://github.com/scottpuppylu/valorant-squad-analytics/actions/runs/37025882219) succeeded (104 seconds elapsed), and [Vercel](https://vercel.com/scottpuppys-projects/valorant-squad-analytics/3DtTvr15utVUmtSkGzCHKAFSHW9A) was Ready in 3m 57s. The canonical API returned HTTP 200, `Cache-Control: no-store`, schema 2 and state `empty`, with zero players and matches. Browser checks confirmed the REAL empty state and the working dictionary on both Vercel and Demo-only GitHub Pages. No player was reconnected and no provider request was made. Non-empty production advanced-metric behavior remains **NOT VERIFIED**. TASK-METRICS-01 is complete within this explicitly empty-production scope; TASK-002B and Synergy remain unstarted.
+
+Final winner-evidence hardening checks: 17 files / 167 tests passed in 33.19 seconds; the 15 reconstruction tests also passed separately in 548 ms. Lint passed, build passed (689 modules, 3.81 seconds) and audit found zero vulnerabilities. Bounded fixtures retained six queries: 1 player / 30 matches used 26.62 ms database, 1.43 ms reconstruction, 3.78 ms projection and 22,803 serialized bytes; 4 players / 300 matches used 159.34 ms database, 16.51 ms reconstruction, 37.09 ms projection and 680,332 bytes. Relative to baseline, response sizes increased by 9,569 bytes (72.3%) and 388,199 bytes (132.9%). These local fixtures are not a production Neon latency guarantee.

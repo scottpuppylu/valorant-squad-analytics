@@ -186,6 +186,7 @@ export class EventMetricEngine {
       let clutchAttempts = 0;
       let clutchWins = 0;
       let clutchWinnerComplete = true;
+      let impactWinnerComplete = true;
       const attemptsByOpponents = emptyClutchBreakdown();
       const winsByOpponents = emptyClutchBreakdown();
       let topologyComplete = eventComplete;
@@ -197,6 +198,7 @@ export class EventMetricEngine {
         if (opening?.killerId === player.id) firstKills += 1;
         if (opening?.victimId === player.id) firstDeaths += 1;
         const madeKill = events.some((event) => event.killerId === player.id);
+        if (madeKill && !input.participants.some((participant) => participant.teamKey === round.winningTeam)) impactWinnerComplete = false;
         const assisted = events.some((event) => event.assistantIds.includes(player.id));
         const death = events.find((event) => event.victimId === player.id);
         if (!death) survivedRounds += 1;
@@ -230,7 +232,7 @@ export class EventMetricEngine {
               attempted = true;
               clutchAttempts += 1;
               attemptsByOpponents[opponentAlive as ClutchOpponentCount] += 1;
-              if (!round.winningTeam) clutchWinnerComplete = false;
+              if (!input.participants.some((participant) => participant.teamKey === round.winningTeam)) clutchWinnerComplete = false;
               else if (round.winningTeam === player.teamKey) {
                 clutchWins += 1;
                 winsByOpponents[opponentAlive as ClutchOpponentCount] += 1;
@@ -260,7 +262,7 @@ export class EventMetricEngine {
         })
         : evidence<ClutchMetrics>('partial', undefined, coverage);
       if (topologyComplete && !clutchWinnerComplete && clutch.value) clutch.status = 'partial';
-      const impactContext = topologyComplete
+      const impactContext = topologyComplete && impactWinnerComplete
         ? evidence('reconstructed', impact)
         : evidence<ImpactContextMetrics>('partial', undefined, coverage);
       const objectives = completeRoundCollection(input) ? objectiveFor(player.id, input.rounds, participants) : evidence<ObjectiveMetrics>('unavailable');

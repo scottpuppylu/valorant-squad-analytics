@@ -152,6 +152,13 @@ describe('event-metrics-v1 round reconstruction', () => {
     expect(clutch.status).toBe('partial');
     expect(clutch.value).toMatchObject({ clutchAttempts: 1, attemptsByOpponents: { 2: 1 } });
     expect(clutch.value).not.toHaveProperty('clutchWins');
+    const impact = playerMetrics(input, 'B1').impactContext;
+    expect(impact.status).toBe('partial');
+    expect(impact).not.toHaveProperty('value');
+    const unknownWinner = { ...input, rounds: [{ ...input.rounds[0]!, winningTeam: 'Unknown' }] };
+    expect(playerMetrics(unknownWinner, 'B1').impactContext).not.toHaveProperty('value');
+    expect(playerMetrics(unknownWinner, 'A1').clutch.status).toBe('partial');
+    expect(playerMetrics(unknownWinner, 'A1').clutch.value).not.toHaveProperty('clutchWins');
   });
 
   it('reconstructs objective and transparent impact context counts', () => {
