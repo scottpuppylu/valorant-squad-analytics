@@ -20,4 +20,31 @@ Baseline payloads: 22,803 bytes (1p/30m), 680,332 bytes (4p/300m), six queries e
 No provider calls, player creation/reconnection, consent-policy changes, individual score changes,
 new browser REAL cache, persistent pair scores, raw event projection or UI refinement task.
 Non-empty production pair path may remain NOT YET EXERCISED; fixture verification is mandatory.
-Task remains IN PROGRESS until all release gates pass.
+Task status: COMPLETE. Implementation release 25cd731 passed all release gates; this acceptance-only
+documentation commit is also pushed and its final deployment statuses are verified at handoff.
+
+## Release acceptance — 2026-10-03
+
+- Local lint exit 0; 19 files / 270 tests passed, 20.69s; secret boundary passed.
+- Production build exit 0, 706 modules, 3.23s; main JS 449.24 kB / 141.81 kB gzip;
+  CSS 34.08 / 7.91 kB; HTML 0.71 / 0.49 kB; radar chunks 1.27 / 0.86,
+  16.08 / 5.68 and 339.53 / 99.68 kB. Dist secret boundary passed.
+- npm audit: 0 vulnerabilities. DB validation: 15/15 tests, 15.31s. No migration.
+- CI success: https://github.com/scottpuppylu/valorant-squad-analytics/actions/runs/37042651011
+  (verify job 87s).
+- Pages success: https://github.com/scottpuppylu/valorant-squad-analytics/actions/runs/37042651390
+  (build 91s; deploy 8s).
+- Vercel Ready, production source 25cd731, duration 3m 28s:
+  https://vercel.com/scottpuppys-projects/valorant-squad-analytics/8Yg2xJkQFuxRsz7NNhBMEfpyLHjx
+- Local Demo, public Pages and canonical Vercel: seven routes each at desktop 1440px and mobile 390px;
+  nonblank, no page-level horizontal overflow, no internal task labels, console errors 0.
+  Matrix selection, asymmetric member detail, contextual filtering and trace verified on Demo.
+- Production read HTTP 200, Cache-Control no-store, schema 3, dataset-read-v3,
+  synergy-ready-projection-v1, REAL empty: 1 public player / 0 matches. Synergy gives the
+  two-public-player requirement, not Demo fallback. No provider/database identifiers in the response.
+- Bounded fixtures: 1p/30m 24,843 bytes, six queries, pair calculation 0.611ms;
+  4p/300m 813,532 bytes, six queries, six observed pairs / 1,800 pair-match tuples,
+  pair calculation 88.452ms. These are local observations, not production latency guarantees.
+- Individual scoring, consent policy and migrations 0001–0006 unchanged. No provider call,
+  production player creation/reconnection, sync, revocation or deletion.
+- Non-empty production Synergy: NOT YET EXERCISED. TASK-UI-01 recommended only, NOT STARTED.

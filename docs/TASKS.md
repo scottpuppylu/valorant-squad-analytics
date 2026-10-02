@@ -277,7 +277,7 @@ Eight dimensions, missing/partial gates, profile/benchmark versions, independent
 
 ## TASK-SYNERGY-01 — evidence-aware teammate analytics
 
-Status: **IMPLEMENTATION COMPLETE — RELEASE ACCEPTANCE PENDING**
+Status: **COMPLETE** (implementation release 25cd731; acceptance recorded below)
 
 - [x] Schema 3 / dataset-read-v3 / synergy-ready-projection-v1; opaque same-team groups and correct per-performance outcomes.
 - [x] Context-first observed-pair enumeration; opponents excluded from shared and independent baselines.
@@ -286,7 +286,7 @@ Status: **IMPLEMENTATION COMPLETE — RELEASE ACCEPTANCE PENDING**
 - [x] Chinese matrix, shortlist, pair detail, expandable trace, date/map/mode/minimum-shared filters and public-ID URL selection.
 - [x] Varied deterministic Demo and intentional empty/one-player/no-shared REAL states; no persistent pair cache.
 - [x] Regression tests for evidence/neutral/asymmetric/filter/trade/privacy semantics and measured bounded payload.
-- [ ] Final worktree quality gates and deployment acceptance (see TASK_SYNERGY_01_PLAN.md).
+- [x] Final worktree quality gates and deployment acceptance (see TASK_SYNERGY_01_PLAN.md).
 
 Non-empty production Synergy **NOT YET EXERCISED**. Do not reconnect the deleted player, change consent policy or perform Henrik calls for this task.
 Task 004 is absorbed. Recommended next step is TASK-UI-01 / V1 refinement only; **NOT STARTED**.

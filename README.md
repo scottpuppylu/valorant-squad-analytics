@@ -4,7 +4,7 @@
 
 ## 目前狀態
 
-TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。TASK-METRICS-01 已完成，production migration、CI 與部署驗證均通過。Vercel 是 [PUBLIC REAL canonical runtime](https://valorant-squad-analytics.vercel.app/)：任何訪客都能在無登入、無存取碼的情況下讀取已同意玩家的去敏感化分析。GitHub Pages 固定為 Demo-only rollback，不呼叫 production dataset API。公開投影最多包含最近 300 場符合資格的持久化對戰；目前 production 在 DATA-01C 刪除後沒有重新加入的玩家，所以公開 REAL dataset 預期為空，非空 production 指標路徑仍是 **NOT VERIFIED**。
+TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。TASK-METRICS-01 已完成，production migration、CI 與部署驗證均通過。Vercel 是 [PUBLIC REAL canonical runtime](https://valorant-squad-analytics.vercel.app/)：任何訪客都能在無登入、無存取碼的情況下讀取已同意玩家的去敏感化分析。GitHub Pages 固定為 Demo-only rollback，不呼叫 production dataset API。公開投影最多包含最近 300 場符合資格的持久化對戰；2026-10-03 的唯讀檢查為 1 位公開玩家、0 場對戰，REAL 保持 empty，非空 production 指標與搭檔路徑仍是 **NOT YET EXERCISED**。本任務沒有新增、重新連結或同步 production 玩家。
 
 ## V1 原則
 
@@ -28,7 +28,7 @@ TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。
 7. DATA-02B 採用 PUBLIC REAL、無 viewer authentication、`no-store` 與最新版公開同意政策；migration `0005` 保證每位玩家最多一筆 active consent
 8. TASK-METRICS-01 已實作 `event-metrics-v1` 的 Trade、KAST、殘局、目標、技能施放、經濟效率與擊殺情境證據重建，production gates 已通過；沒有新增或改寫任何計分權重
 9. TASK-002B 八維度證據感知計分已完成；缺值不補 0 或 50，部分證據顯示覆蓋率。
-10. TASK-SYNERGY-01 已實作獨立搭檔關聯、矩陣、雙向差異與補槍證據；schema 3 修正同隊／個別賽果契約，沒有 migration。發佈驗收見 docs/TASK_SYNERGY_01_PLAN.md；不自動開始後續 UI 任務。
+10. TASK-SYNERGY-01 已完成並通過 CI、Pages、Vercel 與瀏覽器驗收：獨立搭檔關聯、矩陣、雙向差異與補槍證據；schema 3 修正同隊／個別賽果契約，沒有 migration。發佈驗收見 docs/TASK_SYNERGY_01_PLAN.md；不自動開始後續 UI 任務。
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
 
