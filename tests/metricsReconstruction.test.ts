@@ -175,6 +175,12 @@ describe('event-metrics-v1 round reconstruction', () => {
     expect(playerMetrics(input, 'A1').objectives).toMatchObject({ status: 'reconstructed', value: { plants: 1, defuses: 0 } });
     expect(playerMetrics(input, 'A1').trade.status).toBe('unavailable');
   });
+
+  it('rejects impossible event topology for KAST and trade evidence', () => {
+    const input = match({ kills: [kill('r1', 0, 1000, 'B1', 'A1'), kill('r1', 1, 2000, 'A1', 'B1')] });
+    expect(playerMetrics(input, 'A2').kast).not.toHaveProperty('value');
+    expect(playerMetrics(input, 'A2').trade.status).toBe('unavailable');
+  });
 });
 
 describe('direct advanced evidence and aggregation', () => {

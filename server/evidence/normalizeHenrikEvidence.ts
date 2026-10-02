@@ -74,6 +74,15 @@ export function normalizeHenrikEvidence(payload: unknown, input: MatchImportInpu
     if (!metadata || !matchId) return [];
     const roundEvidence = recordsEvidence(match, 'rounds');
     const killEvidence = recordsEvidence(match, 'kills');
+    const roundNumbers = new Set(roundEvidence.records.map((round, index) => asNumber(round.id) ?? index));
+    if (killEvidence.records.some((kill) => !refHmac(matchId, kill.killer, explicitKey)
+      || !refHmac(matchId, kill.victim, explicitKey)
+      || asNumber(kill.time_in_round_in_ms) === undefined
+      || !roundNumbers.has(asNumber(kill.round) ?? -1)
+      || recordsEvidence(kill, 'assistants').status !== 'observed'
+      || asRecords(kill.assistants).some((assistant) => !asText(assistant.puuid)))) {
+      killEvidence.status = 'unavailable';
+    }
     const participants: EvidenceParticipant[] = asRecords(match.players).flatMap((player) => {
       const puuid = asText(player.puuid);
       if (!puuid) return [];
@@ -126,6 +135,9 @@ export function normalizeHenrikEvidence(payload: unknown, input: MatchImportInpu
       const plant = isRecord(round.plant) ? round.plant : undefined;
       const defuse = isRecord(round.defuse) ? round.defuse : undefined;
       const participantEvidence = recordsEvidence(round, 'stats');
+      if (participantEvidence.records.some((item) => !roundParticipant(matchId, item, explicitKey))) {
+        participantEvidence.status = 'unavailable';
+      }
       const roundKills = kills.filter((kill) => asNumber(kill.round) === number).flatMap((kill, index) => {
         const killer = refHmac(matchId, kill.killer, explicitKey);
         const victim = refHmac(matchId, kill.victim, explicitKey);

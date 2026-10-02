@@ -161,7 +161,8 @@ export class EventMetricEngine {
       const presentRounds = input.rounds.filter((round) => round.participantIds.includes(player.id));
       const everyRoundPresent = input.rounds.length > 0 && presentRounds.length === input.rounds.length
         && input.rounds.every((round) => round.participantsStatus === 'observed');
-      const eventComplete = baseComplete && everyRoundPresent && player.teamKey !== 'unknown';
+      const eventComplete = baseComplete && everyRoundPresent && player.teamKey !== 'unknown'
+        && input.rounds.every((round) => validTopology(round, eventsByRound.get(round.id) ?? [], participants));
 
       const tradeValue: TradeMetrics = {
         tradeKills: trade.tradeKillsByPlayer.get(player.id) ?? 0,
@@ -170,7 +171,7 @@ export class EventMetricEngine {
         deathsEligibleForTrade: trade.deathsByPlayer.get(player.id) ?? 0,
         tradeKillEvents: trade.tradeKillsByPlayer.get(player.id) ?? 0,
       };
-      const tradeEvidence = baseComplete && player.teamKey !== 'unknown'
+      const tradeEvidence = eventComplete
         ? evidence('reconstructed', tradeValue)
         : evidence<TradeMetrics>('unavailable');
 
