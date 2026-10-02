@@ -1,5 +1,5 @@
 import type { MatchRecord, Player, RawPlayerStats, RecentPerformance } from '../types/valorant';
-import { round, safeDivide } from './number';
+import { safeDivide } from './number';
 
 interface PlayerMatchEntry {
   match: MatchRecord;
@@ -55,16 +55,16 @@ export function aggregatePlayerStats(player: Player, matches: MatchRecord[]): Ra
     kills,
     deaths,
     assists,
-    acs: round(acs),
-    adr: round(adr),
-    kd: round(safeDivide(kills, deaths), 2),
-    kpr: round(safeDivide(kills, rounds), 2),
-    apr: round(safeDivide(assists, rounds), 2),
-    kast: round(kast, 3),
-    headshotPercentage: headshotPercentage === undefined ? undefined : round(headshotPercentage, 3),
+    acs,
+    adr,
+    kd: deaths > 0 ? kills / deaths : undefined,
+    kpr: safeDivide(kills, rounds),
+    apr: safeDivide(assists, rounds),
+    kast,
+    headshotPercentage,
     firstKills,
     firstDeaths,
-    fkFd: firstKills === undefined || firstDeaths === undefined ? undefined : round(firstKills / Math.max(firstDeaths, 1), 2),
+    fkFd: firstKills === undefined || firstDeaths === undefined ? undefined : firstDeaths > 0 ? firstKills / firstDeaths : undefined,
     clutchAttempts,
     clutchWins,
   };

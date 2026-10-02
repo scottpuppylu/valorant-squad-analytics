@@ -51,7 +51,25 @@ function buildPerformance(matchIndex: number, playerIndex: number, rounds: numbe
   const clutchWins = clamp(Math.round(clutchAttempts * baseline.clutchRate * (1 + wave * 0.25)), 0, clutchAttempts);
   const optionalSeed = matchIndex + playerIndex;
 
+  const kills = Math.max(2, Math.round(rounds * baseline.killsPerRound * impact));
+  const damage = Math.round(baseline.adr * impact * rounds);
+  const spent = rounds * (2500 + optionalSeed % 5 * 150);
+  const opponents = 1 + optionalSeed % 3;
+  const breakdown = (count: number) => Object.fromEntries([1,2,3,4,5].map((n) => [n,n === opponents ? count : 0]));
+  // Fictional aggregate evidence, not a reconstruction of real player events.
+  const support = ['Initiator','Controller'].includes(player.role);
+  const tradeKills = Math.min(kills, 1 + optionalSeed % 3);
   return {
+    advancedMetrics: {
+      ruleVersion:'event-metrics-v1', coverage:{eligibleRounds:rounds,reconstructedRounds:rounds,omittedRounds:0},
+      evidence:{trade:'reconstructed',clutch:'reconstructed',objectives:'reconstructed',abilityCasts:'derived',economy:'derived',impactContext:'reconstructed',roleValueInputs:'partial'},
+      trade:{tradeKills,tradeAssists:support ? 2+optionalSeed%3 : optionalSeed%2,tradedDeaths:2,deathsEligibleForTrade:rounds,tradeKillEvents:tradeKills},
+      clutch:{clutchAttempts,clutchWins,attemptsByOpponents:breakdown(clutchAttempts),winsByOpponents:breakdown(clutchWins)},
+      objectives:{plants:support ? 1+optionalSeed%3 : optionalSeed%2,defuses:player.role === 'Sentinel' ? optionalSeed%3 : optionalSeed%2},
+      abilityCasts:{ability1Casts:rounds,ability2Casts:rounds,grenadeCasts:Math.floor(rounds/2),ultimateCasts:2},
+      economy:{loadoutValueTotal:spent,loadoutValueAverage:spent/rounds,spentTotal:spent,spentAverage:spent/rounds,damage,kills,damagePer1000SpentStatus:'derived',killsPer1000SpentStatus:'derived',damagePer1000Spent:1000*damage/spent,killsPer1000Spent:1000*kills/spent},
+      impactContext:{openingKills:firstKills,tradeKills,manDisadvantageKills:1+optionalSeed%3,clutchStateKills:optionalSeed%3,multiKillRounds:3+optionalSeed%3,twoKillRounds:3,threePlusKillRounds:optionalSeed%3,roundWonKills:Math.floor(kills*(.5+optionalSeed%3*.1))},
+    },
     playerId: player.id,
     agent: pick(player.agents, matchIndex + playerIndex),
     kills: Math.max(2, Math.round(rounds * baseline.killsPerRound * impact)),
@@ -61,10 +79,10 @@ function buildPerformance(matchIndex: number, playerIndex: number, rounds: numbe
     adr: Math.round(baseline.adr * impact * 10) / 10,
     kast: Math.round(clamp(baseline.kast + wave * baseline.variance * 0.09, 0.45, 0.96) * 1000) / 1000,
     headshotPercentage: optionalSeed % 9 === 0 ? undefined : Math.round(clamp(baseline.headshotPercentage + wave * 0.012, 0.1, 0.55) * 1000) / 1000,
-    firstKills: optionalSeed % 11 === 0 ? undefined : firstKills,
-    firstDeaths: optionalSeed % 11 === 0 ? undefined : firstDeaths,
-    clutchAttempts: optionalSeed % 7 === 0 ? undefined : clutchAttempts,
-    clutchWins: optionalSeed % 7 === 0 ? undefined : clutchWins,
+    firstKills: firstKills,
+    firstDeaths: firstDeaths,
+    clutchAttempts: clutchAttempts,
+    clutchWins: clutchWins,
   };
 }
 

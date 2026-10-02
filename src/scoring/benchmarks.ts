@@ -1,61 +1,32 @@
 import type { PlayerRole } from '../types/valorant';
-
-export type ScoredMetric =
-  | 'acs'
-  | 'adr'
-  | 'kd'
-  | 'kpr'
-  | 'apr'
-  | 'kast'
-  | 'firstKillsPerRound'
-  | 'fkFd'
-  | 'winRate';
-
-type MetricRange = readonly [minimum: number, target: number];
-
-export const roleBenchmarks: Record<PlayerRole, Record<ScoredMetric, MetricRange>> = {
-  Duelist: {
-    acs: [175, 275],
-    adr: [120, 175],
-    kd: [0.78, 1.35],
-    kpr: [0.58, 0.9],
-    apr: [0.12, 0.32],
-    kast: [0.64, 0.8],
-    firstKillsPerRound: [0.08, 0.2],
-    fkFd: [0.65, 1.7],
-    winRate: [0.35, 0.72],
-  },
-  Initiator: {
-    acs: [160, 235],
-    adr: [112, 152],
-    kd: [0.76, 1.22],
-    kpr: [0.52, 0.76],
-    apr: [0.24, 0.5],
-    kast: [0.67, 0.83],
-    firstKillsPerRound: [0.05, 0.14],
-    fkFd: [0.65, 1.6],
-    winRate: [0.35, 0.72],
-  },
-  Controller: {
-    acs: [150, 220],
-    adr: [108, 146],
-    kd: [0.76, 1.22],
-    kpr: [0.5, 0.72],
-    apr: [0.23, 0.48],
-    kast: [0.69, 0.85],
-    firstKillsPerRound: [0.035, 0.11],
-    fkFd: [0.65, 1.55],
-    winRate: [0.35, 0.72],
-  },
-  Sentinel: {
-    acs: [155, 225],
-    adr: [110, 150],
-    kd: [0.8, 1.3],
-    kpr: [0.52, 0.75],
-    apr: [0.14, 0.36],
-    kast: [0.69, 0.85],
-    firstKillsPerRound: [0.035, 0.12],
-    fkFd: [0.7, 1.65],
-    winRate: [0.35, 0.72],
-  },
+import type { Benchmark } from './types';
+import { BENCHMARK_VERSION } from './versions';
+export type ScoredMetric = 'acs' | 'adr' | 'kd' | 'kpr' | 'apr' | 'kast' | 'firstKillsPerRound';
+export const roleBenchmarks: Record<PlayerRole, Record<ScoredMetric, readonly [number, number]>> = {
+  Duelist: { acs: [175,275], adr:[120,175], kd:[.78,1.35], kpr:[.58,.9], apr:[.12,.32], kast:[.64,.8], firstKillsPerRound:[.08,.2] },
+  Initiator: { acs:[160,235], adr:[112,152], kd:[.76,1.22], kpr:[.52,.76], apr:[.24,.5], kast:[.67,.83], firstKillsPerRound:[.05,.14] },
+  Controller: { acs:[150,220], adr:[108,146], kd:[.76,1.22], kpr:[.5,.72], apr:[.23,.48], kast:[.69,.85], firstKillsPerRound:[.035,.11] },
+  Sentinel: { acs:[155,225], adr:[110,150], kd:[.8,1.3], kpr:[.52,.75], apr:[.14,.36], kast:[.69,.85], firstKillsPerRound:[.035,.12] },
 };
+// Transparent product-design calibration ranges, NOT population percentiles.
+const globalRanges = {
+  fdpr: [.18,.02,'lower'], disadvantage:[0,.12,'higher'], tradeKills:[0,.15,'higher'],
+  clutchState:[0,.15,'higher'], multiKill:[0,.25,'higher'], wonKills:[0,.65,'higher'],
+  tradeAssists:[0,.10,'higher'], objectives:[0,.15,'higher'], shrunkClutch:[.08,.80,'higher'],
+  difficultWins:[0,.08,'higher'], damageEfficiency:[25,65,'higher'], killEfficiency:[.08,.32,'higher'],
+  acsCv:[.40,.03,'lower'], kastSd:[.15,.01,'lower'],
+} as const;
+export type GlobalMetric = keyof typeof globalRanges;
+export type ComponentMetric = ScoredMetric | GlobalMetric;
+export function benchmarkFor(metric: ComponentMetric, role: PlayerRole): Benchmark {
+  if (metric in globalRanges) {
+    const [poor,strong,direction] = globalRanges[metric as GlobalMetric];
+    return { metric, context:'global', poor,strong,direction,version:BENCHMARK_VERSION };
+  }
+  const [poor,strong] = roleBenchmarks[role][metric as ScoredMetric];
+  return { metric, context:role, poor,strong,direction:'higher',version:BENCHMARK_VERSION };
+}
+export const benchmarkRegistry: Benchmark[] = [
+  ...Object.keys(roleBenchmarks).flatMap((role) => Object.keys(roleBenchmarks[role as PlayerRole]).map((metric) => benchmarkFor(metric as ScoredMetric,role as PlayerRole))),
+  ...Object.keys(globalRanges).map((metric) => benchmarkFor(metric as GlobalMetric,'Duelist')),
+];

@@ -1,4 +1,6 @@
 import type { PlayerEmoji } from './avatar';
+import type { ScoreResult } from '../scoring/types';
+import type { Dimension } from '../scoring/versions';
 import type { AdvancedMetrics } from './advancedMetrics';
 
 export type PlayerRole = 'Duelist' | 'Initiator' | 'Controller' | 'Sentinel';
@@ -61,7 +63,7 @@ export interface RawPlayerStats {
   assists: number;
   acs: number;
   adr: number;
-  kd: number;
+  kd?: number;
   kpr: number;
   apr: number;
   kast: number;
@@ -73,23 +75,8 @@ export interface RawPlayerStats {
   clutchWins?: number;
 }
 
-export type ScoreCategory =
-  | 'overall'
-  | 'firepower'
-  | 'entry'
-  | 'teamplay'
-  | 'clutch'
-  | 'consistency';
-
-export interface PlayerScores {
-  overall: number;
-  firepower: number;
-  entry: number;
-  teamplay: number;
-  clutch: number;
-  consistency: number;
-  confidence: number;
-}
+export type ScoreCategory = 'overall' | Dimension;
+export type PlayerScores = Record<ScoreCategory, ScoreResult> & { confidence: number };
 
 export interface RecentPerformance {
   matchId: string;

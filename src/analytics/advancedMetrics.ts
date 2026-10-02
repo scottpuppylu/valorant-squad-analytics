@@ -1,126 +1,81 @@
-import type {
-  AbilityCastMetrics, ClutchBreakdown, ClutchMetrics, EconomyMetrics, ImpactContextMetrics,
-  KastMetrics, MetricCoverage, MetricEvidence, MetricEvidenceStatus, ObjectiveMetrics, TradeMetrics,
-} from '../types/advancedMetrics';
+import type { MetricCoverage, MetricEvidence, MetricEvidenceStatus, TradeMetrics, KastMetrics, ClutchMetrics, ObjectiveMetrics, AbilityCastMetrics, EconomyMetrics, ImpactContextMetrics, AdvancedMetrics } from '../types/advancedMetrics';
 import type { MatchPerformance } from '../types/valorant';
 
 export interface AggregatedAdvancedMetrics {
-  ruleVersion?: string;
-  coverage: MetricCoverage;
-  trade: MetricEvidence<TradeMetrics>;
-  kast: MetricEvidence<KastMetrics>;
-  clutch: MetricEvidence<ClutchMetrics>;
-  objectives: MetricEvidence<ObjectiveMetrics>;
-  abilityCasts: MetricEvidence<AbilityCastMetrics>;
-  economy: MetricEvidence<EconomyMetrics>;
-  impactContext: MetricEvidence<ImpactContextMetrics>;
+  ruleVersion?: string; coverage: MetricCoverage;
+  trade: MetricEvidence<Partial<TradeMetrics>>; kast: MetricEvidence<KastMetrics>;
+  clutch: MetricEvidence<Partial<ClutchMetrics>>; objectives: MetricEvidence<Partial<ObjectiveMetrics>>;
+  abilityCasts: MetricEvidence<Partial<AbilityCastMetrics>>; economy: MetricEvidence<Partial<EconomyMetrics>>;
+  impactContext: MetricEvidence<Partial<ImpactContextMetrics>>;
 }
-
-const emptyBreakdown = (): ClutchBreakdown => ({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
-
-function addCoverage(values: MetricCoverage[]): MetricCoverage {
-  return values.reduce<MetricCoverage>((sum, coverage) => ({
-    eligibleRounds: (sum.eligibleRounds ?? 0) + (coverage.eligibleRounds ?? 0),
-    reconstructedRounds: (sum.reconstructedRounds ?? 0) + (coverage.reconstructedRounds ?? 0),
-    omittedRounds: (sum.omittedRounds ?? 0) + (coverage.omittedRounds ?? 0),
-  }), {});
-}
-
-function combinedStatus(statuses: MetricEvidenceStatus[], hasValues: boolean): MetricEvidenceStatus {
-  if (!hasValues) return 'unavailable';
-  if (statuses.some((status) => status === 'partial' || status === 'unavailable')) return 'partial';
-  return statuses.every((status) => status === 'derived') ? 'derived' : 'reconstructed';
-}
-
-function metric<T>(status: MetricEvidenceStatus, ruleVersion: string, value?: T, coverage?: MetricCoverage): MetricEvidence<T> {
-  return { status, ruleVersion, ...(value === undefined ? {} : { value }), ...(coverage ? { coverage } : {}) };
-}
-
+type Domain = keyof AdvancedMetrics['evidence'];
+const complete = (status: MetricEvidenceStatus) => status === 'derived' || status === 'reconstructed';
 export function aggregateAdvancedMetrics(performances: MatchPerformance[]): AggregatedAdvancedMetrics {
   const inputs = performances.flatMap((performance) => performance.advancedMetrics ? [{ performance, advanced: performance.advancedMetrics }] : []);
   const ruleVersion = inputs[0]?.advanced.ruleVersion;
-  if (!ruleVersion || inputs.some(({ advanced }) => advanced.ruleVersion !== ruleVersion)) {
-    const unavailable = <T>(): MetricEvidence<T> => ({ status: 'unavailable', ruleVersion: 'event-metrics-v1' });
-    return { coverage: {}, trade: unavailable(), kast: unavailable(), clutch: unavailable(), objectives: unavailable(), abilityCasts: unavailable(), economy: unavailable(), impactContext: unavailable() };
+  const unavailable = { status: 'unavailable' as const };
+  if (!ruleVersion || inputs.some(({advanced}) => advanced.ruleVersion !== ruleVersion)) return { coverage:{},trade:unavailable,kast:unavailable,clutch:unavailable,objectives:unavailable,abilityCasts:unavailable,economy:unavailable,impactContext:unavailable };
+  const coverage = inputs.reduce<Required<MetricCoverage>>((sum,{advanced}) => ({
+    eligibleRounds:sum.eligibleRounds+(advanced.coverage.eligibleRounds ?? 0),
+    reconstructedRounds:sum.reconstructedRounds+(advanced.coverage.reconstructedRounds ?? 0),
+    omittedRounds:sum.omittedRounds+(advanced.coverage.omittedRounds ?? 0),
+  }),{eligibleRounds:0,reconstructedRounds:0,omittedRounds:0});
+  function domain<T>(key: Domain, fields: readonly string[]): MetricEvidence<Partial<T>> {
+    const values = inputs.flatMap(({advanced}) => {
+      const value = advanced[key as keyof AdvancedMetrics];
+      return typeof value === 'object' && value !== null || complete(advanced.evidence[key]) ? [{ value:(value ?? {}) as Record<string,unknown>, status:advanced.evidence[key] }] : [];
+    });
+    const result: Record<string,number> = {};
+    const invalid = values.some(({value}) => fields.some((field) => field in value && (typeof value[field] !== 'number' || !Number.isFinite(value[field]) || (value[field] as number) < 0)));
+    for (const field of fields) {
+      const observed = values.flatMap(({value,status}) => typeof value[field] === 'number' && Number.isFinite(value[field]) && (value[field] as number) >= 0 ? [value[field] as number] : complete(status) && !(field in value) ? [0] : []);
+      if (observed.length) result[field] = observed.reduce((sum,value) => sum+value,0);
+    }
+    const status = !values.length ? 'unavailable' : invalid || inputs.length !== performances.length || inputs.some(({advanced}) => !complete(advanced.evidence[key])) ? 'partial' : inputs.every(({advanced}) => advanced.evidence[key] === 'derived') ? 'derived' : 'reconstructed';
+    return {status,ruleVersion,coverage,...(values.length ? {value:result as Partial<T>} : {})};
   }
-  const coverage = addCoverage(inputs.map(({ advanced }) => advanced.coverage));
-  const values = <K extends 'trade' | 'clutch' | 'objectives' | 'abilityCasts' | 'economy' | 'impactContext'>(key: K) => inputs.flatMap(({ advanced }) => {
-    if (advanced[key]) return [advanced[key]!];
-    // A complete domain may omit its zero-valued count object in the public contract.
-    return advanced.evidence[key] === 'reconstructed' || advanced.evidence[key] === 'derived'
-      ? [{} as NonNullable<typeof advanced[K]>] : [];
+  const trade = domain<TradeMetrics>('trade',['tradeKills','tradedDeaths','tradeAssists','deathsEligibleForTrade','tradeKillEvents']);
+  const clutch = domain<ClutchMetrics>('clutch',['clutchAttempts']);
+  const invalidClutch=inputs.some(({advanced}) => {
+    const value=advanced.clutch;
+    return [value?.clutchWins,...Object.values(value?.attemptsByOpponents ?? {}),...Object.values(value?.winsByOpponents ?? {})].some((count)=>count !== undefined && (!Number.isFinite(count) || count < 0));
   });
-  const statuses = <K extends keyof typeof inputs[number]['advanced']['evidence']>(key: K) => inputs.map(({ advanced }) => advanced.evidence[key]);
-  const tradeValues = values('trade');
-  const clutchValues = values('clutch');
-  const objectiveValues = values('objectives');
-  const abilityValues = values('abilityCasts');
-  const economyValues = values('economy');
-  const impactValues = values('impactContext');
-  const addClutch = (key: 'attemptsByOpponents' | 'winsByOpponents'): ClutchBreakdown => clutchValues.reduce((sum, value) => {
-    const breakdown = value[key];
-    if (!breakdown) return sum;
-    for (const count of [1, 2, 3, 4, 5] as const) sum[count] += breakdown[count] ?? 0;
-    return sum;
-  }, emptyBreakdown());
-  const totalSpent = economyValues.reduce((sum, value) => sum + (value.spentTotal ?? 0), 0);
-  const totalDamage = economyValues.reduce((sum, value) => sum + (value.damage ?? 0), 0);
-  const totalKills = economyValues.reduce((sum, value) => sum + (value.kills ?? 0), 0);
-  const reconstructedRounds = inputs.reduce((sum, { advanced }) => sum + (advanced.coverage.reconstructedRounds ?? 0), 0);
-  const qualifiedRounds = inputs.reduce((sum, { advanced, performance }) => sum + performance.kast * (advanced.coverage.reconstructedRounds ?? 0), 0);
-  const allClutchWins = inputs.every(({ advanced }) => advanced.evidence.clutch === 'reconstructed');
-
-  return {
-    ruleVersion,
-    coverage,
-    trade: metric(combinedStatus(statuses('trade'), tradeValues.length > 0), ruleVersion, tradeValues.length ? {
-      tradeKills: tradeValues.reduce((sum, value) => sum + (value.tradeKills ?? 0), 0),
-      tradedDeaths: tradeValues.reduce((sum, value) => sum + (value.tradedDeaths ?? 0), 0),
-      tradeAssists: tradeValues.reduce((sum, value) => sum + (value.tradeAssists ?? 0), 0),
-      deathsEligibleForTrade: tradeValues.reduce((sum, value) => sum + (value.deathsEligibleForTrade ?? 0), 0),
-      tradeKillEvents: tradeValues.reduce((sum, value) => sum + (value.tradeKillEvents ?? 0), 0),
-    } : undefined, coverage),
-    kast: metric(reconstructedRounds > 0 ? 'reconstructed' : 'unavailable', ruleVersion, reconstructedRounds > 0 ? {
-      qualifiedRounds,
-      eligibleRounds: reconstructedRounds,
-      rate: qualifiedRounds / reconstructedRounds,
-    } : undefined, coverage),
-    clutch: metric(combinedStatus(statuses('clutch'), clutchValues.length > 0), ruleVersion, clutchValues.length ? {
-      clutchAttempts: clutchValues.reduce((sum, value) => sum + (value.clutchAttempts ?? 0), 0),
-      attemptsByOpponents: addClutch('attemptsByOpponents'),
-      ...(allClutchWins ? { clutchWins: clutchValues.reduce((sum, value) => sum + (value.clutchWins ?? 0), 0), winsByOpponents: addClutch('winsByOpponents') } : {}),
-    } : undefined, coverage),
-    objectives: metric(combinedStatus(statuses('objectives'), objectiveValues.length > 0), ruleVersion, objectiveValues.length ? {
-      plants: objectiveValues.reduce((sum, value) => sum + (value.plants ?? 0), 0),
-      defuses: objectiveValues.reduce((sum, value) => sum + (value.defuses ?? 0), 0),
-    } : undefined, coverage),
-    abilityCasts: metric(combinedStatus(statuses('abilityCasts'), abilityValues.length > 0), ruleVersion, abilityValues.length ? {
-      ability1Casts: abilityValues.reduce((sum, value) => sum + (value.ability1Casts ?? 0), 0),
-      ability2Casts: abilityValues.reduce((sum, value) => sum + (value.ability2Casts ?? 0), 0),
-      grenadeCasts: abilityValues.reduce((sum, value) => sum + (value.grenadeCasts ?? 0), 0),
-      ultimateCasts: abilityValues.reduce((sum, value) => sum + (value.ultimateCasts ?? 0), 0),
-    } : undefined, coverage),
-    economy: metric(combinedStatus(statuses('economy'), economyValues.length > 0), ruleVersion, economyValues.length ? {
-      loadoutValueTotal: economyValues.reduce((sum, value) => sum + (value.loadoutValueTotal ?? 0), 0),
-      loadoutValueAverage: economyValues.reduce((sum, value) => sum + (value.loadoutValueAverage ?? 0), 0) / economyValues.length,
-      spentTotal: totalSpent,
-      spentAverage: economyValues.reduce((sum, value) => sum + (value.spentAverage ?? 0), 0) / economyValues.length,
-      damage: totalDamage,
-      kills: totalKills,
-      damagePer1000SpentStatus: totalSpent > 0 ? 'derived' : 'unavailable',
-      ...(totalSpent > 0 ? { damagePer1000Spent: 1000 * totalDamage / totalSpent } : {}),
-      killsPer1000SpentStatus: totalSpent > 0 ? 'derived' : 'unavailable',
-      ...(totalSpent > 0 ? { killsPer1000Spent: 1000 * totalKills / totalSpent } : {}),
-    } : undefined, coverage),
-    impactContext: metric(combinedStatus(statuses('impactContext'), impactValues.length > 0), ruleVersion, impactValues.length ? {
-      openingKills: impactValues.reduce((sum, value) => sum + (value.openingKills ?? 0), 0),
-      tradeKills: impactValues.reduce((sum, value) => sum + (value.tradeKills ?? 0), 0),
-      manDisadvantageKills: impactValues.reduce((sum, value) => sum + (value.manDisadvantageKills ?? 0), 0),
-      clutchStateKills: impactValues.reduce((sum, value) => sum + (value.clutchStateKills ?? 0), 0),
-      multiKillRounds: impactValues.reduce((sum, value) => sum + (value.multiKillRounds ?? 0), 0),
-      twoKillRounds: impactValues.reduce((sum, value) => sum + (value.twoKillRounds ?? 0), 0),
-      threePlusKillRounds: impactValues.reduce((sum, value) => sum + (value.threePlusKillRounds ?? 0), 0),
-      roundWonKills: impactValues.reduce((sum, value) => sum + (value.roundWonKills ?? 0), 0),
-    } : undefined, coverage),
-  };
+  if (invalidClutch) clutch.status='partial';
+  if (clutch.value) {
+    const sumBreakdown = (key:'attemptsByOpponents'|'winsByOpponents') => Object.fromEntries([1,2,3,4,5].map((n) => [n,inputs.reduce((sum,{advanced}) => sum+(advanced.clutch?.[key]?.[n as 1|2|3|4|5] ?? 0),0)])) as ClutchMetrics['attemptsByOpponents'];
+    // Partial breakdowns are not silently completed with zeros.
+    if (!invalidClutch && inputs.every(({advanced}) => complete(advanced.evidence.clutch))) {
+      clutch.value.clutchWins = inputs.reduce((sum,{advanced}) => sum+(advanced.clutch?.clutchWins ?? 0),0);
+      clutch.value.attemptsByOpponents = sumBreakdown('attemptsByOpponents');
+      clutch.value.winsByOpponents = sumBreakdown('winsByOpponents');
+    }
+  }
+  const economy = domain<EconomyMetrics>('economy',['loadoutValueTotal','spentTotal','damage','kills']);
+  if (economy.value) {
+    const allComplete = inputs.length === performances.length && inputs.every(({advanced}) => complete(advanced.evidence.economy) && advanced.economy !== undefined);
+    const average = (key:'loadoutValueAverage'|'spentAverage') => {
+      const observed = inputs.filter(({advanced}) => advanced.economy?.[key] !== undefined || complete(advanced.evidence.economy) && advanced.economy !== undefined);
+      const denominator = observed.reduce((sum,{advanced}) => sum+(advanced.coverage.eligibleRounds ?? 0),0);
+      return denominator > 0 ? observed.reduce((sum,{advanced}) => sum+(advanced.economy?.[key] ?? 0)*(advanced.coverage.eligibleRounds ?? 0),0)/denominator : undefined;
+    };
+    economy.value.loadoutValueAverage = average('loadoutValueAverage');
+    economy.value.spentAverage = average('spentAverage');
+    const spent = economy.value.spentTotal;
+    const validDamage = allComplete && spent !== undefined && spent > 0 && economy.value.damage !== undefined;
+    const validKills = allComplete && spent !== undefined && spent > 0 && economy.value.kills !== undefined;
+    economy.value.damagePer1000SpentStatus = validDamage ? 'derived' : 'unavailable';
+    economy.value.killsPer1000SpentStatus = validKills ? 'derived' : 'unavailable';
+    if (validDamage) economy.value.damagePer1000Spent = 1000*economy.value.damage!/spent!;
+    if (validKills) economy.value.killsPer1000Spent = 1000*economy.value.kills!/spent!;
+  }
+  const eligible = coverage.eligibleRounds;
+  const reconstructed = coverage.reconstructedRounds;
+  const invalidKast = inputs.some(({performance,advanced}) => !Number.isFinite(performance.kast) || performance.kast<0 || performance.kast>1 || !Number.isFinite(advanced.coverage.reconstructedRounds));
+  const qualified = inputs.reduce((sum,{advanced,performance}) => sum+(Number.isFinite(performance.kast) ? performance.kast : 0)*(advanced.coverage.reconstructedRounds ?? 0),0);
+  const kast: MetricEvidence<KastMetrics> = {ruleVersion,coverage,status:invalidKast ? 'unavailable' : reconstructed > 0 ? coverage.omittedRounds > 0 || reconstructed < eligible || inputs.length !== performances.length ? 'partial' : 'reconstructed' : 'unavailable',
+    ...(!invalidKast && reconstructed > 0 ? {value:{qualifiedRounds:qualified,eligibleRounds:reconstructed,rate:qualified/reconstructed}} : {})};
+  return {ruleVersion,coverage,trade,kast,clutch,economy,
+    objectives:domain<ObjectiveMetrics>('objectives',['plants','defuses']),
+    abilityCasts:domain<AbilityCastMetrics>('abilityCasts',['ability1Casts','ability2Casts','grenadeCasts','ultimateCasts']),
+    impactContext:domain<ImpactContextMetrics>('impactContext',['openingKills','tradeKills','manDisadvantageKills','clutchStateKills','multiKillRounds','twoKillRounds','threePlusKillRounds','roundWonKills'])};
 }
