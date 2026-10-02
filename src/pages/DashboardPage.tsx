@@ -25,11 +25,11 @@ export function DashboardPage() {
       <section className="hero-grid">
         <div className="max-w-3xl">
           <span className="data-pill mb-5 inline-flex"><span /> {activeDataset.matches.length} 場{activeDataset.mode === 'REAL' ? '真實' : '虛構'}對戰 · {activeDataset.players.length} 位玩家</span>
-          <h1 className="font-display text-4xl font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-6xl lg:text-7xl">
-            看見完整回合，<br /><span className="text-gradient">不只看擊殺資訊。</span>
+          <h1 className="font-display text-4xl font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-4xl lg:text-5xl">
+            小隊表現總覽
           </h1>
-          <p className="mt-6 max-w-2xl text-base leading-7 text-slate-400 sm:text-lg">
-            {activeDataset.mode === 'REAL' ? '目前顯示伺服器持久化、已去除 provider 識別值的有界真實戰績；Demo 資料不會混入排名。' : '為虛構朋友小隊打造的透明、角色感知社群表現指標。每個分數都能回溯到示範對戰資料與公開公式。'}
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400">
+            {activeDataset.mode === 'REAL' ? '觀察目前可用的真實對戰與八維表現。' : '用固定虛構對戰探索八維表現，分數與公式皆可查閱。'}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link className="button-primary" to="/leaderboard">查看戰力排名</Link>
@@ -49,17 +49,12 @@ export function DashboardPage() {
             </div>
             <ScoreBadge value={leader.scores.overall} label={zhTW.scores.overall} />
           </div>
-          <div className="relative z-10 mt-9 grid grid-cols-3 gap-3 border-t border-white/10 pt-5">
+          <div className="relative z-10 mt-5 grid grid-cols-3 gap-3 border-t border-white/10 pt-5">
             <div><p className="metric-label"><MetricInfo metricId="kd" /></p><p className="stat-value">{formatRatio(leader.stats.kd)}</p></div>
             <div><p className="metric-label"><MetricInfo metricId="kast" /></p><p className="stat-value">{formatPercent(leader.stats.kast)}</p></div>
             <div><p className="metric-label"><MetricInfo metricId="win-rate" label="小隊勝率" /></p><p className="stat-value">{formatPercent(teamWinRate)}</p></div>
           </div>
         </article>
-      </section>
-
-      <section>
-        <SectionHeading eyebrow="分類領先者" title="不同職責，也有不同影響方式" description="角色感知區間讓支援、控場、突破與守點貢獻可比較，同時不假裝它們完全相同。" />
-        <CategoryLeaders analytics={playerAnalytics} />
       </section>
 
       <section>
@@ -73,6 +68,8 @@ export function DashboardPage() {
           {playerAnalytics.map((analytics, index) => <PlayerCard key={analytics.player.id} analytics={analytics} rank={index + 1} />)}
         </div>
       </section>
+
+      <section><SectionHeading title="各維度領先" /><CategoryLeaders analytics={playerAnalytics} /></section>
 
       <section className="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
         <article className="surface-card p-5 sm:p-7">
@@ -118,15 +115,7 @@ export function DashboardPage() {
         </article>
       </section>
 
-      {activeDataset.mode === 'DEMO' ? <section className="surface-card callout-grid p-6 sm:p-8">
-        <div>
-          <p className="metric-label">為什麼重要</p>
-          <h2 className="mt-3 max-w-xl text-2xl font-semibold text-white sm:text-3xl">K/D 是證據，不是全部結論。</h2>
-        </div>
-        <p className="max-w-2xl text-sm leading-7 text-slate-400">
-          NovaHex 帶領原始火力，Quartz 擅長完成艱難殘局，EchoVale 以助攻與 KAST 提升團隊貢獻，AnchorMint 則靠低波動建立穩定度。透明模型保留這些不同故事，而不是只剩單一擊殺數字。
-        </p>
-      </section> : null}
+
     </div>
   );
 }

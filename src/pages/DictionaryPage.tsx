@@ -1,3 +1,4 @@
+import { scoreMetricIds } from '../i18n/zhTW';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { metricDefinitions } from '../data/metricDefinitions';
@@ -27,9 +28,12 @@ const sourceLabels: Record<MetricDataSource, string> = {
   UNKNOWN_REQUIRES_VERIFICATION: '需要進一步官方驗證',
 };
 
+const scoreIds = new Set<string>(Object.values(scoreMetricIds).filter((id) => id !== 'confidence'));
+
 export function DictionaryPage() {
   const [params] = useSearchParams();
   const requestedMetric = params.get('metric');
+  const [group, setGroup] = useState('全部');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<MetricCategory | 'ALL'>('ALL');
   const [availability, setAvailability] = useState<MetricAvailability | 'ALL'>('ALL');
@@ -38,11 +42,12 @@ export function DictionaryPage() {
 
   const filtered = useMemo(() => metricDefinitions.filter((definition) => {
     const searchable = `${definition.abbreviation} ${definition.nameZhTW} ${definition.nameEnglish} ${definition.definition}`.toLocaleLowerCase('zh-TW');
-    return (!deferredQuery || searchable.includes(deferredQuery))
+    const matchesGroup = group === '全部' || (group === '八維評分' ? scoreIds.has(definition.id) : group === '搭檔分析' ? definition.id.includes('pair') || definition.id.includes('mutual') || ['duo-synergy','win-rate-lift'].includes(definition.id) : group === '樣本／信心' ? ['matches','rounds','confidence'].includes(definition.id) : group === '基礎數據' ? definition.type === 'RAW' || definition.type === 'DERIVED' && definition.dataSource !== 'DURABLE_RECONSTRUCTION' : definition.dataSource === 'DURABLE_RECONSTRUCTION' && definition.type !== 'COMPOSITE');
+    return matchesGroup && (!deferredQuery || searchable.includes(deferredQuery))
       && (category === 'ALL' || definition.category === category)
       && (availability === 'ALL' || definition.currentAvailability === availability)
       && (type === 'ALL' || definition.type === type);
-  }), [availability, category, deferredQuery, type]);
+  }), [availability, category, deferredQuery, type, group]);
 
   return (
     <div>
@@ -55,6 +60,7 @@ export function DictionaryPage() {
         <span className="data-pill inline-flex"><span /> {metricDefinitions.length} 項指標</span>
       </header>
 
+      <div className="dictionary-groups" role="group" aria-label="指標群組">{['全部','基礎數據','進階證據','八維評分','搭檔分析','樣本／信心'].map((label) => <button className="button-secondary" key={label} type="button" aria-pressed={group === label} onClick={() => setGroup(label)}>{label}</button>)}</div>
       <section className="dictionary-controls mt-8" aria-label="數據字典篩選器">
         <label><span>搜尋</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="例如：KAST、殘局、經濟" /></label>
         <label><span>類別</span><select value={category} onChange={(event) => setCategory(event.target.value as MetricCategory | 'ALL')}><option value="ALL">全部類別</option>{[...new Set(metricDefinitions.map((item) => item.category))].map((value) => <option key={value}>{value}</option>)}</select></label>

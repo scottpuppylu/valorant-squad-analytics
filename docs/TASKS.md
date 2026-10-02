@@ -289,4 +289,25 @@ Status: **COMPLETE** (implementation release 25cd731; acceptance recorded below)
 - [x] Final worktree quality gates and deployment acceptance (see TASK_SYNERGY_01_PLAN.md).
 
 Non-empty production Synergy **NOT YET EXERCISED**. Do not reconnect the deleted player, change consent policy or perform Henrik calls for this task.
-Task 004 is absorbed. Recommended next step is TASK-UI-01 / V1 refinement only; **NOT STARTED**.
+Task 004 is absorbed. TASK-UI-01 was subsequently explicitly authorized and is tracked below.
+
+## TASK-UI-01 — V1 Product Refinement
+
+Status: **IN PROGRESS — SDD STANDARD**
+
+Starting HEAD 2a27f46956fd94298ac25469223dd6db236a2b84; checkpoint-before-ui-01.
+Presentation only: coherent dark tokens, six primary links and More, honest source/evidence
+badges, responsive tables, compact profile/comparison, selected pair before collapsed matrix,
+dictionary groups, readable consent steps and lazy routes.
+No formula, benchmark, weight, dataset schema, provider, privacy-policy or migration change.
+Local and release evidence is recorded in UI_V1.md; COMPLETE requires both deployment checks.
+
+## TASK-RELEASE-01 — V1 release acceptance
+
+Status: **NOT STARTED — recommendation only**
+
+UI-01 does not declare V1 released. A future explicit task may authorize consenting
+real-player reconnect, non-empty REAL validation, real-data scoring checks and Synergy
+validation with at least two consenting teammates, production smoke tests, final documentation
+and a version/tag/release checkpoint. No production reconnect or Henrik call is authorized
+by UI-01. Current non-empty production scoring and Synergy remain NOT YET EXERCISED.

@@ -209,6 +209,7 @@ export function ConnectPage() {
   }
 
   const busy = flow === 'CONNECTING' || flow === 'IMPORTING' || flow === 'SYNCING' || flow === 'REVOCING' || flow === 'DELETION_WORKING';
+  const flowLabel = revoked && deletionProgress?.status === 'complete' ? '撤回與刪除已完成' : syncProgress?.status === 'complete' && flow === 'CONNECTED' ? '同步完成' : deletionSessionActive ? (flow === 'DELETION_WORKING' ? '刪除執行中' : '已撤回，刪除待完成') : syncProgress?.status === 'paused' && flow === 'CONNECTED' ? '同步已暫停，可續跑' : ({IDLE:'尚未連接',CONNECTING:'正在確認帳號',CONNECTED:'帳號已連接',ACCOUNT_NOT_FOUND:'找不到帳號',RATE_LIMITED:'請稍候再試',PROVIDER_ERROR:'暫時無法完成',NO_MATCHES:'沒有可用對戰',IMPORTING:'正在保存戰績',IMPORT_COMPLETE:'戰績已保存',SYNCING:'正在同步',REVOCING:'撤回待確認',DELETION_WORKING:'刪除執行中',REVOKED:'已撤回'} as const)[flow];
   const providerLabel = provider === 'checking' ? '檢查中' : provider === 'configured' ? '可使用' : provider === 'unconfigured' ? '尚未設定' : '此部署未提供';
 
   return (
@@ -218,11 +219,14 @@ export function ConnectPage() {
         <span className="provider-status" data-status={provider === 'configured' ? 'ready' : 'unavailable'}>API 連線：{providerLabel}</span>
       </header>
 
+      <ol className="flow-steps" aria-label="加入流程"><li aria-current={!account ? 'step' : undefined}>1 · 帳號與公開同意</li><li aria-current={account ? 'step' : undefined}>2 · 保存與同步戰績</li><li>3 · 查看分析／管理參與</li></ol>
+      <div className="connect-state" role="status"><strong>目前狀態：{flowLabel}</strong></div>
+
       {datasetSource === 'REAL_SERVER' && activeDataset.mode === 'REAL' && !revoked && !deletionSessionActive ? (
         <section className="surface-card connect-panel">
           <p className="metric-label">目前資料來源</p>
-          <h2>持久化真實戰績{datasetStatus === 'empty' ? '目前為空' : '已啟用'}</h2>
-          <p>目前由伺服器 Dataset API 提供 {activeDataset.players.length} 位有效同意玩家、{activeDataset.matches.length} 場有界戰績；完整資料集不會保存到 localStorage，也不會與 Demo 混合。</p>
+          <h2>公開真實戰績{datasetStatus === 'empty' ? '目前為空' : '已啟用'}</h2>
+          <p>目前有 {activeDataset.players.length} 位有效同意玩家、{activeDataset.matches.length} 場可用戰績；完整資料集不會保存於瀏覽器，也不會與虛構示範資料混合。</p>
           <div className="connect-actions"><button className="button-primary" type="button" onClick={openImportedDataset}>查看戰績</button><button className="button-secondary" type="button" onClick={() => void refresh()}>重新整理資料</button></div>
         </section>
       ) : null}
@@ -253,10 +257,10 @@ export function ConnectPage() {
           <div><p className="metric-label">第一步</p><h2>確認玩家帳號</h2><p>台灣玩家通常使用亞太（ap）；若帳號所屬不同，可自行修正。</p></div>
           <label>Riot ID<input autoComplete="off" maxLength={32} required value={form.gameName} onChange={(event) => setForm((current) => ({ ...current, gameName: event.target.value }))} placeholder="Game Name" /></label>
           <label>Tag<input autoComplete="off" maxLength={10} required value={form.tag} onChange={(event) => setForm((current) => ({ ...current, tag: event.target.value }))} placeholder="Tag" /></label>
-          <label>Region / affinity<select value={form.affinity} onChange={(event) => setForm((current) => ({ ...current, affinity: event.target.value as Affinity }))}>{affinities.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+          <label>區域（affinity）<select value={form.affinity} onChange={(event) => setForm((current) => ({ ...current, affinity: event.target.value as Affinity }))}>{affinities.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
           <label className="consent-row"><input type="checkbox" checked={form.consent} onChange={(event) => setForm((current) => ({ ...current, consent: event.target.checked }))} /><span>我同意哥布林大調查讀取、保存並分析我的 VALORANT 公開戰績，並同意將我的 Riot ID、Tag、戰績統計、排名、地圖／特務分析等結果公開顯示於本站；任何取得網站網址的人都可以瀏覽。取消參與後將停止同步，並依資料刪除流程移除或匿名化資料。 <Link to="/privacy">查看隱私說明</Link></span></label>
           <button className="button-primary" type="submit" disabled={!form.consent || busy || provider !== 'configured'}>{flow === 'CONNECTING' ? '連接中…' : '連接戰績'}</button>
-          {provider !== 'configured' && provider !== 'checking' ? <p className="connect-notice">此部署目前無法連接真實資料；Demo 分析仍可正常使用。</p> : null}
+          {provider !== 'configured' && provider !== 'checking' ? <p className="connect-notice">{datasetSource === 'REAL_SERVER' ? '此部署暫時無法連接新帳號，既有公開真實戰績不會改成 Demo。' : '此部署只提供虛構示範資料，真實連接請使用正式網站。'}</p> : null}
         </form>
 
         <aside className="surface-card connect-panel security-panel">
@@ -269,13 +273,13 @@ export function ConnectPage() {
 
       {account ? (
         <section className="surface-card connect-panel">
-          <p className="metric-label">帳號已確認</p><h2>{account.gameName}#{account.tag}</h2><p>區域：{account.affinity}{account.accountLevel === undefined ? '' : ` · 帳號等級 ${account.accountLevel}`}</p>
+          <p className="metric-label">第二步 · 帳號已確認</p><h2>{account.gameName}#{account.tag}</h2><p>區域：{account.affinity}{account.accountLevel === undefined ? '' : ` · 帳號等級 ${account.accountLevel}`}</p>
           <label>先處理最近戰績<select value={limit} disabled={busy} onChange={(event) => setLimit(Number(event.target.value) as ImportSize)}><option value={1}>1 場（最小資料）</option><option value={10}>10 場</option><option value={20}>20 場</option><option value={30}>30 場</option></select></label>
-          <button className="button-primary" type="button" disabled={busy || !form.consent || !account.playerId} onClick={importMatches}>{flow === 'IMPORTING' ? '處理中…' : '保存到持久化資料庫'}</button>
-          <p className="connect-notice">舊版瀏覽器內完整 REAL dataset 已退役；這個動作只寫入伺服器持久化證據，再由 Dataset API 讀取。</p>
+          <button className="button-primary" type="button" disabled={busy || !form.consent || !account.playerId} onClick={importMatches}>{flow === 'IMPORTING' ? '處理中…' : '保存近期戰績'}</button>
+          <p className="connect-notice">戰績會保存於伺服器，供公開分析使用；完整真實資料集不會保存於瀏覽器。</p>
           {account.playerId ? (
             <div className="connect-history-sync">
-              <p className="metric-label">持久化歷史同步</p>
+              <p className="metric-label">歷史戰績同步</p>
               <p>每次只處理一個安全區塊，進度會保存；範圍僅代表目前資料供應商可取得的歷史紀錄，不代表完整生涯。</p>
               <button className="button-secondary" type="button" disabled={busy} onClick={syncAvailableHistory}>
                 {flow === 'SYNCING' ? '同步中…' : syncProgress?.status === 'paused' ? '繼續同步下一區塊' : syncProgress?.status === 'complete' ? '檢查新增或修正紀錄' : '開始歷史同步'}

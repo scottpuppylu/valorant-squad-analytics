@@ -145,3 +145,24 @@ Schema 3 supplies match-local same-team identity and per-performance outcome. Ev
 ## TASK-002B scoring boundary
 
 `src/scoring/versions.ts`, `types.ts`, `profiles.ts`, `benchmarks.ts`, `weights.ts`, `normalize.ts`, `components.ts`, `calculateScores.ts` are the authoritative eight-dimensional scoring engine. `src/analytics/advancedMetrics.ts` aggregates evidence without scoring. `src/data/scoringDefinitions.ts` replaces obsolete dictionary definitions. `ScoreExplanation` is aggregate trace presentation; `GapRadarShape` prevents null vertices being drawn at zero. No database/provider module or migration changed.
+
+## TASK-UI-01 presentation boundary
+
+- `AppShell` and `i18n/zhTW.ts`: six primary routes, More/mobile disclosure,
+  keyboard Escape/return focus, skip link and route focus/scroll reset. No route removed.
+- `SourceBadge`, `StatusBadge`, `EmptyState` / `LoadingPanel` and `PageErrorBoundary`:
+  source/evidence language and safe recovery; `DatasetRuntimeBoundary` keeps stale
+  data visible and never substitutes Demo for REAL failure/empty.
+- `App.tsx`: module-level lazy pages and Suspense; Dashboard remains eager.
+  Existing radar imports stay lazy; non-chart routes do not import Recharts.
+- `CompareTables`: transposed score/core table plus closed raw-stat detail, with
+  sample headers, table scopes and keyboard-scrollable containers.
+- `ComparisonRadar`: external compact text legend, honest null gaps and partial dashes.
+  Long legend names retain full title and accessible summary without stretching the chart.
+- `index.css`: shared tokens, responsive containers, sticky ranking identity columns,
+  visible focus and reduced motion; no external assets, fonts, tracking or UI framework.
+- Analytical pages consume the same selection/scoring interfaces. Connect handlers,
+  consent text and deletion authorization are unchanged; Privacy changes headings only.
+- `tests/uiV1.test.tsx`: focused UI/accessibility/state tests without pixel snapshots
+  or a new test dependency. Runtime/navigation regression tests retain prior cases.
+- Conventions, before/after bundles and browser acceptance: `docs/UI_V1.md`.

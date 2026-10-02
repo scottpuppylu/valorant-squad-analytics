@@ -15,7 +15,7 @@ export function ScoreRadar({ analytics }: ScoreRadarProps) {
   const partial=dimensions.some((key) => scores[key].status !== 'available');
 
   return (
-    <div className="h-[380px] w-full" role="img" aria-label={player.handle + ' 的八維度雷達圖；缺值留空，虛線為部分證據。'}>
+    <div className="radar-panel" role="img" aria-label={player.handle + ' 的八維度雷達圖；缺值留空，虛線為部分證據。'}>
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart data={data} outerRadius="70%">
           <PolarRadiusAxis domain={[0,100]} tick={false} axisLine={false} />
@@ -38,7 +38,7 @@ export function ScoreRadar({ analytics }: ScoreRadarProps) {
           />
         </RadarChart>
       </ResponsiveContainer>
-      {partial ? <p className="text-xs text-slate-400">虛線：部分證據；缺值不補零。{dimensions.map((key) => `${zhTW.scores[key]}：${formatScore(scores[key])}`).join("、")}</p> : null}
+      {partial ? <p className="text-xs text-slate-400">虛線：部分證據；缺值留空。各維度數值與依據見分數明細。</p> : null}
     </div>
   );
 }
