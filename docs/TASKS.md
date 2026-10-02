@@ -293,14 +293,17 @@ Task 004 is absorbed. TASK-UI-01 was subsequently explicitly authorized and is t
 
 ## TASK-UI-01 — V1 Product Refinement
 
-Status: **IN PROGRESS — SDD STANDARD**
+Status: **COMPLETE — SDD STANDARD**
 
 Starting HEAD 2a27f46956fd94298ac25469223dd6db236a2b84; checkpoint-before-ui-01.
 Presentation only: coherent dark tokens, six primary links and More, honest source/evidence
 badges, responsive tables, compact profile/comparison, selected pair before collapsed matrix,
 dictionary groups, readable consent steps and lazy routes.
 No formula, benchmark, weight, dataset schema, provider, privacy-policy or migration change.
-Local and release evidence is recorded in UI_V1.md; COMPLETE requires both deployment checks.
+Local and release evidence is recorded in UI_V1.md: 292 tests, lint, build, zero-vulnerability
+audit and 15 DB checks passed; implementation CI/Pages succeeded and Vercel was Ready.
+Both public runtimes passed all eight key routes at 390/768/1024/1440 CSS px, without
+overflow or console errors. Actual 200% zoom and long-name checks passed locally.
 
 ## TASK-RELEASE-01 — V1 release acceptance
 

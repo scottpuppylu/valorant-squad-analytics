@@ -1,6 +1,6 @@
 # TASK-UI-01 — V1 Product Refinement (SDD STANDARD)
 
-Status: IN PROGRESS. Starting HEAD 2a27f46956fd94298ac25469223dd6db236a2b84,
+Status: COMPLETE — SDD STANDARD. Starting HEAD 2a27f46956fd94298ac25469223dd6db236a2b84,
 clean main = origin/main; checkpoint-before-ui-01 created.
 
 ## Plan and boundaries
@@ -115,4 +115,48 @@ data creation is part of UI acceptance. Non-empty production analytics remain NO
 
 ## Verification / deployment
 
-Pending final worktree gates and public CI/Pages/Vercel acceptance. Do not mark COMPLETE yet.
+Final implementation worktree gates: lint exit 0; 20 files / 292 tests passed in 22.89s
+(22 new UI tests, prior 270 cases retained); source secret boundary passed.
+Build exit 0: 710 modules, 2.91s; dist secret boundary passed. npm audit zero vulnerabilities.
+DB validation: 1 file / 15 passed in 15.37s (disposable tests, not production validation).
+
+| Artifact | Before kB / gzip | After kB / gzip |
+|---|---:|---:|
+| Main | 449.24 / 141.81 | 361.72 / 116.15 |
+| CSS | 34.08 / 7.91 | 40.17 / 9.15 |
+| ScoreRadar | 1.27 / 0.86 | 1.25 / 0.86 |
+| ComparisonRadar | 16.08 / 5.68 | 1.63 / 0.96 |
+| Shared chart dependency | 339.53 / 99.68 | 339.21 / 99.53 |
+
+Main JS fell 19.48% (gzip 18.09%); CSS added 6.09 kB / 1.24 kB gzip for responsive,
+focus and shared status rules. No >10% initial-JS regression.
+Route chunks kB / gzip: Compare 6.81 / 2.89; Synergy 19.16 / 7.01;
+Profile 13.03 / 4.87; Dictionary 5.53 / 2.32; Connect 18.18 / 6.22.
+Chart dependency is still sizeable but stays lazy; no risky bundler optimization.
+
+Implementation release f986f0a200427b69f51a0a4cb147dccaf42c89f8 was pushed with
+checkpoint-before-ui-01. Acceptance:
+
+- CI success: https://github.com/scottpuppylu/valorant-squad-analytics/actions/runs/37076123365
+  (workflow start to completion 127s; verify job 86s).
+- Pages success: https://github.com/scottpuppylu/valorant-squad-analytics/actions/runs/37076123390
+  (100s; build 83s, deploy 8s).
+- Vercel Ready / Production / matching commit, 3m32s:
+  https://vercel.com/scottpuppys-projects/valorant-squad-analytics/F2H7snwiUYwJvi5YBpJTdcWLwopu
+- Pages https://scottpuppylu.github.io/valorant-squad-analytics/: eight key routes at
+  all four requested CSS widths (32 combinations), no page overflow, Demo badge,
+  console errors 0. Repository base path and lazy assets work.
+- Pages secondary routes maps/agents/about/privacy checked at 390; dictionary group +
+  search + formula disclosure and mobile matrix expansion verified.
+- Vercel https://valorant-squad-analytics.vercel.app/: eight key routes at all four
+  widths (32 combinations), no page overflow, REAL badge, no Demo player, console errors 0.
+  Actual public analytical content is empty or one-player Synergy, not non-empty metrics.
+- Read-only production dataset HTTP 200: schema 3, mode REAL, isDemo false,
+  state empty, 1 visible player / 0 matches, Cache-Control no-store.
+- Privacy paragraphs compared to starting HEAD: unchanged. No new unsafe HTML/script,
+  secret exposure, package or migration. Existing deployment guard reports database up to date.
+- Live Connect/import/sync/revocation flows, non-empty production scores, advanced metrics,
+  Synergy and server-runtime log scan: NOT VERIFIED in UI-01. No production mutation performed.
+
+This closure is documentation-only. Its final CI/deployment checks are reported at handoff;
+it does not change accepted frontend artifacts. TASK-RELEASE-01 remains NOT STARTED.

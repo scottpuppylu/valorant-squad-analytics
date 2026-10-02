@@ -29,7 +29,7 @@ TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。
 8. TASK-METRICS-01 已實作 `event-metrics-v1` 的 Trade、KAST、殘局、目標、技能施放、經濟效率與擊殺情境證據重建，production gates 已通過；沒有新增或改寫任何計分權重
 9. TASK-002B 八維度證據感知計分已完成；缺值不補 0 或 50，部分證據顯示覆蓋率。
 10. TASK-SYNERGY-01 已完成並通過 CI、Pages、Vercel 與瀏覽器驗收：獨立搭檔關聯、矩陣、雙向差異與補槍證據；schema 3 修正同隊／個別賽果契約，沒有 migration。發佈驗收見 docs/TASK_SYNERGY_01_PLAN.md。
-11. TASK-UI-01 使用 SDD STANDARD 進行 V1 介面收斂：六項主要導覽、更多選單、一致來源／證據狀態、手機捲動表格、精簡比較與搭檔詳情、字典群組及路由分割。驗收進度見 [docs/UI_V1.md](docs/UI_V1.md)。這不是 V1 release；TASK-RELEASE-01 僅建議，未開始。
+11. TASK-UI-01 已完成（SDD STANDARD）：六項主要導覽、更多選單、一致來源／證據狀態、手機捲動表格、精簡比較與搭檔詳情、字典群組及路由分割。292 項測試、lint、build、audit、DB 驗證及 CI／Pages／Vercel 公開介面驗收通過；紀錄見 [docs/UI_V1.md](docs/UI_V1.md)。這不是 V1 release；TASK-RELEASE-01 僅建議，未開始。
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
 
