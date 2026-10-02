@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import { metricDefinitions, metricDefinitionById } from '../src/data/metricDefinitions';
 import { BrowserAvatarRepository, MemoryAvatarRepository, PLAYER_EMOJI_STORAGE_KEY } from '../src/dataSources/avatars/BrowserAvatarRepository';
 import { primaryNavigation, scoreMetricIds, zhTW } from '../src/i18n/zhTW';
-import { categoryMetricWeights, overallWeights } from '../src/scoring/weights';
+import { categoryMetricWeights } from '../src/scoring/weights';
+import { defaultProfile } from '../src/scoring/profiles';
 import { players } from '../src/data/players';
 import { playerEmojiOptions } from '../src/types/avatar';
 import { isPlayerEmoji, resolvePlayerEmoji } from '../src/utils/avatar';
@@ -28,14 +29,14 @@ describe('metric dictionary', () => {
 
   it('documents the formulas currently implemented by the scoring engine', () => {
     expect(metricDefinitionById.get('firepower')?.formula).toContain('35% ACS + 30% ADR + 20% KPR + 15% K/D');
-    expect(metricDefinitionById.get('teamplay')?.formula).toContain('25% Win Rate');
-    expect(metricDefinitionById.get('clutch-score')?.formula).toContain('75%');
-    expect(metricDefinitionById.get('overall')?.formula).toContain(`${overallWeights.firepower * 100}% 火力`);
-    expect(categoryMetricWeights.entry.map(({ metric }) => metric)).toEqual(['firstKillsPerRound', 'fkFd', 'kpr']);
+    expect(metricDefinitionById.get('teamplay')?.formula).toContain('35% KAST');
+    expect(metricDefinitionById.get('clutch-score')?.formula).toContain('80%');
+    expect(metricDefinitionById.get('overall')?.formula).toContain(`${defaultProfile.weights.firepower * 100}% 火力`);
+    expect(categoryMetricWeights.entry.map(([metric]) => metric)).toEqual(['firstKillsPerRound', 'fdpr', 'kpr']);
   });
 
   it('clearly marks future concepts as not implemented', () => {
-    for (const id of ['round-impact', 'economy', 'role-value', 'frag-quality', 'duo-synergy']) {
+    for (const id of ['frag-quality', 'duo-synergy']) {
       const definition = metricDefinitionById.get(id);
       expect(definition?.type).toBe('FUTURE');
       expect(definition?.currentAvailability).toBe('PLANNED');

@@ -1,7 +1,10 @@
+import { agentRoles } from '../utils/agentRoles';
+import { dimensions } from '../scoring/versions';
+import { zhTW } from '../i18n/zhTW';
 import { calculatePlayerScores } from '../scoring/calculateScores';
 import type { AgentName, MapName, MatchRecord, Player, PlayerAnalytics, PlayerRole } from '../types/valorant';
 import { aggregatePlayerStats } from '../utils/aggregateStats';
-import { round, safeDivide } from '../utils/number';
+import { safeDivide } from '../utils/number';
 import type { BadgeAward, GroupSummary, PerformanceEntry, RecentForm, SelectionResult } from './types';
 import { aggregateSelection } from './rankings';
 
@@ -17,8 +20,8 @@ function summarize(id: string, label: string, entries: PerformanceEntry[]): Grou
     matches: new Set(entries.map((entry) => entry.match.id)).size,
     rounds, players: new Set(entries.map((entry) => entry.playerId)).size,
     wins: entries.filter((entry) => entry.match.won).length,
-    winRate: round(safeDivide(entries.filter((entry) => entry.match.won).length, entries.length), 3),
-    acs: round(weighted('acs')), adr: round(weighted('adr')), kd: round(safeDivide(kills, deaths), 2), kast: round(weighted('kast'), 3),
+    winRate: safeDivide(entries.filter((entry) => entry.match.won).length, entries.length),
+    acs: weighted('acs'), adr: weighted('adr'), kd: deaths > 0 ? kills/deaths : undefined, kast: weighted('kast'),
   };
 }
 
@@ -37,7 +40,7 @@ export function groupByAgent(entries: PerformanceEntry[]): GroupSummary[] {
 }
 
 export function groupByRole(entries: PerformanceEntry[]): GroupSummary[] {
-  return [...groupEntries(entries, (entry) => entry.player.role)].map(([id, group]) => summarize(id, id, group)).sort((a, b) => b.appearances - a.appearances || a.label.localeCompare(b.label));
+  return [...groupEntries(entries, (entry) => agentRoles[entry.performance.agent] ?? '未知角色')].map(([id, group]) => summarize(id, id, group)).sort((a, b) => b.appearances - a.appearances || a.label.localeCompare(b.label));
 }
 
 export function comparePlayers(analytics: PlayerAnalytics[], playerIds: string[]): PlayerAnalytics[] {
@@ -61,10 +64,12 @@ export function calculateRecentForm(player: Player, entries: PerformanceEntry[])
   if (recent.length < 3 || baseline.length < 3) return { status: 'insufficient', recentMatches: recent.length, baselineMatches: baseline.length };
   const recentAnalytics = analyticsFromEntries(player, recent)!;
   const baselineAnalytics = analyticsFromEntries(player, baseline)!;
-  const delta = round(recentAnalytics.scores.overall - baselineAnalytics.scores.overall, 1);
+  const recentValue=recentAnalytics.scores.overall.value, baselineValue=baselineAnalytics.scores.overall.value;
+  if (recentValue === undefined || baselineValue === undefined) return {status:'insufficient',recentMatches:recent.length,baselineMatches:baseline.length};
+  const delta = recentValue - baselineValue;
   return {
     status: delta > 2 ? 'up' : delta < -2 ? 'down' : 'flat', delta,
-    recentOverall: recentAnalytics.scores.overall, baselineOverall: baselineAnalytics.scores.overall,
+    recentOverall: recentValue, baselineOverall: baselineValue,
     recentMatches: recent.length, baselineMatches: baseline.length,
   };
 }
@@ -72,7 +77,8 @@ export function calculateRecentForm(player: Player, entries: PerformanceEntry[])
 export function mapExtremes(player: Player, entries: PerformanceEntry[], minimum = 2): { strongest?: MapName; weakest?: MapName } {
   const candidates = [...groupEntries(entries, (entry) => entry.match.map)]
     .filter(([, group]) => group.length >= minimum)
-    .map(([map, group]) => ({ map, score: analyticsFromEntries(player, group)!.scores.overall }))
+    .map(([map, group]) => ({ map, score: analyticsFromEntries(player, group)!.scores.overall.value }))
+    .filter((item): item is { map: MapName; score: number } => item.score !== undefined)
     .sort((a, b) => b.score - a.score || a.map.localeCompare(b.map));
   return { strongest: candidates[0]?.map, weakest: candidates.length > 1 ? candidates.at(-1)?.map : undefined };
 }
@@ -90,11 +96,7 @@ export function resolveWinners(values: Array<{ playerId: string; value: number }
 export function computeBadges(selection: SelectionResult, minMatches = 5, minRounds = 100): BadgeAward[] {
   const eligible = aggregateSelection(selection).filter(({ stats }) => stats.matches >= minMatches && stats.rounds >= minRounds);
   const specifications = [
-    ['firepower', '火力王', '🔥', 'Firepower', (a: PlayerAnalytics) => a.scores.firepower],
-    ['entry', '開戰王', '⚡', 'Entry', (a: PlayerAnalytics) => a.scores.entry],
-    ['teamplay', '團隊核心', '🧠', 'Teamplay', (a: PlayerAnalytics) => a.scores.teamplay],
-    ['clutch', '殘局王', '💥', 'Clutch', (a: PlayerAnalytics) => a.scores.clutch],
-    ['consistency', '最穩定', '🛡️', 'Consistency', (a: PlayerAnalytics) => a.scores.consistency],
+    ...dimensions.map((key) => [key, zhTW.scores[key]+'領先', '🏅', key, (a: PlayerAnalytics) => a.scores[key].value ?? Number.NaN] as const),
     ['headshot', '爆頭王', '🎯', 'HS%', (a: PlayerAnalytics) => a.stats.headshotPercentage ?? Number.NaN],
   ] as const;
   const awards: BadgeAward[] = specifications.flatMap(([id, label, emoji, basis, value]) => {
@@ -108,7 +110,7 @@ export function computeBadges(selection: SelectionResult, minMatches = 5, minRou
     if (!player) return [];
     return [...groupEntries(playerEntries, (entry) => entry.match.map)]
       .filter(([, group]) => group.length >= 3)
-      .map(([, group]) => ({ playerId, value: analyticsFromEntries(player, group)!.scores.overall }));
+      .map(([, group]) => ({ playerId, value: analyticsFromEntries(player, group)!.scores.overall.value ?? Number.NaN }));
   });
   const mapWinner = resolveWinners(mapCandidates);
   if (mapWinner) awards.push({ id: 'map', label: '地圖王', emoji: '🗺️', metricBasis: '單一地圖 Overall', minMatches: 3, minRounds: 0, ...mapWinner, tieRule: '最高值 0.1 以內並列' });

@@ -21,7 +21,7 @@ export function PlayerCard({ analytics, rank }: PlayerCardProps) {
     >
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="rank-number">{String(rank).padStart(2, '0')}</span>
+          <span className="rank-number">{scores.overall.value === undefined ? '—' : String(rank).padStart(2, '0')}</span>
           <PlayerAvatar player={player} />
           <div className="min-w-0">
             <h3 className="truncate text-base font-semibold text-white">{player.handle}</h3>

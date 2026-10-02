@@ -7,6 +7,6 @@ import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <DatasetProvider><AvatarProvider><App /></AvatarProvider></DatasetProvider>
+    <DatasetProvider forceDemo={import.meta.env.DEV ? true : undefined}><AvatarProvider><App /></AvatarProvider></DatasetProvider>
   </StrictMode>,
 );

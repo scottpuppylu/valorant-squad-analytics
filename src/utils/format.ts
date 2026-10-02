@@ -1,10 +1,12 @@
+import type { ScoreResult } from '../scoring/types';
 const unavailable = '—';
 
-function formatFixed(value: number, decimals: number): string {
-  return Number.isFinite(value) ? value.toFixed(decimals) : unavailable;
+function formatFixed(value: number | undefined, decimals: number): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(decimals) : unavailable;
 }
 
-export function formatScore(value: number): string {
+export function formatScore(value: number | ScoreResult | undefined): string {
+  if (typeof value === 'object') return value.value === undefined ? '資料不足' : `${formatFixed(value.value, 1)}${value.status === 'partial' ? ` · 部分 ${formatPercent(value.coverage.ratio, 0)}` : ''}`;
   return formatFixed(value, 1);
 }
 
@@ -16,7 +18,7 @@ export function formatAdr(value: number): string {
   return formatFixed(value, 1);
 }
 
-export function formatRatio(value: number): string {
+export function formatRatio(value: number | undefined): string {
   return formatFixed(value, 2);
 }
 

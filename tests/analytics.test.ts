@@ -70,12 +70,12 @@ describe('rankings, comparisons and summaries', () => {
 
   it('ranks every eligible player deterministically in both directions', () => {
     const descending = rankPlayers(selection, defaultAnalysisFilters, 'overall', 'desc');
-    const ascending = rankPlayers(selection, defaultAnalysisFilters, 'overall', 'asc');
+    const ascending = rankPlayers(selection, defaultAnalysisFilters, 'acs', 'asc');
     expect(descending).toHaveLength(8);
     expect(descending.map(({ analytics }) => analytics.player.id)).toEqual(rankPlayers(selection, defaultAnalysisFilters, 'overall', 'desc').map(({ analytics }) => analytics.player.id));
-    expect(descending.every((row, index) => index === 0 || descending[index - 1]!.value >= row.value)).toBe(true);
-    expect(ascending.every((row, index) => index === 0 || ascending[index - 1]!.value <= row.value)).toBe(true);
-    expect(descending.every(({ value }) => Number.isFinite(value) && value >= 0 && value <= 100)).toBe(true);
+    expect(descending.every((row, index) => index === 0 || descending[index - 1]!.value! >= row.value!)).toBe(true);
+    expect(ascending.every((row, index) => index === 0 || ascending[index - 1]!.value! <= row.value!)).toBe(true);
+    expect(descending.every(({ value }) => Number.isFinite(value) && value! >= 0 && value! <= 100)).toBe(true);
     expect(rankPlayers(selection, defaultAnalysisFilters, 'acs')[0]!.value).toBe(rankPlayers(selection, defaultAnalysisFilters, 'acs')[0]!.analytics.stats.acs);
   });
 

@@ -22,6 +22,7 @@ export const zhTW = {
   scores: {
     overall: '綜合表現',
     firepower: '火力',
+    roundImpact: '回合影響', economy: '經濟效率', roleValue: '角色價值',
     entry: '開戰影響',
     teamplay: '團隊貢獻',
     clutch: '殘局能力',
@@ -63,6 +64,7 @@ export const secondaryNavigation = [
 export const scoreMetricIds = {
   overall: 'overall',
   firepower: 'firepower',
+  roundImpact: 'round-impact', economy: 'economy', roleValue: 'role-value',
   entry: 'entry',
   teamplay: 'teamplay',
   clutch: 'clutch-score',

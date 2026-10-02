@@ -1,16 +1,12 @@
-import type { PlayerAnalytics, ScoreCategory } from '../types/valorant';
+import { dimensions } from '../scoring/versions';
+import { scoreMetricIds } from '../i18n/zhTW';
+import type { PlayerAnalytics } from '../types/valorant';
 import { zhTW } from '../i18n/zhTW';
 import { MetricInfo } from './MetricInfo';
 import { PlayerAvatar } from './PlayerAvatar';
 import { formatScore } from '../utils/format';
 
-const categories: Array<{ key: Exclude<ScoreCategory, 'overall'>; metricId: string; label: string; hint: string }> = [
-  { key: 'firepower', metricId: 'firepower', label: zhTW.scores.firepower, hint: 'ACS、ADR、KPR 與 K/D' },
-  { key: 'entry', metricId: 'entry', label: zhTW.scores.entry, hint: '角色調整後的開局影響' },
-  { key: 'teamplay', metricId: 'teamplay', label: zhTW.scores.teamplay, hint: 'KAST、助攻與共同勝率' },
-  { key: 'clutch', metricId: 'clutch-score', label: zhTW.scores.clutch, hint: '轉換率與殘局勝場' },
-  { key: 'consistency', metricId: 'consistency', label: zhTW.scores.consistency, hint: '場與場之間的穩定性' },
-];
+const categories = dimensions.map((key) => ({key,metricId:scoreMetricIds[key],label:zhTW.scores[key],hint:'可用證據中的最高分'}));
 
 interface CategoryLeadersProps {
   analytics: PlayerAnalytics[];
@@ -18,9 +14,10 @@ interface CategoryLeadersProps {
 
 export function CategoryLeaders({ analytics }: CategoryLeadersProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {categories.map(({ key, metricId, label, hint }) => {
-        const leader = [...analytics].sort((a, b) => b.scores[key] - a.scores[key])[0]!;
+        const leader = analytics.filter((item) => item.scores[key].value !== undefined).sort((a,b) => b.scores[key].value!-a.scores[key].value!)[0];
+        if (!leader) return <article className="surface-card p-4" key={key}><p>{label}</p><p className="mt-3 text-slate-400">資料不足</p></article>;
         return (
           <article className="surface-card p-4" key={key}>
             <p className="metric-label"><MetricInfo metricId={metricId} label={label} /></p>

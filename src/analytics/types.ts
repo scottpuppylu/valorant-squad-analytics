@@ -4,7 +4,7 @@ export type RecentWindow = 'all' | 'recent10' | 'recent30' | 'custom';
 export type SortDirection = 'asc' | 'desc';
 
 export type RankingMetric =
-  | 'overall' | 'firepower' | 'entry' | 'teamplay' | 'clutch' | 'consistency'
+  | 'roundImpact' | 'economy' | 'roleValue' | 'overall' | 'firepower' | 'entry' | 'teamplay' | 'clutch' | 'consistency'
   | 'acs' | 'adr' | 'kd' | 'kpr' | 'apr' | 'kast' | 'headshotPercentage'
   | 'firstKills' | 'firstDeaths' | 'fkFd' | 'clutchConversion' | 'winRate';
 
@@ -36,7 +36,7 @@ export interface SelectionResult {
 
 export interface RankedPlayer {
   analytics: PlayerAnalytics;
-  value: number;
+  value?: number;
   metric: RankingMetric;
 }
 
@@ -51,7 +51,7 @@ export interface GroupSummary {
   winRate: number;
   acs: number;
   adr: number;
-  kd: number;
+  kd?: number;
   kast: number;
 }
 

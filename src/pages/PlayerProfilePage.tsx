@@ -1,3 +1,6 @@
+import { dimensions } from '../scoring/versions';
+import { scoreMetricIds } from '../i18n/zhTW';
+import { ScoreExplanation } from '../components/ScoreExplanation';
 import { lazy, Suspense, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { calculateRecentForm, groupByAgent, groupByMap, mapExtremes, mostUsedAgent } from '../analytics/analysis';
@@ -16,13 +19,7 @@ import { formatAcs, formatAdr, formatPercent, formatRatio, formatScore } from '.
 
 const ScoreRadar = lazy(() => import('../components/ScoreRadar').then((module) => ({ default: module.ScoreRadar })));
 
-const scoreRows = [
-  { key: 'firepower', metricId: 'firepower', label: zhTW.scores.firepower },
-  { key: 'entry', metricId: 'entry', label: zhTW.scores.entry },
-  { key: 'teamplay', metricId: 'teamplay', label: zhTW.scores.teamplay },
-  { key: 'clutch', metricId: 'clutch-score', label: zhTW.scores.clutch },
-  { key: 'consistency', metricId: 'consistency', label: zhTW.scores.consistency },
-] as const;
+const scoreRows = dimensions.map((key) => ({key,metricId:scoreMetricIds[key],label:zhTW.scores[key]}));
 
 const formCopy = {
   up: ['↑', '近期上升'],
@@ -79,7 +76,7 @@ export function PlayerProfilePage() {
         <article className="surface-card context-card"><p className="metric-label">最常使用特務</p><strong>{primaryAgent ?? '無資料'}</strong><p>{agents[0] ? `${agents[0].appearances} 次出賽，占目前條件 ${formatPercent(agents[0].appearances / analytics.stats.matches)}` : '目前條件無特務樣本'}</p></article>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2"><article className="surface-card p-5 sm:p-7"><SectionHeading eyebrow="表現輪廓" title="分類雷達圖" description="角色感知分類分數，各項皆限制在 0 到 100。" /><Suspense fallback={<div className="grid h-[320px] place-items-center text-sm text-slate-500">{zhTW.common.loadingChart}</div>}><ScoreRadar analytics={analytics} /></Suspense></article><article className="surface-card p-5 sm:p-7"><SectionHeading eyebrow="分數明細" title="五種貢獻方式" description={`樣本信心：${formatScore(analytics.scores.confidence)}%，來自 ${analytics.stats.matches} 場對戰。`} /><div className="space-y-5">{scoreRows.map(({ key, metricId, label }) => <div key={key}><div className="mb-2 flex items-center justify-between text-sm"><MetricInfo metricId={metricId} label={label} /><strong className="font-mono text-white">{formatScore(analytics.scores[key])}</strong></div><div className="score-track"><span style={{ width: analytics.scores[key] + '%', backgroundColor: player.accent }} /></div></div>)}</div></article></section>
+      <section className="grid gap-6 xl:grid-cols-2"><article className="surface-card p-5 sm:p-7"><SectionHeading eyebrow="表現輪廓" title="分類雷達圖" description="角色感知分類分數，各項皆限制在 0 到 100。" /><Suspense fallback={<div className="grid h-[320px] place-items-center text-sm text-slate-500">{zhTW.common.loadingChart}</div>}><ScoreRadar analytics={analytics} /></Suspense></article><article className="surface-card p-5 sm:p-7"><SectionHeading eyebrow="分數明細" title="八種貢獻方式" description={`樣本信心：${formatScore(analytics.scores.confidence)}%，來自 ${analytics.stats.matches} 場對戰。`} /><div className="space-y-5">{scoreRows.map(({ key, metricId, label }) => <div key={key}><div className="mb-2 flex items-center justify-between text-sm"><MetricInfo metricId={metricId} label={label} /><strong className="font-mono text-white">{formatScore(analytics.scores[key])}</strong></div><div className="score-track"><span style={{ width: (analytics.scores[key].value ?? 0) + '%', backgroundColor: player.accent }} /></div><ScoreExplanation score={analytics.scores[key]} /></div>)}</div><ScoreExplanation score={analytics.scores.overall} /></article></section>
 
       <section><SectionHeading eyebrow="地圖切分" title="地圖表現" description="只呈現目前篩選條件內的出賽，並保留場次與回合樣本。" /><div className="surface-card overflow-hidden"><div className="overflow-x-auto"><table className="analysis-summary-table"><thead><tr><th>地圖</th><th>出賽</th><th>回合</th><th>勝率</th><th>ACS</th><th>ADR</th><th>K/D</th><th>KAST</th></tr></thead><tbody>{maps.map((map) => <tr key={map.id}><td>{map.label}</td><td>{map.appearances}</td><td>{map.rounds}</td><td>{formatPercent(map.winRate)}</td><td>{formatAcs(map.acs)}</td><td>{formatAdr(map.adr)}</td><td>{formatRatio(map.kd)}</td><td>{formatPercent(map.kast)}</td></tr>)}</tbody></table></div></div></section>
 

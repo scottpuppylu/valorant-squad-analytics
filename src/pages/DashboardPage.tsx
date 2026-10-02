@@ -42,7 +42,7 @@ export function DashboardPage() {
             <div className="flex items-center gap-3">
               <PlayerAvatar player={leader.player} />
               <div>
-              <p className="metric-label">目前綜合領先</p>
+              <p className="metric-label">{leader.scores.overall.value === undefined ? '綜合資料不足' : '目前綜合領先'}</p>
               <h2 className="mt-3 text-3xl font-semibold text-white">{leader.player.handle}</h2>
               <p className="mt-1 text-sm text-slate-400">{zhTW.roles[leader.player.role]} · {leader.player.tagline}</p>
               </div>
@@ -66,7 +66,7 @@ export function DashboardPage() {
         <SectionHeading
           eyebrow="綜合排名"
           title="小隊快照"
-          description="綜合表現混合五個初始類別；樣本信心獨立呈現，永遠不會提高表現分數。"
+          description="綜合表現依八個貢獻維度與證據覆蓋率計算；樣本信心獨立呈現，永遠不會提高表現分數。"
           action={<Link className="text-link" to="/leaderboard">完整排名 →</Link>}
         />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -79,7 +79,7 @@ export function DashboardPage() {
           <SectionHeading
             eyebrow="玩家視角"
             title="表現輪廓"
-            description="選擇玩家，查看五個不同表現面向如何組合。"
+            description="選擇玩家，查看八個不同表現面向如何組合。"
             action={
               <label className="select-label">
                 <span className="sr-only">選擇玩家</span>
@@ -124,7 +124,7 @@ export function DashboardPage() {
           <h2 className="mt-3 max-w-xl text-2xl font-semibold text-white sm:text-3xl">K/D 是證據，不是全部結論。</h2>
         </div>
         <p className="max-w-2xl text-sm leading-7 text-slate-400">
-          NovaHex 帶領原始火力，Quartz 擅長完成艱難殘局，EchoVale 以助攻與 KAST 提升團隊貢獻，AnchorMint 則靠低波動建立穩定度。初始模型保留這些不同故事，而不是只剩單一擊殺數字。
+          NovaHex 帶領原始火力，Quartz 擅長完成艱難殘局，EchoVale 以助攻與 KAST 提升團隊貢獻，AnchorMint 則靠低波動建立穩定度。透明模型保留這些不同故事，而不是只剩單一擊殺數字。
         </p>
       </section> : null}
     </div>

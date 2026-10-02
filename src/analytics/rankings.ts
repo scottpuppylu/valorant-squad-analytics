@@ -1,11 +1,11 @@
-import { calculatePlayerScores } from '../scoring/calculateScores';
+import { compareScoreResults, calculatePlayerScores } from '../scoring/calculateScores';
 import type { MatchRecord, PlayerAnalytics } from '../types/valorant';
 import { aggregatePlayerStats, getRecentPerformances } from '../utils/aggregateStats';
 import { safeDivide } from '../utils/number';
 import type { AnalysisFilters, PerformanceEntry, RankedPlayer, RankingMetric, SelectionResult, SortDirection } from './types';
 
 export const rankingMetricLabels: Record<RankingMetric, string> = {
-  overall: '綜合表現', firepower: '火力', entry: '開戰影響', teamplay: '團隊貢獻', clutch: '殘局能力', consistency: '穩定度',
+  roundImpact: '回合影響', economy: '經濟效率', roleValue: '角色價值', overall: '綜合表現', firepower: '火力', entry: '開戰影響', teamplay: '團隊貢獻', clutch: '殘局能力', consistency: '穩定度',
   acs: 'ACS', adr: 'ADR', kd: 'K/D', kpr: 'KPR', apr: 'APR', kast: 'KAST', headshotPercentage: 'HS%',
   firstKills: '首殺', firstDeaths: '首死', fkFd: 'FK/FD', clutchConversion: '殘局轉換率', winRate: '勝率',
 };
@@ -27,7 +27,7 @@ export function aggregateSelection(selection: SelectionResult): PlayerAnalytics[
 }
 
 export function rankingValue(analytics: PlayerAnalytics, metric: RankingMetric): number | undefined {
-  if (metric in analytics.scores) return analytics.scores[metric as keyof typeof analytics.scores];
+  if (metric in analytics.scores) return analytics.scores[metric as Exclude<keyof typeof analytics.scores, 'confidence'>].value;
   if (metric === 'clutchConversion') {
     return analytics.stats.clutchAttempts && analytics.stats.clutchWins !== undefined
       ? analytics.stats.clutchWins / analytics.stats.clutchAttempts : undefined;
@@ -48,9 +48,9 @@ export function rankPlayers(
     .filter(({ stats }) => stats.matches > 0 && stats.rounds > 0 && stats.matches >= filters.minMatches && stats.rounds >= filters.minRounds)
     .flatMap((analytics) => {
       const value = rankingValue(analytics, metric);
-      return value === undefined || !Number.isFinite(value) ? [] : [{ analytics, value, metric }];
+      return [{ analytics, value, metric }];
     })
-    .sort((a, b) => factor * (a.value - b.value) || a.analytics.player.handle.localeCompare(b.analytics.player.handle));
+    .sort((a, b) => (metric === 'overall' ? (a.analytics.scores.overall.status !== b.analytics.scores.overall.status ? compareScoreResults(a.analytics.scores.overall, b.analytics.scores.overall) : factor * ((a.value ?? 0) - (b.value ?? 0))) : a.value === undefined ? (b.value === undefined ? 0 : 1) : b.value === undefined ? -1 : factor * (a.value - b.value)) || a.analytics.player.handle.localeCompare(b.analytics.player.handle));
 }
 
 export function insufficientPlayers(selection: SelectionResult, filters: AnalysisFilters): string[] {

@@ -1,3 +1,4 @@
+import { agentRoles } from '../utils/agentRoles';
 import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 import type { MatchRecord } from '../types/valorant';
 import type { AnalysisFilters, PerformanceEntry, SelectionResult } from './types';
@@ -39,7 +40,7 @@ export function selectPerformances(entries: PerformanceEntry[], filters: Analysi
     (filters.playerId === 'all' || entry.playerId === filters.playerId)
     && (filters.map === 'all' || entry.match.map === filters.map)
     && (filters.agent === 'all' || entry.performance.agent === filters.agent)
-    && (filters.role === 'all' || entry.player.role === filters.role)
+    && (filters.role === 'all' || agentRoles[entry.performance.agent] === filters.role)
     && (filters.gameMode === 'all' || entry.match.gameMode === filters.gameMode)
     && (filters.period !== 'custom' || withinCustomRange(entry, filters))
   ));
