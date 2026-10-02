@@ -1,12 +1,29 @@
 import type { MatchImportInput } from '../contracts.js';
 import { eventHmac, participantHmac, providerIdentityHmac, sourceMatchHmac } from '../identityProtection.js';
-import type { DurableMatchEvidence, EvidenceParticipant, EvidenceRound, EvidenceRoundParticipant, EvidenceStatus } from './types.js';
+import { DURABLE_NORMALIZATION_VERSION, type DurableMatchEvidence, type EvidenceParticipant, type EvidenceRound, type EvidenceRoundParticipant, type EvidenceStatus } from './types.js';
 
 type Json = Record<string, unknown>;
 const isRecord = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value);
 const asRecords = (value: unknown): Json[] => Array.isArray(value) ? value.filter(isRecord) : [];
 const asText = (value: unknown): string | undefined => typeof value === 'string' && value.length > 0 ? value : undefined;
 const asNumber = (value: unknown): number | undefined => typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+
+function recordsEvidence(container: Json, field: string): { status: EvidenceStatus; records: Json[] } {
+  if (!(field in container)) return { status: 'missing', records: [] };
+  const value = container[field];
+  if (!Array.isArray(value) || value.some((item) => !isRecord(item))) return { status: 'unavailable', records: [] };
+  return { status: 'observed', records: value };
+}
+
+function numericObjectEvidence(container: Json, field: string, keys: string[]): { status: EvidenceStatus; value?: Json } {
+  if (!(field in container)) return { status: 'missing' };
+  const value = container[field];
+  if (!isRecord(value)) return { status: 'unavailable' };
+  const statuses = keys.map((key) => !(key in value) ? 'missing' : asNumber(value[key]) === undefined ? 'unavailable' : 'observed');
+  if (statuses.every((status) => status === 'observed')) return { status: 'observed', value };
+  if (statuses.every((status) => status === 'missing')) return { status: 'missing', value };
+  return { status: 'unavailable', value };
+}
 
 function refHmac(matchId: string, value: unknown, key?: string): string | undefined {
   if (!isRecord(value)) return undefined;
@@ -55,12 +72,23 @@ export function normalizeHenrikEvidence(payload: unknown, input: MatchImportInpu
     const metadata = isRecord(match.metadata) ? match.metadata : undefined;
     const matchId = asText(metadata?.match_id);
     if (!metadata || !matchId) return [];
+    const roundEvidence = recordsEvidence(match, 'rounds');
+    const killEvidence = recordsEvidence(match, 'kills');
     const participants: EvidenceParticipant[] = asRecords(match.players).flatMap((player) => {
       const puuid = asText(player.puuid);
       if (!puuid) return [];
       const stats = isRecord(player.stats) ? player.stats : undefined;
       const damage = isRecord(stats?.damage) ? stats.damage : undefined;
       const agent = isRecord(player.agent) ? player.agent : undefined;
+      const ability = numericObjectEvidence(player, 'ability_casts', ['ability1', 'ability2', 'grenade', 'ultimate']);
+      const economy = isRecord(player.economy) ? player.economy : undefined;
+      const loadout = economy && numericObjectEvidence(economy, 'loadout_value', ['overall', 'average']);
+      const spent = economy && numericObjectEvidence(economy, 'spent', ['overall', 'average']);
+      const economyStatus: EvidenceStatus = !('economy' in player)
+        ? 'missing'
+        : !economy || loadout?.status === 'unavailable' || spent?.status === 'unavailable'
+          ? 'unavailable'
+          : loadout?.status === 'observed' && spent?.status === 'observed' ? 'observed' : 'missing';
       const consenting = asText(player.name)?.toLocaleLowerCase() === input.gameName.toLocaleLowerCase()
         && asText(player.tag)?.toLocaleLowerCase() === input.tag.toLocaleLowerCase();
       return [{
@@ -72,9 +100,15 @@ export function normalizeHenrikEvidence(payload: unknown, input: MatchImportInpu
         kills: asNumber(stats?.kills), deaths: asNumber(stats?.deaths), assists: asNumber(stats?.assists), score: asNumber(stats?.score),
         damageDealt: asNumber(damage?.dealt), damageReceived: asNumber(damage?.received),
         headshots: asNumber(stats?.headshots), bodyshots: asNumber(stats?.bodyshots), legshots: asNumber(stats?.legshots),
+        abilityStatus: ability.status,
+        ability1Casts: asNumber(ability.value?.ability1), ability2Casts: asNumber(ability.value?.ability2),
+        grenadeCasts: asNumber(ability.value?.grenade), ultimateCasts: asNumber(ability.value?.ultimate),
+        economyStatus,
+        loadoutValueTotal: asNumber(loadout?.value?.overall), loadoutValueAverage: asNumber(loadout?.value?.average),
+        spentTotal: asNumber(spent?.value?.overall), spentAverage: asNumber(spent?.value?.average),
       }];
     });
-    const kills = asRecords(match.kills);
+    const kills = killEvidence.records;
     const knownParticipants = new Set(participants.map((participant) => participant.lookupHmac));
     for (const kill of kills) {
       for (const value of [kill.killer, kill.victim, ...asRecords(kill.assistants), ...asRecords(kill.player_locations)]) {
@@ -83,14 +117,15 @@ export function normalizeHenrikEvidence(payload: unknown, input: MatchImportInpu
         if (!puuid) continue;
         const lookupHmac = participantHmac(matchId, puuid, explicitKey);
         if (knownParticipants.has(lookupHmac)) continue;
-        participants.push({ lookupHmac, teamKey: asText(value.team) ?? 'unknown', status: 'missing' });
+        participants.push({ lookupHmac, teamKey: asText(value.team) ?? 'unknown', status: 'missing', abilityStatus: 'missing', economyStatus: 'missing' });
         knownParticipants.add(lookupHmac);
       }
     }
-    const rounds: EvidenceRound[] = asRecords(match.rounds).map((round, roundIndex) => {
+    const rounds: EvidenceRound[] = roundEvidence.records.map((round, roundIndex) => {
       const number = asNumber(round.id) ?? roundIndex;
       const plant = isRecord(round.plant) ? round.plant : undefined;
       const defuse = isRecord(round.defuse) ? round.defuse : undefined;
+      const participantEvidence = recordsEvidence(round, 'stats');
       const roundKills = kills.filter((kill) => asNumber(kill.round) === number).flatMap((kill, index) => {
         const killer = refHmac(matchId, kill.killer, explicitKey);
         const victim = refHmac(matchId, kill.victim, explicitKey);
@@ -117,7 +152,8 @@ export function normalizeHenrikEvidence(payload: unknown, input: MatchImportInpu
         number, winningTeam: asText(round.winning_team), result: asText(round.result),
         plantStatus: objectStatus(round, 'plant'), plantParticipantHmac: refHmac(matchId, plant?.player, explicitKey), plantTimeMs: asNumber(plant?.round_time_in_ms),
         defuseStatus: objectStatus(round, 'defuse'), defuseParticipantHmac: refHmac(matchId, defuse?.player, explicitKey), defuseTimeMs: asNumber(defuse?.round_time_in_ms),
-        participants: asRecords(round.stats).flatMap((item) => {
+        participantsStatus: participantEvidence.status,
+        participants: participantEvidence.records.flatMap((item) => {
           const normalized = roundParticipant(matchId, item, explicitKey); return normalized ? [normalized] : [];
         }),
         kills: roundKills,
@@ -127,9 +163,10 @@ export function normalizeHenrikEvidence(payload: unknown, input: MatchImportInpu
     const queue = isRecord(metadata.queue) ? metadata.queue : undefined;
     return [{
       matchLookupHmac: sourceMatchHmac('HenrikDev', matchId, explicitKey), provider: 'HenrikDev' as const,
-      providerSchemaVersion: 'v4' as const, normalizationVersion: 'durable-evidence-v1' as const, affinity: input.affinity,
+      providerSchemaVersion: 'v4' as const, normalizationVersion: DURABLE_NORMALIZATION_VERSION, affinity: input.affinity,
       mapId: asText(map?.id), mapName: asText(map?.name), queueId: asText(queue?.id), queueName: asText(queue?.name),
-      startedAt: asText(metadata.started_at), gameLengthMs: asNumber(metadata.game_length_in_ms), participants,
+      startedAt: asText(metadata.started_at), gameLengthMs: asNumber(metadata.game_length_in_ms),
+      roundsStatus: roundEvidence.status, killsStatus: killEvidence.status, participants,
       teams: asRecords(match.teams).map((team) => ({ teamKey: asText(team.team_id) ?? 'unknown', won: typeof team.won === 'boolean' ? team.won : undefined, roundsWon: asNumber(isRecord(team.rounds) ? team.rounds.won : undefined), roundsLost: asNumber(isRecord(team.rounds) ? team.rounds.lost : undefined) })),
       rounds,
     }];

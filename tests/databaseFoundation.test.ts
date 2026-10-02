@@ -63,9 +63,9 @@ function rawPayload() {
         map: { id: 'ascent-id', name: 'Ascent' }, queue: { id: 'competitive', name: 'Competitive' },
       },
       players: [
-        { puuid: 'consenting-puuid', name: 'GoblinScout', tag: 'TW', team_id: 'Blue', agent: { id: 'jett-id', name: 'Jett' }, stats: { kills: 1, deaths: 0, assists: 0, score: 300, headshots: 1, bodyshots: 0, legshots: 0, damage: { dealt: 150, received: 0 } } },
-        { puuid: 'private-teammate-puuid', name: 'PrivateTeammate', tag: 'XX', team_id: 'Blue', agent: { id: 'sova-id', name: 'Sova' }, stats: { kills: 0, deaths: 0, assists: 1, score: 100, headshots: 0, bodyshots: 0, legshots: 0, damage: { dealt: 30, received: 0 } } },
-        { puuid: 'private-opponent-puuid', name: 'PrivateOpponent', tag: 'XX', team_id: 'Red', agent: { id: 'sage-id', name: 'Sage' }, stats: { kills: 0, deaths: 1, assists: 0, score: 0, headshots: 0, bodyshots: 0, legshots: 0, damage: { dealt: 0, received: 150 } } },
+        { puuid: 'consenting-puuid', name: 'GoblinScout', tag: 'TW', team_id: 'Blue', agent: { id: 'jett-id', name: 'Jett' }, stats: { kills: 1, deaths: 0, assists: 0, score: 300, headshots: 1, bodyshots: 0, legshots: 0, damage: { dealt: 150, received: 0 } }, ability_casts: { ability1: 3, ability2: 2, grenade: 1, ultimate: 1 }, economy: { loadout_value: { overall: 3900, average: 3900 }, spent: { overall: 4300, average: 4300 } } },
+        { puuid: 'private-teammate-puuid', name: 'PrivateTeammate', tag: 'XX', team_id: 'Blue', agent: { id: 'sova-id', name: 'Sova' }, stats: { kills: 0, deaths: 0, assists: 1, score: 100, headshots: 0, bodyshots: 0, legshots: 0, damage: { dealt: 30, received: 0 } }, ability_casts: { ability1: 0, ability2: 0, grenade: 0, ultimate: 0 }, economy: { loadout_value: { overall: 0, average: 0 }, spent: { overall: 0, average: 0 } } },
+        { puuid: 'private-opponent-puuid', name: 'PrivateOpponent', tag: 'XX', team_id: 'Red', agent: { id: 'sage-id', name: 'Sage' }, stats: { kills: 0, deaths: 1, assists: 0, score: 0, headshots: 0, bodyshots: 0, legshots: 0, damage: { dealt: 0, received: 150 } }, ability_casts: null, economy: 'malformed' },
       ],
       teams: [{ team_id: 'Blue', won: true, rounds: { won: 1, lost: 0 } }, { team_id: 'Red', won: false, rounds: { won: 0, lost: 1 } }],
       rounds: [{
@@ -115,6 +115,7 @@ describe('durable database and consent foundation', () => {
       { version: '0003', applied: '1' },
       { version: '0004', applied: '1' },
       { version: '0005', applied: '1' },
+      { version: '0006', applied: '1' },
     ]);
     const cursorColumns = await database.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name='sync_cursors'`,
@@ -124,6 +125,14 @@ describe('durable database and consent foundation', () => {
       'next_attempt_at', 'coverage_complete_for_provider_window', 'coverage_incomplete_reason',
       'lease_token', 'lease_expires_at',
     ]));
+    const evidenceColumns = await database.query<{ table_name: string; column_name: string }>(
+      `SELECT table_name,column_name FROM information_schema.columns
+       WHERE (table_name='source_matches' AND column_name IN ('rounds_evidence_status','kills_evidence_status'))
+          OR (table_name='match_participants' AND column_name IN ('ability_evidence_status','economy_evidence_status'))
+          OR (table_name='rounds' AND column_name='participants_evidence_status')
+       ORDER BY table_name,column_name`,
+    );
+    expect(evidenceColumns.rows).toHaveLength(5);
   });
 
   it('enforces database uniqueness independently of application checks', async () => {
@@ -131,7 +140,7 @@ describe('durable database and consent foundation', () => {
     await expect(database.query(`INSERT INTO squads (id, slug, display_name) VALUES ('00000000-0000-4000-8000-000000000002','unique-squad','Duplicate')`)).rejects.toThrow();
   });
 
-  it('upgrades an existing 0001-0004 database through 0005 and reruns idempotently', async () => {
+  it('upgrades an existing 0001-0004 database through 0005 and 0006 and reruns idempotently', async () => {
     const existing = new PGliteDatabase(new PGlite());
     try {
       const migrations = await loadMigrations(resolve('migrations'));
@@ -140,7 +149,7 @@ describe('durable database and consent foundation', () => {
         VALUES ('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000102','Upgrade','TW')`);
       await existing.query(`INSERT INTO consents (id,player_id,status,consent_method,privacy_version,consented_at)
         VALUES ('00000000-0000-4000-8000-000000000103','00000000-0000-4000-8000-000000000101','active','self_asserted','old-v1',now())`);
-      expect(await applyMigrations(existing, migrations)).toEqual(['0005']);
+      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006']);
       expect(await applyMigrations(existing, migrations)).toEqual([]);
     } finally {
       await existing.close();
@@ -201,6 +210,14 @@ describe('durable database and consent foundation', () => {
     const second = await Promise.all(tables.map((table) => scalar(database, table)));
     expect(first).toEqual([1, 1, 1, 2, 3, 1, 3, 1, 1, 2]);
     expect(second).toEqual(first);
+    const corrected = rawPayload();
+    corrected.data[0]!.players[0]!.ability_casts = { ability1: 4, ability2: 0, grenade: 0, ultimate: 0 };
+    corrected.data[0]!.players[0]!.economy = { loadout_value: { overall: 7000, average: 3500 }, spent: { overall: 5000, average: 2500 } };
+    await service.persistMatches(authorizedInput, corrected, '2026-09-30T00:02:00.000Z');
+    const correctedRow = await database.query<{ ability_1_casts: number; spent_total: number }>(
+      'SELECT ability_1_casts,spent_total FROM match_participants WHERE player_id IS NOT NULL',
+    );
+    expect(correctedRow.rows[0]).toEqual({ ability_1_casts: 4, spent_total: 5000 });
     expect(summary.performance).toMatchObject({
       sqlQueryCount: 12,
       evidenceCounts: { participants: 3, teams: 2, rounds: 1, roundParticipants: 3, kills: 1, assistants: 1, locations: 2 },
@@ -218,7 +235,11 @@ describe('durable database and consent foundation', () => {
 
   it('preserves observed zero, marks missing evidence and does not create a non-consenting player', async () => {
     const evidence = normalizeHenrikEvidence(rawPayload(), input, hmacKey)[0]!;
+    expect(evidence).toMatchObject({ normalizationVersion: 'durable-evidence-v2', roundsStatus: 'observed', killsStatus: 'observed' });
+    expect(evidence.participants[0]).toMatchObject({ abilityStatus: 'observed', ability1Casts: 3, economyStatus: 'observed', spentTotal: 4300 });
+    expect(evidence.participants[1]).toMatchObject({ abilityStatus: 'observed', ability1Casts: 0, economyStatus: 'observed', spentTotal: 0 });
     expect(evidence.participants[2]).toMatchObject({ kills: 0, deaths: 1, status: 'observed' });
+    expect(evidence.participants[2]).toMatchObject({ abilityStatus: 'unavailable', economyStatus: 'unavailable' });
     expect(evidence.rounds[0]).toMatchObject({ plantStatus: 'absent', defuseStatus: 'missing' });
     expect(evidence.rounds[0]?.participants[2]).toMatchObject({ loadoutValue: 0, weaponStatus: 'missing', armorStatus: 'missing' });
     expect(evidence.participants[2]?.providerIdentityHmac).toBeUndefined();
@@ -227,6 +248,39 @@ describe('durable database and consent foundation', () => {
     await service.persistMatches({ ...input, playerId: connected.publicPlayerId! }, rawPayload());
     expect(await scalar(database, 'players')).toBe(1);
     expect(await scalar(database, 'match_participants')).toBe(3);
+    const persisted = await database.query<{ ability_1_casts: number | null; spent_total: number | null; ability_evidence_status: string; economy_evidence_status: string }>(
+      `SELECT ability_1_casts,spent_total,ability_evidence_status,economy_evidence_status
+       FROM match_participants WHERE player_id IS NOT NULL`,
+    );
+    expect(persisted.rows[0]).toEqual({ ability_1_casts: 3, spent_total: 4300, ability_evidence_status: 'observed', economy_evidence_status: 'observed' });
+  });
+
+  it('keeps missing, null and malformed match-level evidence distinct from observed zero', () => {
+    const payload = rawPayload();
+    const source = payload.data[0]!.players;
+    const missingPlayer: Record<string, unknown> = { ...source[0] };
+    delete missingPlayer.ability_casts;
+    delete missingPlayer.economy;
+    const missing = normalizeHenrikEvidence({ ...payload, data: [{ ...payload.data[0], players: [missingPlayer] }] }, input, hmacKey)[0]!.participants[0]!;
+    const unavailable = normalizeHenrikEvidence({ ...payload, data: [{ ...payload.data[0], players: [{ ...source[0], ability_casts: null, economy: [] }] }] }, input, hmacKey)[0]!.participants[0]!;
+    expect(missing).toMatchObject({ abilityStatus: 'missing', economyStatus: 'missing' });
+    expect(missing.ability1Casts).toBeUndefined();
+    expect(unavailable).toMatchObject({ abilityStatus: 'unavailable', economyStatus: 'unavailable' });
+    expect(unavailable.ability1Casts).toBeUndefined();
+  });
+
+  it('distinguishes observed empty, missing and malformed event collections', () => {
+    const payload = rawPayload();
+    const base = payload.data[0]!;
+    const observedEmpty = normalizeHenrikEvidence({ ...payload, data: [{ ...base, rounds: [], kills: [] }] }, input, hmacKey)[0]!;
+    const missingMatch: Record<string, unknown> = { ...base };
+    delete missingMatch.rounds;
+    delete missingMatch.kills;
+    const missing = normalizeHenrikEvidence({ ...payload, data: [missingMatch] }, input, hmacKey)[0]!;
+    const unavailable = normalizeHenrikEvidence({ ...payload, data: [{ ...base, rounds: null, kills: {} }] }, input, hmacKey)[0]!;
+    expect(observedEmpty).toMatchObject({ roundsStatus: 'observed', killsStatus: 'observed', rounds: [] });
+    expect(missing).toMatchObject({ roundsStatus: 'missing', killsStatus: 'missing', rounds: [] });
+    expect(unavailable).toMatchObject({ roundsStatus: 'unavailable', killsStatus: 'unavailable', rounds: [] });
   });
 
   it('rolls back the full match when a batched child write fails', async () => {

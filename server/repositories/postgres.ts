@@ -109,14 +109,16 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
       `INSERT INTO source_matches (
         id, squad_id, provider, provider_match_lookup_hmac, provider_schema_version, normalization_version,
         affinity, map_id, map_name, queue_id, queue_name, started_at, game_length_ms, first_observed_at, last_observed_at
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14)
+        , rounds_evidence_status, kills_evidence_status
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14,$15,$16)
       ON CONFLICT (provider, provider_match_lookup_hmac) DO UPDATE SET
         map_id=EXCLUDED.map_id, map_name=EXCLUDED.map_name, queue_id=EXCLUDED.queue_id, queue_name=EXCLUDED.queue_name,
         started_at=EXCLUDED.started_at, game_length_ms=EXCLUDED.game_length_ms, normalization_version=EXCLUDED.normalization_version,
+        rounds_evidence_status=EXCLUDED.rounds_evidence_status, kills_evidence_status=EXCLUDED.kills_evidence_status,
         last_observed_at=EXCLUDED.last_observed_at RETURNING id`,
       [randomUUID(), squadId, evidence.provider, evidence.matchLookupHmac, evidence.providerSchemaVersion, evidence.normalizationVersion,
         evidence.affinity, evidence.mapId ?? null, evidence.mapName ?? null, evidence.queueId ?? null, evidence.queueName ?? null,
-        evidence.startedAt ?? null, evidence.gameLengthMs ?? null, observedAt],
+        evidence.startedAt ?? null, evidence.gameLengthMs ?? null, observedAt, evidence.roundsStatus, evidence.killsStatus],
     );
 
     const teamRows = evidence.teams.map((team) => [
@@ -138,20 +140,32 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
       participant.kills ?? null, participant.deaths ?? null, participant.assists ?? null, participant.score ?? null,
       participant.damageDealt ?? null, participant.damageReceived ?? null, participant.headshots ?? null,
       participant.bodyshots ?? null, participant.legshots ?? null,
+      participant.abilityStatus, participant.ability1Casts ?? null, participant.ability2Casts ?? null,
+      participant.grenadeCasts ?? null, participant.ultimateCasts ?? null,
+      participant.economyStatus, participant.loadoutValueTotal ?? null, participant.loadoutValueAverage ?? null,
+      participant.spentTotal ?? null, participant.spentAverage ?? null,
     ]);
     const participantResult = participantRows.length === 0
       ? { rows: [] as ParticipantIdRow[] }
       : await transaction.query<ParticipantIdRow>(
         `INSERT INTO match_participants (
            id, source_match_id, player_id, participant_lookup_hmac, team_key, agent_id, agent_name, stats_evidence_status,
-           kills, deaths, assists, score, damage_dealt, damage_received, headshots, bodyshots, legshots
-         ) VALUES ${valuePlaceholders(participantRows.length, 17)}
+           kills, deaths, assists, score, damage_dealt, damage_received, headshots, bodyshots, legshots,
+           ability_evidence_status, ability_1_casts, ability_2_casts, grenade_casts, ultimate_casts,
+           economy_evidence_status, loadout_value_total, loadout_value_average, spent_total, spent_average
+         ) VALUES ${valuePlaceholders(participantRows.length, 27)}
          ON CONFLICT (source_match_id, participant_lookup_hmac) DO UPDATE SET
            player_id=COALESCE(EXCLUDED.player_id, match_participants.player_id), team_key=EXCLUDED.team_key,
            agent_id=EXCLUDED.agent_id, agent_name=EXCLUDED.agent_name, stats_evidence_status=EXCLUDED.stats_evidence_status,
            kills=EXCLUDED.kills, deaths=EXCLUDED.deaths, assists=EXCLUDED.assists, score=EXCLUDED.score,
            damage_dealt=EXCLUDED.damage_dealt, damage_received=EXCLUDED.damage_received,
-           headshots=EXCLUDED.headshots, bodyshots=EXCLUDED.bodyshots, legshots=EXCLUDED.legshots
+           headshots=EXCLUDED.headshots, bodyshots=EXCLUDED.bodyshots, legshots=EXCLUDED.legshots,
+           ability_evidence_status=EXCLUDED.ability_evidence_status,
+           ability_1_casts=EXCLUDED.ability_1_casts, ability_2_casts=EXCLUDED.ability_2_casts,
+           grenade_casts=EXCLUDED.grenade_casts, ultimate_casts=EXCLUDED.ultimate_casts,
+           economy_evidence_status=EXCLUDED.economy_evidence_status,
+           loadout_value_total=EXCLUDED.loadout_value_total, loadout_value_average=EXCLUDED.loadout_value_average,
+           spent_total=EXCLUDED.spent_total, spent_average=EXCLUDED.spent_average
          RETURNING id, participant_lookup_hmac`,
         flattenRows(participantRows),
       );
@@ -160,15 +174,15 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
     await transaction.query('DELETE FROM rounds WHERE source_match_id = $1', [sourceMatchId]);
     const preparedRounds = evidence.rounds.map((round) => ({ id: randomUUID(), round }));
     const roundRows = preparedRounds.map(({ id, round }) => [
-      id, sourceMatchId, round.number, round.winningTeam ?? null, round.result ?? null, round.plantStatus,
+      id, sourceMatchId, round.number, round.winningTeam ?? null, round.result ?? null, round.participantsStatus, round.plantStatus,
       round.plantParticipantHmac ? participantIds.get(round.plantParticipantHmac) ?? null : null, round.plantTimeMs ?? null,
       round.defuseStatus, round.defuseParticipantHmac ? participantIds.get(round.defuseParticipantHmac) ?? null : null,
       round.defuseTimeMs ?? null,
     ]);
     if (roundRows.length > 0) {
       await transaction.query(
-        `INSERT INTO rounds (id, source_match_id, round_number, winning_team, result, plant_status, plant_participant_id, plant_time_ms, defuse_status, defuse_participant_id, defuse_time_ms)
-         VALUES ${valuePlaceholders(roundRows.length, 11)}`,
+        `INSERT INTO rounds (id, source_match_id, round_number, winning_team, result, participants_evidence_status, plant_status, plant_participant_id, plant_time_ms, defuse_status, defuse_participant_id, defuse_time_ms)
+         VALUES ${valuePlaceholders(roundRows.length, 12)}`,
         flattenRows(roundRows),
       );
     }

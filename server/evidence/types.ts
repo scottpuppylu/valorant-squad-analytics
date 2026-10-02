@@ -1,5 +1,7 @@
 export type EvidenceStatus = 'observed' | 'missing' | 'unavailable';
 
+export const DURABLE_NORMALIZATION_VERSION = 'durable-evidence-v2' as const;
+
 export interface EvidenceParticipant {
   lookupHmac: string;
   providerIdentityHmac?: string;
@@ -16,6 +18,16 @@ export interface EvidenceParticipant {
   headshots?: number;
   bodyshots?: number;
   legshots?: number;
+  abilityStatus: EvidenceStatus;
+  ability1Casts?: number;
+  ability2Casts?: number;
+  grenadeCasts?: number;
+  ultimateCasts?: number;
+  economyStatus: EvidenceStatus;
+  loadoutValueTotal?: number;
+  loadoutValueAverage?: number;
+  spentTotal?: number;
+  spentAverage?: number;
 }
 
 export interface EvidenceKill {
@@ -58,6 +70,7 @@ export interface EvidenceRound {
   defuseStatus: EvidenceStatus | 'present' | 'absent';
   defuseParticipantHmac?: string;
   defuseTimeMs?: number;
+  participantsStatus: EvidenceStatus;
   participants: EvidenceRoundParticipant[];
   kills: EvidenceKill[];
 }
@@ -66,7 +79,7 @@ export interface DurableMatchEvidence {
   matchLookupHmac: string;
   provider: 'HenrikDev';
   providerSchemaVersion: 'v4';
-  normalizationVersion: 'durable-evidence-v1';
+  normalizationVersion: typeof DURABLE_NORMALIZATION_VERSION;
   affinity: string;
   mapId?: string;
   mapName?: string;
@@ -74,6 +87,8 @@ export interface DurableMatchEvidence {
   queueName?: string;
   startedAt?: string;
   gameLengthMs?: number;
+  roundsStatus: EvidenceStatus;
+  killsStatus: EvidenceStatus;
   participants: EvidenceParticipant[];
   teams: Array<{ teamKey: string; won?: boolean; roundsWon?: number; roundsLost?: number }>;
   rounds: EvidenceRound[];
