@@ -27,7 +27,7 @@ TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。
 6. DATA-02A／02A.1 已完成 durable read API、DatasetProvider 與 missing-evidence hardening
 7. DATA-02B 採用 PUBLIC REAL、無 viewer authentication、`no-store` 與最新版公開同意政策；migration `0005` 保證每位玩家最多一筆 active consent
 8. TASK-METRICS-01 已實作 `event-metrics-v1` 的 Trade、KAST、殘局、目標、技能施放、經濟效率與擊殺情境證據重建，production gates 已通過；沒有新增或改寫任何計分權重
-9. TASK-002B 八維度證據感知計分已在本機實作，部署驗證進行中；缺值不補 0 或 50，部分證據顯示覆蓋率。下一步只建議 TASK-SYNERGY-01，不自動開始。
+9. TASK-002B 八維度證據感知計分已完成；最終提交的 CI 與部署結果以任務完成報告為準；缺值不補 0 或 50，部分證據顯示覆蓋率。下一步只建議 TASK-SYNERGY-01，不自動開始。
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
 

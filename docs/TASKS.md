@@ -203,7 +203,7 @@ Status: **COMPLETE — SDD STRICT**
 - [x] Preserve the newest-300-match bound, DATA-02A.1 missing-evidence semantics and the existing sanitized schema 1 projection.
 - [x] Update Chinese consent, Privacy and revocation copy for public publication and resumable deletion semantics.
 
-The current production dataset is validly `empty` because DATA-01C deleted the former test player and no player was reconnected. Public non-empty production content path is **NOT YET EXERCISED AFTER DATA-01C DELETION**; disposable database tests validate current-policy visibility, obsolete-policy exclusion, revocation exclusion and sanitized serialization. TASK-METRICS-01 is complete with empty-production validation; TASK-002B implementation is in progress; Synergy remains unstarted.
+The current production dataset is validly `empty` because DATA-01C deleted the former test player and no player was reconnected. Public non-empty production content path is **NOT YET EXERCISED AFTER DATA-01C DELETION**; disposable database tests validate current-policy visibility, obsolete-policy exclusion, revocation exclusion and sanitized serialization. TASK-METRICS-01 is complete with empty-production validation; TASK-002B implementation is complete; Synergy remains unstarted.
 
 ## Task METRICS-01 — versioned event reconstruction and advanced metric evidence
 
@@ -222,7 +222,9 @@ Existing `durable-evidence-v1` rows default to missing v2 evidence and are not s
 
 ## Task 002B — evidence-aware scoring correctness
 
-Status: **IN PROGRESS — local engine and UI implemented; deployment gates pending**
+Status: **COMPLETE**
+
+Implementation/local acceptance is recorded in TASK_002B_PLAN.md; final HEAD release gates must be verified before handoff.
 
 TASK-002B does not depend on live API completion. It may use the current deterministic demo evidence while keeping formulas transparent, representing unavailable evidence explicitly and avoiding claims about unverified real-provider coverage.
 
@@ -271,3 +273,4 @@ By explicit user decision, TASK-003 was executed before TASK-002B. It consumes t
 ### TASK-002B execution evidence
 
 Starting HEAD bb2bdb87a3ed3041decb0552177552cc4b1bb558; checkpoint-before-task-002b. Versioned eight-dimensional engine, explicit missing/partial policy, precision preservation, selected-role context, trace UI, radar gaps and fictional Demo evidence implemented. See TASK_002B_PLAN.md and SCORING.md. No migration or provider fetch; non-empty production scoring NOT YET EXERCISED. Next only recommended task: TASK-SYNERGY-01, NOT STARTED.
+Eight dimensions, missing/partial gates, profile/benchmark versions, independent confidence, role-aware traces, eight-axis radar gaps, deterministic Demo and regression gates are complete. First release CI/Pages/Vercel succeeded; final commit release acceptance is reported at handoff. Public REAL remains empty, non-empty scoring NOT YET EXERCISED. No migration; no provider request; Synergy NOT STARTED.
