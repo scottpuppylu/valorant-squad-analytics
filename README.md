@@ -74,3 +74,12 @@ production 需求見 [docs/TASK_API_02_SPEC.md](docs/TASK_API_02_SPEC.md)，真�
 - 不複製 Riot、VALORANT、VLR 或其他網站的視覺資產與版面。
 
 計分規則 `community-score-v2`／基準 `community-benchmarks-v1`／綜合設定 `overall-profile-v1` 維持不變。搭檔使用獨立 `duo-synergy-v1`／`duo-synergy-benchmarks-v1`，不是第九維度。公式見 [SCORING](docs/SCORING.md) 與 [SYNERGY](docs/SYNERGY.md)。`npm run dev` 固定虛構 Demo；Vercel 使用 server dataset，Pages 固定 Demo。沒有新 migration；非空 production scoring／Synergy **NOT YET EXERCISED**。未重新加入已刪除玩家，未呼叫 Henrik。
+# Release projection hotfix
+
+TASK-RELEASE-01A.2 (SDD STRICT) implements schema 4 / dataset-read-v4 /
+evidence-decoupled-projection-v1. Valid basic REAL performances no longer require
+complete anonymous kill topology; every visible player must still have explicit
+presence in every durable round. Missing KAST/Opening remain absent, not zero.
+Event/scoring/Synergy rules and privacy policy are unchanged. No migration or
+provider call is authorized. Deployment acceptance is tracked in
+[docs/RELEASE_V1.md](docs/RELEASE_V1.md). V1 is NOT YET RELEASED.

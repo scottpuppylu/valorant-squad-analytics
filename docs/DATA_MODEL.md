@@ -28,11 +28,11 @@ The fixture produces 32 unique matches. Five of eight players participate in eac
 
 ### `MatchPerformance`
 
-The raw player-match grain. Required fields are kills, deaths, assists, ACS, ADR, KAST, agent, and player ID. HS%, first kills, first deaths, clutch attempts, and clutch wins are optional to exercise missing-data behavior.
+The raw player-match grain. Required fields are kills, deaths, assists, ACS, ADR, agent, and player ID. KAST, HS%, first kills, first deaths, clutch attempts, and clutch wins are optional. Schema-4 REAL performances always include actual engine `eventEvidence` statuses for KAST and Opening; partial/unavailable event evidence has no fabricated value.
 
 ### `RawPlayerStats`
 
-`src/utils/aggregateStats.ts` aggregates player-match rows. Totals are additive. ACS, ADR, and KAST are round-weighted averages. HS% is kill-weighted when present. Ratios use safe division and return a finite fallback when the denominator is zero.
+`src/utils/aggregateStats.ts` aggregates player-match rows. Totals are additive. ACS and ADR are round-weighted averages. KAST uses reconstructed observed rows only and is undefined when none exists; scoring retains selected evidence coverage. HS% is kill-weighted when present. Ratios preserve their existing explicit denominator semantics.
 
 ### `PlayerScores`
 

@@ -8,8 +8,8 @@ Status: **TASK-DATA-02 COMPLETE — SDD STRICT**
 Neon durable evidence
   -> PostgresDatasetReadRepository (six set-based queries, newest 300 matches)
   -> EventMetricEngine (`event-metrics-v1`)
-  -> DatasetProjectionService (`synergy-ready-projection-v1`)
-  -> GET /api/valorant/dataset (schema version 3)
+  -> DatasetProjectionService (`evidence-decoupled-projection-v1`)
+  -> GET /api/valorant/dataset (schema version 4)
   -> DatasetProvider
   -> buildAnalytics(dataset)
   -> existing routes and analysis UI
@@ -29,12 +29,12 @@ The response excludes PUUIDs, provider match IDs, lookup HMACs, database interna
 
 The successful versioned response contains:
 
-- `schemaVersion: 3`;
+- `schemaVersion: 4`;
 - `state: ready | empty`;
 - opaque content-derived `snapshot.version`;
-- `snapshot.generation: dataset-read-v3`;
+- `snapshot.generation: dataset-read-v4`;
 - `snapshot.source: durable-neon`;
-- `snapshot.projectionVersion: synergy-ready-projection-v1`;
+- `snapshot.projectionVersion: evidence-decoupled-projection-v1`;
 - bounded coverage metadata with `lifetimeComplete: false`;
 - explicit compatibility and advanced-metric evidence availability;
 - one normalized `mode: REAL`, `isDemo: false` dataset.
@@ -44,6 +44,12 @@ The snapshot version hashes only browser-visible dataset, coverage and evidence 
 The REAL response is `Cache-Control: no-store`. Revocation therefore takes effect on the next server request without a configured browser/CDN TTL. The React provider performs an initial load and explicit refresh; route reloads create a new load. It does not poll and does not persist a full REAL dataset in localStorage. An already-open page may retain the last in-memory snapshot until refresh/reload.
 
 ## Versioned metric projection
+
+Schema 4 (`durable-neon-v4`) decouples basic performance from full anonymous event topology. Presence is checked explicitly: a Set of distinct round IDs for the exact visible participant with `present=true` must contain every durable match round. Duplicate rows cannot conceal missing rounds. Missing core evidence still omits the whole performance.
+
+Every REAL performance includes `eventEvidence: { kast, opening }` using actual engine statuses (`reconstructed`, `partial`, `unavailable`). KAST is optional; partial/unavailable KAST has no value. Partial/unavailable Opening has neither FK nor FD. The client rejects old schemas and contradictory combinations. Valid direct economy, ability and objective domains survive independently; topology-dependent domains remain conservative. Demo remains deterministic and Pages remains Demo-only.
+
+Snapshot hashing includes schema/projection versions and public content. The large-fixture payload budget is 950,000 bytes (previously 850,000); compact per-performance evidence measured 893,937 bytes during this hotfix. No raw rows or new identifiers are exposed.
 
 - A browser `MatchPerformance` is emitted only when match-level stats evidence is `observed`, the agent and K/D/A/score/damage fields are observed finite numbers, at least one durable round exists, and the player has round-presence evidence for every durable round in the match.
 - Missing core or round evidence omits the performance instead of manufacturing numeric zero. A match with no usable visible performance is also omitted; active player profiles may remain visible independently.

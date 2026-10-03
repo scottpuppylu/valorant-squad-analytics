@@ -307,10 +307,26 @@ overflow or console errors. Actual 200% zoom and long-name checks passed locally
 
 ## TASK-RELEASE-01 — V1 release acceptance
 
-Status: **NOT STARTED — recommendation only**
+Status: **IN PROGRESS — SDD STRICT; V1 NOT YET RELEASED**
 
 UI-01 does not declare V1 released. A future explicit task may authorize consenting
 real-player reconnect, non-empty REAL validation, real-data scoring checks and Synergy
 validation with at least two consenting teammates, production smoke tests, final documentation
 and a version/tag/release checkpoint. No production reconnect or Henrik call is authorized
 by UI-01. Current non-empty production scoring and Synergy remain NOT YET EXERCISED.
+
+## TASK-RELEASE-01A — Production release preflight
+
+Status: **IN PROGRESS**. Read-only checks only; no release level selected.
+Baseline audit currently reports five high vulnerabilities; no forced dependency
+upgrade is included in the projection hotfix. See RELEASE_V1.md.
+
+## TASK-RELEASE-01A.2 — Basic / Advanced Evidence Decoupling Hotfix
+
+Status: **IN PROGRESS — SDD STRICT**. Option A explicitly approved.
+Schema 4 preserves valid basic performances with exact visible-player presence
+for every distinct durable round. KAST/Opening and topology-dependent domains
+remain independently reconstructed/partial/unavailable; no numeric substitutes.
+Formulas, engine, privacy and migrations unchanged. CI/Pages/Vercel and read-only
+production acceptance must succeed before marking complete. No provider call,
+import/sync, consent change, deletion, release tag or release level is authorized.

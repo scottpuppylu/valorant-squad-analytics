@@ -25,7 +25,7 @@ GET /api/valorant/dataset
   -> exact REAL_DATASET_READ_MODE=public fail-closed gate
   -> PostgresDatasetReadRepository (six set-based reads)
   -> EventMetricEngine (event-metrics-v1)
-  -> DatasetProjectionService (synergy-ready-projection-v1)
+  -> DatasetProjectionService (evidence-decoupled-projection-v1)
   -> public browser-safe REAL dataset, coverage and opaque snapshot
 
 #/connect durable sync controls
@@ -166,3 +166,14 @@ Schema 3 supplies match-local same-team identity and per-performance outcome. Ev
 - `tests/uiV1.test.tsx`: focused UI/accessibility/state tests without pixel snapshots
   or a new test dependency. Runtime/navigation regression tests retain prior cases.
 - Conventions, before/after bundles and browser acceptance: `docs/UI_V1.md`.
+# Schema-4 hotfix consumer boundary
+
+`src/dataSources/server/datasetContract.ts` validates exact schema/generation/
+projection and REAL eventEvidence/value consistency. DatasetProvider consumes
+that validator. DatasetProjectionService explicitly checks distinct visible
+participant round presence independently of EventMetricEngine topology.
+Aggregation and UI preserve optional KAST. Existing scoring and Synergy formulas
+remain unchanged; independently complete direct domains remain scoreable.
+Regression fixtures live in tests/evidenceDecoupling.test.ts; release evidence
+is tracked in RELEASE_V1.md. Historical implementation checkpoints above retain
+their original versions.

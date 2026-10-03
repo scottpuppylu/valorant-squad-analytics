@@ -103,3 +103,18 @@ Database validation: 1 file / 15 tests passed in 17.22 seconds. After operator v
 Implementation deployment checkpoint `be473ba`: [CI](https://github.com/scottpuppylu/valorant-squad-analytics/actions/runs/37025882306) succeeded (88 seconds elapsed), [GitHub Pages](https://github.com/scottpuppylu/valorant-squad-analytics/actions/runs/37025882219) succeeded (104 seconds elapsed), and [Vercel](https://vercel.com/scottpuppys-projects/valorant-squad-analytics/3DtTvr15utVUmtSkGzCHKAFSHW9A) was Ready in 3m 57s. The canonical API returned HTTP 200, `Cache-Control: no-store`, schema 2 and state `empty`, with zero players and matches. Browser checks confirmed the REAL empty state and the working dictionary on both Vercel and Demo-only GitHub Pages. No player was reconnected and no provider request was made. Non-empty production advanced-metric behavior remains **NOT VERIFIED**. TASK-METRICS-01 is complete within this explicitly empty-production scope; TASK-002B and Synergy remain unstarted.
 
 Final winner-evidence hardening checks: 17 files / 167 tests passed in 33.19 seconds; the 15 reconstruction tests also passed separately in 548 ms. Lint passed, build passed (689 modules, 3.81 seconds) and audit found zero vulnerabilities. Bounded fixtures retained six queries: 1 player / 30 matches used 26.62 ms database, 1.43 ms reconstruction, 3.78 ms projection and 22,803 serialized bytes; 4 players / 300 matches used 159.34 ms database, 16.51 ms reconstruction, 37.09 ms projection and 680,332 bytes. Relative to baseline, response sizes increased by 9,569 bytes (72.3%) and 388,199 bytes (132.9%). These local fixtures are not a production Neon latency guarantee.
+# Current projection contract (release hotfix)
+
+Schema 4 / dataset-read-v4 / evidence-decoupled-projection-v1 supersedes the
+historical schema-2 acceptance above. EventMetricEngine and event-metrics-v1
+are UNCHANGED. Basic stats require observed finite combat/score/damage, agent,
+positive durable rounds and exact visible-player presence in every distinct
+round, not full anonymous event topology. Actual engine KAST/Opening statuses
+are always emitted per REAL performance; partial/unavailable values are absent.
+Independent direct economy/ability/objective evidence is preserved.
+
+The engine uses simplified single-life alive-state topology and does not fully
+model revival/second-life semantics. Event order outside that model leaves
+affected event-derived domains partial/unavailable; it is not proof of corrupt
+durable evidence. Exact per-event provider revive semantics remain NOT VERIFIED.
+No revive-aware reconstruction, new formula or migration belongs to this hotfix.
