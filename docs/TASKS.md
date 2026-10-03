@@ -317,12 +317,14 @@ by UI-01. Current non-empty production scoring and Synergy remain NOT YET EXERCI
 
 ## TASK-RELEASE-01A — Production release preflight
 
-Status: **COMPLETE — SDD STRICT WITH DOCUMENTED DEV-ONLY SECURITY EXCEPTION SEC-2026-001**. No release level selected. See RELEASE_V1.md and SECURITY_EXCEPTIONS.md.
+Status: **IN PROGRESS / ON HOLD — production fixture confirmation required**. Dependency security gate is resolved with SEC-2026-001. No release level selected. See RELEASE_V1.md and SECURITY_EXCEPTIONS.md.
 Full audit still reports five high findings, NOT FIXED; production audit is zero.
 The 2026-10-03 human-verified production health checks now pass: 27 orphan edges,
 cross-match references, migrations 0001–0006, consent, sync and deletion health.
 TASK-RELEASE-01A.3 formally dispositions the unpatched dev/build-only risk until
 2026-11-03 or an earlier upstream fix. Changed scope/exposure or expiry reopens the gate.
+Post-push dataset GET unexpectedly shows two players / seventeen matches, not the
+required one / ten. Cause NOT VERIFIED; no repair or production mutation authorized.
 
 ## TASK-RELEASE-01A.2 — Basic / Advanced Evidence Decoupling Hotfix
 
@@ -336,7 +338,7 @@ import/sync, consent change, deletion, release tag or release level is authorize
 
 ## TASK-RELEASE-01A.3 — Dependency Audit Resolution and Security Disposition
 
-Status: **COMPLETE — SDD STRICT; SEC-2026-001**.
+Status: **SECURITY DISPOSITION COMPLETE — SDD STRICT; FINAL PRODUCTION ACCEPTANCE ON HOLD**.
 Starting HEAD 846c464f28f54d4e22c53e50d32d99bdaf63041e; pushed checkpoint-before-release-01a3-security.
 All five findings classified, production-only install and browser/API dependency
 closures checked, compatible update trial reproduced the findings. No dependencies,
@@ -344,6 +346,8 @@ application behavior, CI workflow, schema, scoring or Synergy changed. Remote Ve
 artifact bytes NOT VERIFIED; no production-input path exists into affected application
 code. See TASK_RELEASE_01A3_PLAN.md and SECURITY_EXCEPTIONS.md for evidence and limits.
 Deployment acceptance is recorded at handoff; this does not authorize V1 release.
+Required production fixture acceptance is NOT MET (two players / seventeen matches).
+Human confirmation and a revised read-only acceptance scope are required; do not repair data.
 
 ## TASK-SECURITY-01 — braces advisory follow-up
 

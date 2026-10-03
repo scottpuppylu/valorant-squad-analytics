@@ -85,7 +85,9 @@ provider call is authorized. Deployment acceptance is tracked in
 [docs/RELEASE_V1.md](docs/RELEASE_V1.md). V1 is NOT YET RELEASED.
 Hotfix API/browser acceptance passed: REAL ready, 1 player, 10 matches;
 317 tests passed. Read-only production health checks are complete. Release preflight
-is COMPLETE with the documented dev-only [SEC-2026-001](docs/SECURITY_EXCEPTIONS.md)
+dependency gate is resolved with the documented dev-only [SEC-2026-001](docs/SECURITY_EXCEPTIONS.md)
 exception: full audit still has five unpatched high findings, production audit has zero.
+Overall preflight is ON HOLD: the dataset now has two players / seventeen matches,
+not the required one / ten; human confirmation is required and no repair is authorized.
 Review is due 2026-11-03 or sooner on an upstream fix. V1 remains NOT YET RELEASED;
 no release level has been selected.

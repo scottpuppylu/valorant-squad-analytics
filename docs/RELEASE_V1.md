@@ -2,7 +2,7 @@
 
 Governance: SDD STRICT. TASK-RELEASE-01 remains IN PROGRESS; V1 is NOT YET RELEASED. No release level or release tag is authorized.
 
-Current preflight: TASK-RELEASE-01A COMPLETE — SDD STRICT WITH DOCUMENTED DEV-ONLY SECURITY EXCEPTION SEC-2026-001. Historical blocker statements below are superseded by the 01A.3 disposition, not erased. Full audit remains five high, NOT FIXED; production audit zero. No release Level A/B/C or v1.0.0 authorization follows from preflight completion.
+Current preflight: TASK-RELEASE-01A IN PROGRESS / ON HOLD for an unexpected production fixture change detected during 01A.3 acceptance. Dependency security disposition is complete under SEC-2026-001, but the required one-player/ten-match acceptance is not met. Historical dependency blocker statements below are superseded by that disposition, not erased. Full audit remains five high, NOT FIXED; production audit zero. No release Level A/B/C or v1.0.0 authorization.
 
 ## TASK-RELEASE-01A.2 — approved Option A
 
@@ -68,6 +68,12 @@ Compatible-parent update trial and registry metadata reproduce the same five hig
 
 SEC-2026-001 accepts this dev/build-only risk temporarily, not as fixed. Expiry/review 2026-11-03 or earlier upstream fix; named maintainer manually reviews at every release/dependency/boundary change. TASK-SECURITY-01 is MONITORING / BLOCKED ON UPSTREAM. Full audit must still be run and reported honestly; production audit must remain zero. New high/critical, changed five-finding scope, runtime promotion, input-path change or expiry invalidates the exception. Existing CI never included audit; no audit gate was removed and no blanket suppression or custom automated gate was added.
 
-TASK-RELEASE-01A is COMPLETE — SDD STRICT WITH DOCUMENTED DEV-ONLY SECURITY EXCEPTION SEC-2026-001. TASK-RELEASE-01 remains IN PROGRESS, V1 NOT YET RELEASED. CI/Pages/Vercel final-commit verification and schema 4 / REAL / ready / one player / ten matches read-only acceptance are reported at handoff. Migration NONE, Henrik calls 0, production data writes NONE. No Connect/import/sync, production health SQL rerun, release level or release tag.
+The dependency-only preflight gate is resolved WITH DOCUMENTED DEV-ONLY SECURITY EXCEPTION SEC-2026-001. Overall TASK-RELEASE-01A remains IN PROGRESS / ON HOLD because the required production fixture no longer matches (see below). TASK-RELEASE-01 remains IN PROGRESS, V1 NOT YET RELEASED. CI/Pages/Vercel final-commit verification is reported at handoff. Migration NONE, Henrik calls 0, production data writes NONE. No Connect/import/sync, production health SQL rerun, release level or release tag.
 
 Final local rerun for this disposition: lint PASS; 21 files / 317 tests PASS (21.97s); source secret scan PASS; build PASS (711 modules, 3.18s; main 363.14 kB / 116.46 gzip, charts 339.21 / 99.53, CSS 40.17 / 9.15; unchanged output hashes); dist secret scan PASS; DB foundation validation 1 file / 15 tests PASS (17.49s). Full audit still FAILS, exactly five high; production audit PASS, zero vulnerabilities. No new tests were needed for documentation-only changes.
+
+### Unexpected production fixture — acceptance hold
+
+After pushing 988c372, the canonical dataset GET returned HTTP 200/no-store, schema 4, ready, **two players / seventeen matches**, instead of the explicitly expected one / ten. A second read-only aggregate check confirmed the same counts. No identities, payloads or rows were archived; no provider calls or production writes were made by this task. Cause and authorization of this external state change are NOT VERIFIED. Dependencies, application code and output hashes remain unchanged in this task.
+
+Stop data-related validation and do not repair, delete, reimport, sync or rerun production SQL. Human confirmation of the intended current fixture and authorization of revised read-only acceptance are required before closing RELEASE-01A or selecting a release level. The security disposition remains valid for the unchanged application dependency boundary; the exact production acceptance is NOT MET. Final-commit deployment status can still be observed read-only without altering data.
