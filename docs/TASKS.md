@@ -370,7 +370,13 @@ TASK-RELEASE-01A remains ON HOLD; TASK-RELEASE-01 IN PROGRESS; V1 NOT YET RELEAS
 
 ## TASK-DATA-03A — Deep Historical Acquisition
 
-Status: **IMPLEMENTATION COMPLETE — SDD STRICT; PRODUCTION EXECUTION GATED / NOT STARTED**.
+Status: **IMPLEMENTATION COMPLETE — SDD STRICT; PRODUCTION ACCEPTANCE BLOCKED**.
+TASK-DATA-03A.1 approved canaries passed on 2026-10-04. Full continuation stopped
+on P2 provider_repeated_page: P1 paused/P2 failed, both live_v4 and sourceExhausted=false.
+Sources 17 -> 30; links P1=15/P2=18; shared=3. Fourteen live provider requests,
+zero stored/detail requests; no further sync after stop. SELECT-only integrity
+checks passed; the known failed run remains. See DEEP_HISTORY.md for exact evidence.
+No completion claim or automatic retry/repair is authorized by this result.
 Starting HEAD f3c870f5ee7b93dbbd6fcadf470a5f3053866c17 after preserving/pushing
 prior diagnosis; checkpoint-before-data-03a-deep-history at that HEAD.
 Independent deep_backfill/deep-history-v1: live size/start then 1-based stored
@@ -381,8 +387,9 @@ privacy, reconstruction, scoring/Synergy unchanged. See DEEP_HISTORY.md.
 Initial implementation CI/Pages/Vercel and migration 0007 verified; final follow-up
 deployment status is reported at handoff. Current local gates: 339 tests, lint,
 build, 16 DB checks, production audit zero; full audit retains SEC-2026-001.
-Deployment/migration authorized; even bounded production provider/write tests
-and full P1/P2 crawl require separate human approval. No lifetime guarantee.
+Deployment/migration and approved DATA-03A.1 execution are recorded separately.
+The earlier implementation-only gate was satisfied by explicit human approval;
+the subsequent hard stop does not authorize a new crawl or repair. No lifetime guarantee.
 
 ## TASK-DATA-03B — Full-history runtime consumption
 

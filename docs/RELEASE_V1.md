@@ -2,11 +2,14 @@
 
 Governance: SDD STRICT. TASK-RELEASE-01 / 01A are PAUSED FOR DATA-03; V1 is NOT YET RELEASED. No release level or release tag is authorized.
 
-TASK-DATA-03A is the immediate implementation/deployment scope: independent
-deep-history-v1 acquisition and append-only migration 0007. Production deep crawl
-NOT STARTED; bounded provider/write validation and full P1/P2 crawl require a
-separate human gate. Public schema 4/newest-300 remains unchanged; DATA-03B NOT
-STARTED. See DEEP_HISTORY.md. Prior fixture diagnosis below remains evidence, not
+TASK-DATA-03A implementation/deployment is complete: independent deep-history-v1
+acquisition and append-only migration 0007. Approved TASK-DATA-03A.1 production
+canaries passed; full continuation STOPPED on P2 provider_repeated_page on
+2026-10-04. Production acceptance is BLOCKED: P1 paused/P2 failed; neither source
+is exhausted. Durable sources=30, linked matches=15/18, shared same-team=3.
+Post-stop SELECT-only integrity checks passed; no retry, repair or further sync.
+Public schema 4/newest-300 remains unchanged; DATA-03B NOT STARTED.
+See DEEP_HISTORY.md. Prior fixture diagnosis below remains evidence, not
 automatic adoption of an invariant-based release baseline. SEC-2026-001 unchanged.
 
 Current preflight: TASK-RELEASE-01A IN PROGRESS / ON HOLD pending human approval of a revised production fixture/invariant baseline. TASK-RELEASE-01A.4 classifies the one-player/ten-match to two-player/seventeen-match drift as EXPECTED_SUPPORTED_ACTIVITY from existing Connect, sync and import records, not a code change. Actor attribution is NOT VERIFIED. The exact one-player/ten-match requirement remains unchanged and not met until human approval. Dependency security disposition remains complete under SEC-2026-001. Historical statements below are retained as historical evidence. Full audit remains five high, NOT FIXED; production audit zero. No release Level A/B/C or v1.0.0 authorization.
