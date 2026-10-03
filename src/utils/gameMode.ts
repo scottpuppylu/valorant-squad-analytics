@@ -1,4 +1,4 @@
-import type { GameMode } from '../types/valorant';
+import type { GameMode } from '../types/valorant.js';
 
 export function normalizeGameMode(queueId?: string | null, queueName?: string | null): GameMode {
   const label = queueName || queueId || 'Unknown';

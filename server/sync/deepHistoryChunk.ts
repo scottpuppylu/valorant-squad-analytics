@@ -110,7 +110,7 @@ export async function executeDeepHistoryChunk(options: {
     metrics.returnedMatches = rawIds.length;
     metrics.overlapMatches = existing.size;
     result.nextStart += rawIds.length;
-    result.boundaryHmac = hmacs.at(-1);
+    result.boundaryHmac = hmacs[hmacs.length - 1];
     if (rawIds.length < pageSize) {
       deep.liveHistoryExhausted = true;
       deep.historyPhase = 'stored_index';

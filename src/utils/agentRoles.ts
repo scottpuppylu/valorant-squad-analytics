@@ -1,4 +1,4 @@
-import type { AgentName, PlayerRole } from '../types/valorant';
+import type { AgentName, PlayerRole } from '../types/valorant.js';
 
 export const agentRoles: Readonly<Record<string, PlayerRole>> = {
   Jett: 'Duelist', Raze: 'Duelist', Phoenix: 'Duelist', Reyna: 'Duelist', Yoru: 'Duelist', Neon: 'Duelist', Iso: 'Duelist', Waylay: 'Duelist',
