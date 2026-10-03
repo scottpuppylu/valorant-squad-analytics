@@ -1,5 +1,11 @@
 # Deep historical acquisition
 
+## Superseding acquisition freeze — TASK-DATA-04A, 2026-10-04
+
+**FULL LIFETIME MATCH HISTORY** is now the hard requirement: earliest actual match through latest, no known missing matches. [LIFETIME_HISTORY.md](LIFETIME_HISTORY.md) records completed docs-only feasibility research: primary Outcome D, Riot lifetime guarantee NOT DOCUMENTED, Production access NOT VERIFIED, `lifetimeComplete=false` required.
+
+Do not continue P1/P2, DATA-03A.2, Henrik live/stored/detail retrieval, Riot game calls or production writes. Preserve the 30 durable matches and two consenting players. Henrik is secondary reconciliation only, not lifetime authority. DATA-03A production acceptance remains BLOCKED; DATA-03B NOT STARTED; RELEASE-01 PAUSED. Future DATA-04B is BLOCKED / NOT STARTED. No operational states or historical evidence below were changed; prior permissions do not override this freeze.
+
 TASK-DATA-03A — SDD STRICT, IMPLEMENTATION COMPLETE; production acceptance BLOCKED after the approved TASK-DATA-03A.1 hard stop. Rule: `deep-history-v1`.
 Starting HEAD: f3c870f5ee7b93dbbd6fcadf470a5f3053866c17. The preceding release
 diagnosis was preserved and pushed first. Checkpoint: checkpoint-before-data-03a-deep-history.

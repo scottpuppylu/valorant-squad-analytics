@@ -1,5 +1,23 @@
 # Development tasks
 
+## Current decision — TASK-DATA-04A (2026-10-04)
+
+The hard requirement is **FULL LIFETIME MATCH HISTORY**, earliest actual VALORANT match through latest, with no known missing matches. Do not substitute a provider window, source exhaustion or newest-300 projection.
+
+### TASK-DATA-04A — Authoritative Lifetime History Feasibility
+
+Status: **COMPLETE — docs-only research and access readiness**. See [LIFETIME_HISTORY.md](LIFETIME_HISTORY.md) for the official-source matrix, proof standard, current integration audit, draft application and future reconciliation/RSO design.
+
+Primary outcome **D: FULL_LIFETIME_HISTORY_NOT_PROVABLE_WITH_CURRENT_AVAILABLE_SOURCES**. Riot lifetime guarantee **NOT DOCUMENTED**; actual Production/OAuth approval **NOT VERIFIED**. `lifetimeComplete=true` cannot currently be proven. The current private friend-group scope requires Riot eligibility clarification; no application was submitted.
+
+### TASK-DATA-04B — Riot Official Provider / RSO Integration
+
+Status: **BLOCKED / NOT STARTED**. Requires explicit authorization, eligible product scope, approved Production and separate OAuth access, reviewed token/identity/consent lifecycle and a documented decision on the unmet lifetime requirement. No invented VAL matchlist pagination. Henrik is secondary reconciliation only; existing players, public UUIDs and durable history must be preserved.
+
+### Acquisition / release freeze
+
+This decision supersedes earlier continuation permissions. Preserve DATA-03A implementation and DATA-03A.1 hard-stop evidence: P1 paused, P2 failed `provider_repeated_page`, 30 durable unique sources, `lifetimeComplete=false`. DATA-03A production acceptance remains **BLOCKED**; DATA-03A.2 and P1/P2 continuation are frozen. DATA-03B remains **NOT STARTED**. RELEASE-01 remains **PAUSED**, V1 not released. No Riot/Henrik game API calls, production writes, migration or release levels/tags are authorized by DATA-04A. Historical roadmap entries below are retained, not renewed authorization.
+
 ## Task 000 — repository and Codex setup
 
 - [x] Initialize a Git repository with `main` as the default branch.
