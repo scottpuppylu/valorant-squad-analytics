@@ -33,3 +33,25 @@ Browser: Dashboard, Leaderboard, Player Profile, Matches (expanded missing KAST)
 Post-deploy dataset GET log window 16:56:28–16:57:33 (Asia/Taipei): four GET rows, four HTTP 200, zero listed failure patterns. Only dataset-read requests inspected. Runtime-log scan is bounded evidence, not a claim about all historical requests.
 
 Remaining RELEASE-01A blockers: audit high vulnerabilities; aggregate relational orphan/migration/consent/sync/deletion health queries NOT VERIFIED because Vercel again requires human database verification. No alternate credential extraction or write was attempted. RELEASE-01A remains IN PROGRESS; overall RELEASE-01 remains IN PROGRESS; V1 NOT YET RELEASED. No Level A/B/C selection or v1.0.0 tag.
+
+## Read-only health closure — 2026-10-03
+
+The preceding database-verification blocker is now resolved after human verification. Two SELECT-only aggregate queries ran with the console Read-only checkbox checked. No production data writes, provider calls, migration or identity export occurred.
+
+| Check | Verified result |
+|---|---|
+| Foreign-key orphan checks | 27 edges checked, 0 orphan rows, 0 failing edges |
+| Unvalidated public FK/check constraints | 0 |
+| Cross-match presence/kill/assistant/location/objective references | All 0 |
+| Migration ledger | Exactly 0001–0006, count 6, unexpected versions 0 |
+| Current active consent | 1 |
+| Obsolete/duplicate/anonymized active consents | All 0 |
+| Inconsistent consent timestamps / missing active management verifier | Both 0 |
+| Active membership without current consent | 0 |
+| Open or failed sync runs; live/stale sync leases | All 0 |
+| Open or failed deletion jobs; stale deletion leases; expired audits | All 0 |
+| Source matches / old normalization versions | 10 / 0 |
+
+Public API recheck: HTTP 200, schema 4, REAL ready, 1 player, 10 matches. Final implementation HEAD before this documentation update was 8f182654ec5a580e275dfb908e45e5d634b7d99d: CI 37111689980 succeeded (93s), Pages 37111690005 succeeded (107s), Vercel 4o82jAnFhTG4js8AhfSZ6HYixJDt Ready (3m42s). These are historical aligned deployment checkpoints, not assertions about later documentation commits.
+
+This continuation reran lint PASS, 21 files/317 tests PASS (32.39s), build PASS (711 modules, 5.00s; unchanged bundle sizes), source/dist secret scans PASS and DB validation 15 tests PASS (18.90s). npm audit still FAILS with five high development-chain advisories. The only outstanding preflight blocker is dependency audit remediation; no forced Tailwind 4 migration is authorized here. TASK-RELEASE-01A remains IN PROGRESS; TASK-RELEASE-01A.2 remains COMPLETE; V1 NOT YET RELEASED. Do not choose a release level until the remaining gate is resolved.

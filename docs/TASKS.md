@@ -320,6 +320,9 @@ by UI-01. Current non-empty production scoring and Synergy remain NOT YET EXERCI
 Status: **IN PROGRESS**. Read-only checks only; no release level selected.
 Baseline audit currently reports five high vulnerabilities; no forced dependency
 upgrade is included in the projection hotfix. See RELEASE_V1.md.
+The 2026-10-03 human-verified production health checks now pass: 27 orphan edges,
+cross-match references, migrations 0001–0006, consent, sync and deletion health.
+Dependency audit remediation remains the only outstanding preflight blocker.
 
 ## TASK-RELEASE-01A.2 — Basic / Advanced Evidence Decoupling Hotfix
 
