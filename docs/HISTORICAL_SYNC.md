@@ -1,5 +1,22 @@
 # Durable historical synchronization
 
+## Current acquisition extension — DATA-03A
+
+The legacy contract/evidence below is preserved. `deep_backfill` is an independent
+kind under `deep-history-v1`; see [DEEP_HISTORY.md](DEEP_HISTORY.md). It advances
+through full overlap with no legacy 300-response acquisition horizon, then
+transitions from v4 size/start to 1-based stored size/page. An index discovers
+HMAC-keyed sources; at most one unknown full detail is normalized per invocation.
+Status adds phase/page/item and sourceExhausted/lifetimeComplete=false for deep only.
+Legacy run/cursor records are not reset. Sync runtime disables hidden provider retries.
+Explicit browser continuation spaces requests >=7 seconds, honors nextAttemptAt,
+stops on pause/unmount/revocation/error, and restores readonly progress on refresh.
+No cron/queue; future incremental work still needs explicit execution/continuation.
+Production crawl NOT STARTED / NOT VERIFIED pending approval. Public read stays
+newest-300; full-history runtime consumption is DATA-03B, NOT STARTED.
+
+## Legacy DATA-01B contract and evidence
+
 TASK-DATA-01B implements bounded, resumable synchronization for one actively consenting player. “History” means only the records that HenrikDev v4 returned through the verified `size/start` contract at observation time. It never means guaranteed Riot lifetime history.
 
 ## Public boundary
@@ -8,7 +25,7 @@ TASK-DATA-01B implements bounded, resumable synchronization for one actively con
 - `POST /api/valorant/sync/continue` accepts only the public run UUID.
 - `GET /api/valorant/sync/status` returns aggregate progress, coverage, safe error state and performance totals.
 - PUUIDs, Riot ID/tag, raw provider match IDs, HMAC values, database IDs and credentials never appear in these responses.
-- The React analytics runtime remains browser-local until DATA-02. Sync controls do not silently switch leaderboard data to Neon.
+- At DATA-01B React remained browser-local until DATA-02; current runtime is bounded PUBLIC REAL server read. Sync does not enlarge its read limit.
 
 ## State machine and cursor
 

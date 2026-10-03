@@ -307,7 +307,7 @@ overflow or console errors. Actual 200% zoom and long-name checks passed locally
 
 ## TASK-RELEASE-01 — V1 release acceptance
 
-Status: **IN PROGRESS — SDD STRICT; V1 NOT YET RELEASED**
+Status: **PAUSED FOR DATA-03 — SDD STRICT; V1 NOT YET RELEASED**
 
 UI-01 does not declare V1 released. A future explicit task may authorize consenting
 real-player reconnect, non-empty REAL validation, real-data scoring checks and Synergy
@@ -317,7 +317,7 @@ by UI-01. Current non-empty production scoring and Synergy remain NOT YET EXERCI
 
 ## TASK-RELEASE-01A — Production release preflight
 
-Status: **IN PROGRESS / ON HOLD — human approval of revised fixture/invariant baseline required**. Dependency security gate is resolved with SEC-2026-001. No release level selected. See RELEASE_V1.md and SECURITY_EXCEPTIONS.md.
+Status: **PAUSED FOR DATA-03 — revised fixture/invariant approval still required**. Dependency gate resolved with SEC-2026-001. No release level selected. See RELEASE_V1.md and SECURITY_EXCEPTIONS.md.
 Full audit still reports five high findings, NOT FIXED; production audit is zero.
 The 2026-10-03 human-verified production health checks now pass: 27 orphan edges,
 cross-match references, migrations 0001–0006, consent, sync and deletion health.
@@ -367,6 +367,24 @@ No application/package changes, provider calls, production writes or migration.
 Level B/C prerequisites POSSIBLE only; no release level executed or tag created.
 Recommend human-approved invariant-based acceptance; do not adopt it automatically.
 TASK-RELEASE-01A remains ON HOLD; TASK-RELEASE-01 IN PROGRESS; V1 NOT YET RELEASED.
+
+## TASK-DATA-03A — Deep Historical Acquisition
+
+Status: **IMPLEMENTED — deployment verification pending; SDD STRICT; PRODUCTION CRAWL NOT STARTED**.
+Starting HEAD f3c870f5ee7b93dbbd6fcadf470a5f3053866c17 after preserving/pushing
+prior diagnosis; checkpoint-before-data-03a-deep-history at that HEAD.
+Independent deep_backfill/deep-history-v1: live size/start then 1-based stored
+index and bounded full-detail recovery, no total cap or full-overlap stop.
+Append-only 0007, phase/page/item, consent/lease/backoff, aggregate status and
+explicit browser auto-continuation. Legacy records, public schema 4/newest-300,
+privacy, reconstruction, scoring/Synergy unchanged. See DEEP_HISTORY.md.
+Deployment/migration authorized; even bounded production provider/write tests
+and full P1/P2 crawl require separate human approval. No lifetime guarantee.
+
+## TASK-DATA-03B — Full-history runtime consumption
+
+Status: **NOT STARTED**. Future bounded pagination/consumption; do not enlarge
+public dataset reads implicitly. RELEASE-01/01A PAUSED FOR DATA-03; no v1.0.0.
 
 ## TASK-SECURITY-01 — braces advisory follow-up
 

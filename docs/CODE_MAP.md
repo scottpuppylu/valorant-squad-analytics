@@ -166,6 +166,20 @@ Schema 3 supplies match-local same-team identity and per-performance outcome. Ev
 - `tests/uiV1.test.tsx`: focused UI/accessibility/state tests without pixel snapshots
   or a new test dependency. Runtime/navigation regression tests retain prior cases.
 - Conventions, before/after bundles and browser acceptance: `docs/UI_V1.md`.
+# Deep historical acquisition — DATA-03A
+
+- `server/sync/historicalDiscoveryProvider.ts`: provider-neutral live/index/detail boundary.
+- `server/henrikDataProvider.ts`: encoded routes; sync runtime disables internal retries.
+- `server/sync/deepHistoryChunk.ts`: bounded two-phase discovery/overlap/detail recovery.
+- `historicalSyncService.ts` / `postgresSyncStore.ts`: independent kind, consent/lease, cursor/status/backoff.
+- `migrations/0007_deep_historical_acquisition.sql`: append-only phase/counter extension.
+- `src/dataSources/server/deepSyncSession.ts`: minimal versioned public-ID recovery/retry spacing.
+- `src/pages/ConnectPage.tsx`: explicit start/resume, automatic bounded continue, pause/unmount cleanup.
+- Tests: historicalSync, historicalDiscoveryProvider, deepSyncSession, databaseFoundation; fixtures only.
+- Specification and production gate: `docs/DEEP_HISTORY.md`.
+
+Dataset read, reconstruction, scoring and Synergy are unchanged.
+
 # Schema-4 hotfix consumer boundary
 
 `src/dataSources/server/datasetContract.ts` validates exact schema/generation/

@@ -179,6 +179,21 @@ An exclusive source match is deleted with its children. In a shared match, the r
 
 The first production validation processed 154 exclusive matches and no shared matches in three deletion attempts. It removed the provider identity, membership, consent and two cursors, anonymized personal fields on two sync runs, tombstoned the player and left zero orphan rows. This validates the observed exclusive path; shared-match behavior remains covered by disposable-database tests because the production subject had no shared match.
 
+## Deep acquisition cursor — DATA-03A
+
+Migration 0007 adds independent deep_backfill and preserves legacy rows. New
+cursor fields: history_phase (live_v4/stored_index/complete), stored_page (1-based),
+stored_item_index, optional stored_total/discovery_page, live_history_exhausted,
+stored_history_exhausted and history_rule_version. Live next_start is an offset.
+Existing HMAC fingerprints detect repetition/page changes; no plaintext discovery
+ID is persisted. Run counters: stored_matches_seen/detail_requests/detail_unavailable_count.
+Counts describe committed processing observations/upserts, not unique lifetime totals.
+Recorded failed requests count attempts; abrupt death before failure/status commit
+can leave telemetry incomplete. Full detail uses the same evidence pipeline;
+compact stored rows never fabricate rounds/kills/advanced zeros. Both phases are
+required for sourceExhausted; lifetimeComplete=false always. Public schema 4 and
+newest-300 response unchanged; DATA-03B deferred. See DEEP_HISTORY.md.
+
 ## Missing data
 
 - Optional statistics remain `undefined`; they are not silently converted to observed zero.

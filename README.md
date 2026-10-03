@@ -4,6 +4,8 @@
 
 ## 目前狀態
 
+目前優先工作為 TASK-DATA-03A（SDD STRICT）：獨立 `deep_backfill`／`deep-history-v1` 先讀 v4 歷史，再以 Stored Matches 索引恢復較舊詳細資料。實作／部署及 migration 0007 已授權；正式抓取 **NOT STARTED**，需另行人工批准。發佈驗收 **PAUSED FOR DATA-03**；DATA-03B 尚未開始，分析仍維持 schema 4／最近最多 300 場，不宣稱完整生涯。見 [docs/DEEP_HISTORY.md](docs/DEEP_HISTORY.md)。下方舊任務數量是歷史 checkpoint，不代表固定正式資料數量。
+
 TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。TASK-METRICS-01 已完成，production migration、CI 與部署驗證均通過。Vercel 是 [PUBLIC REAL canonical runtime](https://valorant-squad-analytics.vercel.app/)：任何訪客都能在無登入、無存取碼的情況下讀取已同意玩家的去敏感化分析。GitHub Pages 固定為 Demo-only rollback，不呼叫 production dataset API。公開投影最多包含最近 300 場符合資格的持久化對戰；2026-10-03 的唯讀檢查為 1 位公開玩家、0 場對戰，REAL 保持 empty，非空 production 指標與搭檔路徑仍是 **NOT YET EXERCISED**。本任務沒有新增、重新連結或同步 production 玩家。
 
 ## V1 原則
@@ -91,3 +93,9 @@ Overall preflight is ON HOLD: the dataset now has two players / seventeen matche
 not the required one / ten; human confirmation is required and no repair is authorized.
 Review is due 2026-11-03 or sooner on an upstream fix. V1 remains NOT YET RELEASED;
 no release level has been selected.
+
+## 深度歷史同步
+
+明確選擇「同步所有目前可取得歷史」後，頁面至少每 7 秒續跑一個安全區塊並遵守退避。可暫停、離頁停止、刷新後明確恢復；沒有背景排程。每次一頁 live，或一頁索引加至多一份完整詳細資料。重疊不會終止深度發現；不可得詳細資料會記錄而不捏造事件。兩個來源耗盡不是完整生涯。
+
+恢復 key `goblin-survey:deep-sync:v1` 只保存版本與公開 player/run UUID，權威游標在伺服器。最新增量仍獨立且非無人值守保證。分數、搭檔、公開政策及刪除流程不變。正式 P1/P2 深度工作須另行批准，不能以部署通過推定已抓取。
