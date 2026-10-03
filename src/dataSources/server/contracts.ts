@@ -92,10 +92,21 @@ export interface PublicDeletionProgress {
 export interface RevocationResponse { ok: true; deletion: PublicDeletionProgress }
 export interface DeletionResponse { ok: true; deletion: PublicDeletionProgress }
 
-export type SyncKind = 'backfill' | 'incremental';
+export type SyncKind = 'backfill' | 'incremental' | 'deep_backfill';
 export type SyncStatus = 'pending' | 'running' | 'paused' | 'complete' | 'failed' | 'cancelled';
 
 export interface PublicSyncProgress {
+  history?: {
+    ruleVersion: 'deep-history-v1';
+    historyPhase: 'live_v4' | 'stored_index' | 'complete';
+    storedPage: number;
+    storedItemIndex: number;
+    storedTotal?: number;
+    liveHistoryExhausted: boolean;
+    storedHistoryExhausted: boolean;
+    sourceExhausted: boolean;
+    lifetimeComplete: false;
+  };
   runId: string;
   kind: SyncKind;
   status: SyncStatus;
@@ -105,6 +116,9 @@ export interface PublicSyncProgress {
     matchesPersisted: number;
     overlapsUpdated: number;
     retries: number;
+    storedMatchesSeen?: number;
+    detailRequests?: number;
+    detailUnavailableCount?: number;
   };
   coverage: {
     from?: string;

@@ -12,8 +12,11 @@ import type {
   SyncRunRecord,
   SyncStatus,
   SyncTerminationReason,
+  SyncChunkMetrics,
 } from './types.js';
 import { PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
+import type { HistoricalDiscoveryProvider } from './historicalDiscoveryProvider.js';
+import { executeDeepHistoryChunk } from './deepHistoryChunk.js';
 
 const DEFAULT_PAGE_SIZE = 3;
 const DEFAULT_HISTORY_HORIZON = 300;
@@ -56,6 +59,7 @@ function classifyFailure(error: unknown, databaseStage: boolean): SyncErrorCateg
   if (error.code === 'PROVIDER_TIMEOUT') return 'PROVIDER_TIMEOUT';
   if (error.code === 'MALFORMED_PROVIDER_RESPONSE') return 'MALFORMED_RESPONSE';
   if (error.code === 'PROVIDER_ERROR') return 'PROVIDER_5XX';
+  if (error.code === 'DATABASE_ERROR') return 'DATABASE_ERROR';
   return 'UNKNOWN';
 }
 
@@ -89,7 +93,7 @@ export class HistoricalSyncService {
   constructor(
     private readonly store: PostgresSyncStore,
     private readonly durable: SyncPageWriter,
-    private readonly provider: HistoricalMatchProvider,
+    private readonly provider: HistoricalMatchProvider | HistoricalDiscoveryProvider,
     private readonly hmacKey: string,
     options: HistoricalSyncOptions = {},
   ) {
@@ -108,7 +112,7 @@ export class HistoricalSyncService {
     }
     const existingRun = await this.store.findLatestRun(subject, kind);
     if (existingRun) {
-      if (existingRun.status === 'complete' && kind === 'backfill') return this.requireStatus(existingRun.publicId);
+      if (existingRun.status === 'complete' && kind !== 'incremental') return this.requireStatus(existingRun.publicId);
       if (existingRun.status !== 'complete' && existingRun.status !== 'cancelled') return this.continue(existingRun.publicId);
     }
     const at = this.now();
@@ -167,6 +171,11 @@ export class HistoricalSyncService {
     let databaseStage = false;
     let released = false;
     let cursorCommitted = false;
+    const deepMetrics: SyncChunkMetrics | undefined = run.kind === 'deep_backfill' ? {
+      providerFetchMs: 0, normalizationMs: 0, databaseMs: 0, totalMs: 0, sqlQueryCount: 0,
+      returnedMatches: 0, persistedMatches: 0, overlapMatches: 0,
+      providerRequests: 0, storedMatchesSeen: 0, detailRequests: 0, detailUnavailableCount: 0,
+    } : undefined;
     try {
       if (!await this.store.hasActiveConsent(run.subject.playerId)) {
         await this.store.recordFailure({
@@ -186,6 +195,33 @@ export class HistoricalSyncService {
         privacyVersion: PUBLIC_DATASET_PRIVACY_VERSION,
         limit: 3,
       };
+      if (run.kind === 'deep_backfill') {
+        if (!('fetchStoredIndexPage' in this.provider) || !('fetchMatchDetail' in this.provider)) {
+          throw new PublicApiError(502, 'MALFORMED_PROVIDER_RESPONSE', '資料來源尚未支援深度歷史。');
+        }
+        const chunk = await executeDeepHistoryChunk({
+          store: this.store, durable: this.durable, provider: this.provider,
+          run, cursor, input, hmacKey: this.hmacKey, pageSize: this.pageSize,
+          now: this.now, monotonicNow: this.monotonicNow, invocationStarted,
+          budgetMs: this.usefulWorkBudgetMs,
+          metrics: deepMetrics!,
+        });
+        chunk.metrics.totalMs = Math.round(this.monotonicNow() - invocationStarted);
+        chunk.metrics.sqlQueryCount += initialSqlQueryCount + 5;
+        databaseStage = true;
+        await this.store.recordSuccess({
+          cursorId: cursor.id, leaseToken, runId: run.id, ...chunk,
+          pageNumber: cursor.deep?.historyPhase === 'stored_index' ? cursor.deep.storedPage : Math.floor(cursor.nextStart / this.pageSize),
+          at: this.now().toISOString(),
+          completeForProviderWindow: chunk.deep.liveHistoryExhausted && chunk.deep.storedHistoryExhausted,
+          incompleteReason: chunk.runStatus === 'failed' ? 'provider_repeated_page' : undefined,
+        });
+        released = true;
+        cursorCommitted = true;
+        process.stdout.write(`${JSON.stringify({ event: 'deep_history_chunk', kind: run.kind,
+          phase: chunk.deep.historyPhase, status: chunk.runStatus, ...chunk.metrics })}\n`);
+        return this.requireStatus(run.publicId);
+      }
       const providerStarted = this.monotonicNow();
       const payload = await this.provider.fetchHistoryPage(input, cursor.nextStart, this.pageSize);
       const providerFetchMs = Math.round(this.monotonicNow() - providerStarted);
@@ -295,7 +331,11 @@ export class HistoricalSyncService {
       })}\n`);
       return this.requireStatus(run.publicId);
     } catch (error) {
-      if (error instanceof PublicApiError && error.code === 'CONSENT_REVOKED') throw error;
+      if (error instanceof PublicApiError && error.code === 'CONSENT_REVOKED') {
+        await this.store.cancelRunForConsent(run.id, run.subject.playerId, run.kind, this.now().toISOString());
+        released = true;
+        throw error;
+      }
       if (cursorCommitted) throw new PublicApiError(503, 'DATABASE_ERROR', '同步已安全提交，但狀態暫時無法讀取。');
       const category = classifyFailure(error, databaseStage);
       const status = retryStatus(category);
@@ -311,6 +351,7 @@ export class HistoricalSyncService {
           status,
           at: failedAt.toISOString(),
           nextAttemptAt: retryable ? new Date(failedAt.getTime() + retrySeconds * 1_000).toISOString() : undefined,
+          metrics: deepMetrics,
         });
         released = true;
       } catch {

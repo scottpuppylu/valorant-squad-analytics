@@ -11,6 +11,7 @@ import type {
   SyncStatus,
   SyncSubject,
   SyncTerminationReason,
+  DeepCursorState,
 } from './types.js';
 import { PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
 
@@ -24,6 +25,13 @@ type SubjectRow = {
 };
 
 type CursorRow = {
+  history_phase: DeepCursorState['historyPhase'];
+  stored_page: number;
+  stored_item_index: number;
+  stored_total: number | null;
+  discovery_page: number | null;
+  live_history_exhausted: boolean;
+  stored_history_exhausted: boolean;
   id: string;
   player_id: string;
   sync_kind: SyncKind;
@@ -49,6 +57,16 @@ type RunRow = SubjectRow & {
 };
 
 type StatusRow = {
+  history_phase: DeepCursorState['historyPhase'];
+  stored_page: number;
+  stored_item_index: number;
+  stored_total: number | null;
+  discovery_page: number | null;
+  live_history_exhausted: boolean;
+  stored_history_exhausted: boolean;
+  stored_matches_seen: number;
+  detail_requests: number;
+  detail_unavailable_count: number;
   public_id: string;
   sync_kind: SyncKind;
   status: SyncStatus;
@@ -104,6 +122,16 @@ function cursorFromRow(row: CursorRow): SyncCursorRecord {
     nextAttemptAt: iso(row.next_attempt_at),
     completeForProviderWindow: row.coverage_complete_for_provider_window,
     incompleteReason: row.coverage_incomplete_reason ?? undefined,
+    ...(row.sync_kind === 'deep_backfill' ? { deep: deepFromRow(row) } : {}),
+  };
+}
+
+function deepFromRow(row: Pick<CursorRow, 'history_phase' | 'stored_page' | 'stored_item_index' | 'stored_total' | 'discovery_page' | 'live_history_exhausted' | 'stored_history_exhausted'>): DeepCursorState {
+  return {
+    historyPhase: row.history_phase, storedPage: Number(row.stored_page),
+    storedItemIndex: Number(row.stored_item_index), storedTotal: row.stored_total ?? undefined,
+    discoveryPage: row.discovery_page ?? undefined, liveHistoryExhausted: row.live_history_exhausted,
+    storedHistoryExhausted: row.stored_history_exhausted,
   };
 }
 
@@ -138,8 +166,8 @@ export class PostgresSyncStore {
   private async ensureCursor(transaction: SqlExecutor, subject: SyncSubject, kind: SyncKind): Promise<string> {
     const id = randomUUID();
     await transaction.query(
-      `INSERT INTO sync_cursors (id, player_id, provider, affinity, queue_scope, sync_kind)
-       VALUES ($1,$2,'HenrikDev',$3,'*',$4)
+      `INSERT INTO sync_cursors (id, player_id, provider, affinity, queue_scope, sync_kind, history_rule_version)
+       VALUES ($1,$2,'HenrikDev',$3,'*',$4,CASE WHEN $4='deep_backfill' THEN 'deep-history-v1' ELSE NULL END)
        ON CONFLICT (player_id, provider, affinity, queue_scope, sync_kind) DO NOTHING`,
       [id, subject.playerId, subject.affinity, kind],
     );
@@ -286,6 +314,8 @@ export class PostgresSyncStore {
     completeForProviderWindow: boolean;
     incompleteReason?: string;
     metrics: SyncChunkMetrics;
+    deep?: DeepCursorState;
+    runStatus?: SyncStatus;
   }): Promise<void> {
     await this.database.transaction(async (transaction) => {
       const consent = await transaction.query<{ id: string }>(
@@ -310,11 +340,19 @@ export class PostgresSyncStore {
            last_successful_page=$8, last_success_at=$9, retry_count=0,
            last_error_category=NULL, last_error_at=NULL, next_attempt_at=NULL,
            coverage_complete_for_provider_window=$10, coverage_incomplete_reason=$11,
+           history_phase=COALESCE($12::jsonb->>'historyPhase',history_phase),
+           stored_page=COALESCE(($12::jsonb->>'storedPage')::integer,stored_page),
+           stored_item_index=COALESCE(($12::jsonb->>'storedItemIndex')::integer,stored_item_index),
+           stored_total=COALESCE(($12::jsonb->>'storedTotal')::integer,stored_total),
+           discovery_page=COALESCE(($12::jsonb->>'discoveryPage')::integer,discovery_page),
+           live_history_exhausted=COALESCE(($12::jsonb->>'liveHistoryExhausted')::boolean,live_history_exhausted),
+           stored_history_exhausted=COALESCE(($12::jsonb->>'storedHistoryExhausted')::boolean,stored_history_exhausted),
+           history_rule_version=CASE WHEN $12::jsonb IS NULL THEN history_rule_version ELSE 'deep-history-v1' END,
            lease_token=NULL, lease_expires_at=NULL, updated_at=$9
          WHERE id=$1 AND lease_token=$2`,
         [input.cursorId, input.leaseToken, input.nextStart, input.coverageFrom ?? null, input.coverageTo ?? null,
           input.boundaryHmac ?? null, input.fingerprintHmac ?? null, input.pageNumber, input.at,
-          input.completeForProviderWindow, input.incompleteReason ?? null],
+          input.completeForProviderWindow, input.incompleteReason ?? null, input.deep ? JSON.stringify(input.deep) : null],
       );
       if (cursor.rowCount !== 1) throw new Error('Sync lease was lost before cursor commit.');
       const terminal = input.terminationReason !== undefined;
@@ -331,16 +369,19 @@ export class PostgresSyncStore {
            last_provider_match_boundary_hmac=COALESCE($6,last_provider_match_boundary_hmac),
            page_count=page_count+1, matches_seen=matches_seen+$7,
            matches_persisted=matches_persisted+$8, overlap_count=overlap_count+$9,
-           provider_request_count=provider_request_count+1, provider_fetch_ms=provider_fetch_ms+$10,
+           provider_request_count=provider_request_count+$17, provider_fetch_ms=provider_fetch_ms+$10,
            normalization_ms=normalization_ms+$11, database_ms=database_ms+$12,
            total_ms=total_ms+$13, sql_query_count=sql_query_count+$14,
-           termination_reason=$15, error_category=NULL, last_error_at=NULL, cursor_start=$16
+           termination_reason=$15, error_category=NULL, last_error_at=NULL, cursor_start=$16,
+           stored_matches_seen=stored_matches_seen+$18, detail_requests=detail_requests+$19,
+           detail_unavailable_count=detail_unavailable_count+$20
          WHERE id=$1 AND status <> 'cancelled'`,
-        [input.runId, terminal ? 'complete' : 'paused', input.at, input.coverageFrom ?? null, input.coverageTo ?? null,
+        [input.runId, input.runStatus ?? (terminal ? 'complete' : 'paused'), input.at, input.coverageFrom ?? null, input.coverageTo ?? null,
           input.boundaryHmac ?? null, input.metrics.returnedMatches, input.metrics.persistedMatches,
           input.metrics.overlapMatches, input.metrics.providerFetchMs, input.metrics.normalizationMs,
           input.metrics.databaseMs, input.metrics.totalMs, input.metrics.sqlQueryCount,
-          input.terminationReason ?? null, input.nextStart],
+          input.terminationReason ?? null, input.nextStart, input.metrics.providerRequests ?? 1,
+          input.metrics.storedMatchesSeen ?? 0, input.metrics.detailRequests ?? 0, input.metrics.detailUnavailableCount ?? 0],
       );
       if (run.rowCount !== 1) throw new PublicApiError(409, 'CONSENT_REVOKED', '同步工作已被撤回程序取消。');
     });
@@ -354,19 +395,25 @@ export class PostgresSyncStore {
     status: SyncStatus;
     at: string;
     nextAttemptAt?: string;
+    metrics?: SyncChunkMetrics;
   }): Promise<void> {
     await this.database.transaction(async (transaction) => {
-      await transaction.query(
+      const cursor = await transaction.query(
         `UPDATE sync_cursors SET retry_count=retry_count+1, last_error_category=$3,
            last_error_at=$4, next_attempt_at=$5, lease_token=NULL, lease_expires_at=NULL, updated_at=$4
          WHERE id=$1 AND lease_token=$2`,
         [input.cursorId, input.leaseToken, input.category, input.at, input.nextAttemptAt ?? null],
       );
+      if (cursor.rowCount !== 1) throw new Error('Sync lease was lost before failure commit.');
       await transaction.query(
         `UPDATE sync_runs SET status=$2, error_category=$3, last_error_at=$4,
-           retry_count=retry_count+1, completed_at=CASE WHEN $2 IN ('failed','cancelled') THEN $4::timestamptz ELSE NULL END
+           retry_count=retry_count+1, completed_at=CASE WHEN $2 IN ('failed','cancelled') THEN $4::timestamptz ELSE NULL END,
+           provider_request_count=provider_request_count+$5,
+           detail_requests=detail_requests+$6,
+           provider_fetch_ms=provider_fetch_ms+$7
          WHERE id=$1 AND status <> 'cancelled'`,
-        [input.runId, input.status, input.category, input.at],
+        [input.runId, input.status, input.category, input.at, input.metrics?.providerRequests ?? 0,
+          input.metrics?.detailRequests ?? 0, input.metrics?.providerFetchMs ?? 0],
       );
     });
   }
@@ -382,6 +429,9 @@ export class PostgresSyncStore {
   async status(publicRunId: string): Promise<PublicSyncStatus | undefined> {
     const result = await this.database.query<StatusRow>(
       `SELECT sr.public_id, sr.sync_kind, sr.status, sr.page_count, sr.matches_seen,
+              sc.history_phase,sc.stored_page,sc.stored_item_index,sc.stored_total,sc.discovery_page,
+              sc.live_history_exhausted,sc.stored_history_exhausted,
+              sr.stored_matches_seen,sr.detail_requests,sr.detail_unavailable_count,
               sr.matches_persisted, sr.overlap_count, sr.retry_count,
               COALESCE(sc.coverage_from,sr.coverage_from) AS coverage_from,
               COALESCE(sc.coverage_to,sr.coverage_to) AS coverage_to,
@@ -404,12 +454,21 @@ export class PostgresSyncStore {
       runId: row.public_id,
       kind: row.sync_kind,
       status: row.status,
+      ...(row.sync_kind === 'deep_backfill' ? { history: {
+        ...deepFromRow(row), ruleVersion: 'deep-history-v1' as const,
+        sourceExhausted: row.history_phase === 'complete' && row.live_history_exhausted && row.stored_history_exhausted,
+        lifetimeComplete: false as const,
+      } } : {}),
       progress: {
         pages: Number(row.page_count),
         matchesSeen: Number(row.matches_seen),
         matchesPersisted: Number(row.matches_persisted),
         overlapsUpdated: Number(row.overlap_count),
         retries: Number(row.retry_count),
+        ...(row.sync_kind === 'deep_backfill' ? {
+          storedMatchesSeen: Number(row.stored_matches_seen), detailRequests: Number(row.detail_requests),
+          detailUnavailableCount: Number(row.detail_unavailable_count),
+        } : {}),
       },
       coverage: {
         from: iso(row.coverage_from),

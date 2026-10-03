@@ -116,6 +116,7 @@ describe('durable database and consent foundation', () => {
       { version: '0004', applied: '1' },
       { version: '0005', applied: '1' },
       { version: '0006', applied: '1' },
+      { version: '0007', applied: '1' },
     ]);
     const cursorColumns = await database.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name='sync_cursors'`,
@@ -140,7 +141,7 @@ describe('durable database and consent foundation', () => {
     await expect(database.query(`INSERT INTO squads (id, slug, display_name) VALUES ('00000000-0000-4000-8000-000000000002','unique-squad','Duplicate')`)).rejects.toThrow();
   });
 
-  it('upgrades an existing 0001-0004 database through 0005 and 0006 and reruns idempotently', async () => {
+  it('upgrades an existing 0001-0004 database through 0007 and reruns idempotently', async () => {
     const existing = new PGliteDatabase(new PGlite());
     try {
       const migrations = await loadMigrations(resolve('migrations'));
@@ -149,11 +150,32 @@ describe('durable database and consent foundation', () => {
         VALUES ('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000102','Upgrade','TW')`);
       await existing.query(`INSERT INTO consents (id,player_id,status,consent_method,privacy_version,consented_at)
         VALUES ('00000000-0000-4000-8000-000000000103','00000000-0000-4000-8000-000000000101','active','self_asserted','old-v1',now())`);
-      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006']);
+      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006', '0007']);
       expect(await applyMigrations(existing, migrations)).toEqual([]);
     } finally {
       await existing.close();
     }
+  });
+
+  it('upgrades populated 0006 sync records to 0007 without resetting legacy cursor, run or evidence', async () => {
+    const existing = new PGliteDatabase(new PGlite());
+    try {
+      const migrations = await loadMigrations(resolve('migrations'));
+      await applyMigrations(existing, migrations.slice(0, 6));
+      const writer = new DurableEvidenceService(existing, hmacKey);
+      const connected = await writer.persistConnection(input, 'consenting-puuid');
+      await writer.persistMatches({ ...input, playerId: connected.publicPlayerId! }, rawPayload());
+      await existing.query(`INSERT INTO sync_cursors (id,player_id,provider,affinity,sync_kind,next_start,retry_count)
+        SELECT '00000000-0000-4000-8000-000000000121',id,'HenrikDev','ap','backfill',159,2 FROM players LIMIT 1`);
+      await existing.query(`INSERT INTO sync_runs (id,squad_id,player_id,provider,trigger_kind,status,started_at,sync_kind,matches_seen)
+        SELECT '00000000-0000-4000-8000-000000000122',squad_id,player_id,'HenrikDev','manual','paused',now(),'backfill',159 FROM squad_memberships LIMIT 1`);
+      expect(await applyMigrations(existing, migrations)).toEqual(['0007']);
+      expect(await applyMigrations(existing, migrations)).toEqual([]);
+      expect((await existing.query('SELECT sync_kind,next_start,retry_count,stored_page,stored_item_index FROM sync_cursors')).rows[0]).toEqual({ sync_kind: 'backfill', next_start: 159, retry_count: 2, stored_page: 1, stored_item_index: 0 });
+      expect((await existing.query('SELECT sync_kind,status,matches_seen FROM sync_runs')).rows[0]).toEqual({ sync_kind: 'backfill', status: 'paused', matches_seen: 159 });
+      expect(await scalar(existing, 'source_matches')).toBe(1);
+      expect(await scalar(existing, 'kill_events')).toBe(1);
+    } finally { await existing.close(); }
   });
 
   it('enforces at most one active consent per player across privacy versions', async () => {

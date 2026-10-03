@@ -1,5 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, loadMigrations } from '../server/db/migrations';
 import type { SqlDatabase, SqlExecutor, SqlResult } from '../server/db/types';
 import { PublicApiError } from '../server/errors';
@@ -8,6 +8,7 @@ import { DurableEvidenceService } from '../server/persistence/durableEvidenceSer
 import { HistoricalSyncService } from '../server/sync/historicalSyncService';
 import { PostgresSyncStore } from '../server/sync/postgresSyncStore';
 import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy';
+import type { HistoricalDiscoveryProvider } from '../server/sync/historicalDiscoveryProvider';
 
 const hmacKey = 'test-sync-hmac-key-with-at-least-32-bytes';
 const connection = {
@@ -56,7 +57,7 @@ function match(index: number, id = `fictional-history-match-${index}`) {
       queue: { id: 'competitive', name: 'Competitive' },
     },
     players: [{
-      puuid: 'fictional-consenting-participant', name: connection.gameName, tag: connection.tag,
+      puuid: 'fictional-consenting-participant', name: String(connection.gameName), tag: connection.tag,
       team_id: 'Blue', agent: { id: 'agent-id', name: 'Sova' },
       stats: { kills: 0, deaths: 0, assists: 0, score: 0, headshots: 0, bodyshots: 0, legshots: 0, damage: { dealt: 0, received: 0 } },
     }],
@@ -70,6 +71,23 @@ function match(index: number, id = `fictional-history-match-${index}`) {
 }
 
 const page = (...matches: ReturnType<typeof match>[]) => ({ status: 200, data: matches });
+
+class DeepFixtureProvider extends FixtureProvider implements HistoricalDiscoveryProvider {
+  storedCalls = 0;
+  detailCalls = 0;
+  detailFailure?: PublicApiError;
+  constructor(pages: Map<number, unknown>, readonly storedPages = new Map<number, number[]>()) { super(pages); }
+  async fetchStoredIndexPage(_input: unknown, number: number) {
+    this.storedCalls += 1;
+    const entries = this.storedPages.get(number) ?? [];
+    return { data: entries.map((index) => ({ meta: { id: match(index).metadata.match_id } })) };
+  }
+  async fetchMatchDetail(_input: unknown, id: string) {
+    this.detailCalls += 1;
+    if (this.detailFailure) throw this.detailFailure;
+    return { status: 200, data: match(Number(id.split('-').at(-1))) };
+  }
+}
 
 async function count(database: SqlDatabase, table: string): Promise<number> {
   const result = await database.query<{ count: string }>(`SELECT count(*)::text AS count FROM ${table}`);
@@ -92,6 +110,175 @@ describe('bounded historical synchronization', () => {
   });
 
   afterEach(async () => { await database.close(); });
+
+  it('deep cursor budget exhaustion makes no provider call and does not advance', async () => {
+    const provider = new DeepFixtureProvider(new Map());
+    let clock = 0;
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey, { usefulWorkBudgetMs: 25, monotonicNow: () => { clock += 30; return clock; } });
+    await expect(service.start(publicPlayerId, 'deep_backfill')).rejects.toMatchObject({ code: 'PROVIDER_TIMEOUT' });
+    expect(provider.calls).toBe(0);
+    expect((await database.query('SELECT next_start,history_rule_version FROM sync_cursors')).rows[0]).toEqual({ next_start: 0, history_rule_version: 'deep-history-v1' });
+  });
+
+  it('deep full overlap advances to older unique matches without rewriting legacy backfill', async () => {
+    await durable.persistMatches({ ...connection, playerId: publicPlayerId, limit: 3 }, page(match(0), match(1), match(2)));
+    const provider = new DeepFixtureProvider(new Map([[0, page(match(0), match(1), match(2))], [3, page(match(3), match(4), match(5))]]));
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    const first = await service.start(publicPlayerId, 'deep_backfill');
+    expect(first).toMatchObject({ status: 'paused', progress: { overlapsUpdated: 3 }, history: { historyPhase: 'live_v4', lifetimeComplete: false } });
+    const second = await service.continue(first.runId);
+    expect(second.status).toBe('paused');
+    expect(await count(database, 'source_matches')).toBe(6);
+    const third = await service.continue(first.runId);
+    expect(third).toMatchObject({ status: 'paused', history: { historyPhase: 'stored_index', liveHistoryExhausted: true, sourceExhausted: false } });
+    const final = await service.continue(first.runId);
+    expect(final).toMatchObject({ status: 'complete', terminationReason: 'source_exhausted', history: { sourceExhausted: true, lifetimeComplete: false } });
+  });
+
+  it('P2 continues past matches already stored by consenting P1 and attaches both shared participants', async () => {
+    const other = { ...connection, gameName: 'OtherGoblin' };
+    const connected = await durable.persistConnection(other, 'fictional-other-participant');
+    const shared = (index: number) => {
+      const value = match(index);
+      value.players.push({ ...value.players[0]!, puuid: 'fictional-other-participant', name: other.gameName });
+      return value;
+    };
+    await durable.persistMatches({ ...connection, playerId: publicPlayerId, limit: 3 }, page(shared(0), shared(1), shared(2)));
+    const older = match(3);
+    older.players[0] = { ...older.players[0]!, puuid: 'fictional-other-participant', name: other.gameName };
+    const provider = new DeepFixtureProvider(new Map([[0, page(shared(0), shared(1), shared(2))], [3, page(older)]]));
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    const first = await service.start(connected.publicPlayerId!, 'deep_backfill');
+    const second = await service.continue(first.runId);
+    expect(second).toMatchObject({ status: 'paused', progress: { overlapsUpdated: 3 }, history: { historyPhase: 'stored_index' } });
+    expect(await count(database, 'source_matches')).toBe(4);
+    const links = await database.query<{ count: string }>('SELECT count(*)::text AS count FROM match_participants WHERE player_id IS NOT NULL');
+    expect(Number(links.rows[0]!.count)).toBe(7);
+    expect(provider.calls).toBe(2);
+  });
+
+  it.each([
+    [429, 'RATE_LIMITED'], [504, 'PROVIDER_TIMEOUT'], [502, 'PROVIDER_ERROR'],
+  ] as const)('detail %i persists backoff without advancing stored cursor or making hidden retries', async (status, code) => {
+    let now = new Date('2026-10-03T00:00:00Z');
+    const provider = new DeepFixtureProvider(new Map(), new Map([[1, [8]]]));
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey, { now: () => now });
+    const first = await service.start(publicPlayerId, 'deep_backfill');
+    provider.detailFailure = new PublicApiError(status, code, 'synthetic detail failure');
+    await expect(service.continue(first.runId)).rejects.toMatchObject({ code });
+    expect(await service.status(first.runId)).toMatchObject({ status: 'paused', history: { storedPage: 1, storedItemIndex: 0, sourceExhausted: false }, performance: { providerRequests: 3 }, progress: { detailRequests: 1 } });
+    await expect(service.continue(first.runId)).rejects.toMatchObject({ code: 'SYNC_BACKOFF' });
+    expect(provider.detailCalls).toBe(1);
+    provider.detailFailure = undefined;
+    now = new Date('2026-10-03T00:01:01Z');
+    const final = await service.continue(first.runId);
+    expect(final).toMatchObject({ status: 'complete', history: { sourceExhausted: true, lifetimeComplete: false } });
+    expect(await count(database, 'source_matches')).toBe(1);
+  });
+
+  it('stored counters distinguish a full final page from a repeated provider page', async () => {
+    const provider = new DeepFixtureProvider(new Map(), new Map([[1, [0, 1, 2]]]));
+    const original = provider.fetchStoredIndexPage.bind(provider);
+    vi.spyOn(provider, 'fetchStoredIndexPage').mockImplementation(async (input, number) => ({
+      ...await original(input, number), results: { total: 3, returned: 3, before: 0, after: 0 },
+    }));
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    let progress = await service.start(publicPlayerId, 'deep_backfill');
+    for (let index = 0; index < 3; index += 1) progress = await service.continue(progress.runId);
+    expect(progress).toMatchObject({ status: 'complete', history: { storedTotal: 3, storedPage: 1, storedItemIndex: 3 } });
+    expect(provider.storedCalls).toBe(3);
+    expect(provider.detailCalls).toBe(3);
+  });
+
+  it('a repeated stored page is stalled, not exhausted, and never fabricates compact-index evidence', async () => {
+    await durable.persistMatches({ ...connection, playerId: publicPlayerId, limit: 3 }, page(match(0), match(1), match(2)));
+    const provider = new DeepFixtureProvider(new Map(), new Map([[1, [0, 1, 2]], [2, [0, 1, 2]]]));
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    let progress = await service.start(publicPlayerId, 'deep_backfill');
+    progress = await service.continue(progress.runId);
+    progress = await service.continue(progress.runId);
+    expect(progress).toMatchObject({ status: 'failed', terminationReason: 'provider_repeated_page', history: { sourceExhausted: false, storedHistoryExhausted: false } });
+    expect(provider.detailCalls).toBe(0);
+    expect(await count(database, 'source_matches')).toBe(3);
+  });
+
+  it('deep history persists >300 synthetic matches with no configured horizon', async () => {
+    const pages = new Map<number, unknown>();
+    for (let start = 0; start < 303; start += 3) pages.set(start, page(match(start), match(start + 1), match(start + 2)));
+    const provider = new DeepFixtureProvider(pages);
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey, { historyHorizon: 3 });
+    let progress = await service.start(publicPlayerId, 'deep_backfill');
+    while (progress.history?.historyPhase === 'live_v4') progress = await service.continue(progress.runId);
+    expect(progress.progress.matchesPersisted).toBe(303);
+    expect(progress.status).toBe('paused');
+    expect(await count(database, 'source_matches')).toBe(303);
+    expect(provider.calls).toBe(102);
+    expect((await service.continue(progress.runId)).history?.sourceExhausted).toBe(true);
+  }, 30_000);
+
+  it('short live phase transitions then stored A/B/C overlaps recover older D/E detail one per invocation', async () => {
+    const provider = new DeepFixtureProvider(new Map([[0, page(match(0), match(1))]]), new Map([[1, [0, 1, 2]], [2, [3, 4]]]));
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    let progress = await service.start(publicPlayerId, 'deep_backfill');
+    expect(progress).toMatchObject({ status: 'paused', history: { historyPhase: 'stored_index' } });
+    for (let attempt = 0; attempt < 5 && progress.status !== 'complete'; attempt += 1) {
+      const before = provider.detailCalls;
+      progress = await service.continue(progress.runId);
+      expect(provider.detailCalls - before).toBeLessThanOrEqual(1);
+    }
+    expect(progress).toMatchObject({ status: 'complete', progress: { matchesPersisted: 5, overlapsUpdated: 2, detailRequests: 3 } });
+    expect(await count(database, 'source_matches')).toBe(5);
+    expect(JSON.stringify(progress)).not.toContain('fictional-history-match');
+  });
+
+  it('permanent missing detail advances without fabricated evidence', async () => {
+    const provider = new DeepFixtureProvider(new Map(), new Map([[1, [5]]]));
+    provider.detailFailure = new PublicApiError(404, 'ACCOUNT_NOT_FOUND', 'Unavailable');
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    const first = await service.start(publicPlayerId, 'deep_backfill');
+    const second = await service.continue(first.runId);
+    expect(second).toMatchObject({ status: 'complete', progress: { detailUnavailableCount: 1, matchesPersisted: 0 } });
+    expect(await count(database, 'source_matches')).toBe(0);
+  });
+
+  it('stored crash resume keeps page/item and safely repeats a committed detail after lost cursor commit', async () => {
+    const provider = new DeepFixtureProvider(new Map(), new Map([[1, [5, 6]]]));
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    const first = await service.start(publicPlayerId, 'deep_backfill');
+    const failure = vi.spyOn(store, 'recordSuccess').mockRejectedValueOnce(new Error('crash before cursor commit'));
+    await expect(service.continue(first.runId)).rejects.toMatchObject({ code: 'DATABASE_ERROR' });
+    failure.mockRestore();
+    expect(await count(database, 'source_matches')).toBe(1);
+    const position = await database.query<{ stored_page: number; stored_item_index: number }>("SELECT stored_page,stored_item_index FROM sync_cursors WHERE sync_kind='deep_backfill'");
+    expect(position.rows[0]).toMatchObject({ stored_page: 1, stored_item_index: 0 });
+    const resumed = await service.continue(first.runId);
+    expect(resumed.status).toBe('complete');
+    expect(await count(database, 'source_matches')).toBe(2);
+    expect(provider.detailCalls).toBe(2);
+  });
+
+  it('deep repeated live page is a failed stall, never source exhaustion', async () => {
+    const same = page(match(0), match(1), match(2));
+    const provider = new DeepFixtureProvider(new Map([[0, same], [3, same]]));
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    const first = await service.start(publicPlayerId, 'deep_backfill');
+    expect(await service.continue(first.runId)).toMatchObject({ status: 'failed', terminationReason: 'provider_repeated_page', history: { sourceExhausted: false } });
+  });
+
+  it('revocation between stored index and detail prevents that detail call and cancels run', async () => {
+    const provider = new DeepFixtureProvider(new Map(), new Map([[1, [5]]]));
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    const first = await service.start(publicPlayerId, 'deep_backfill');
+    const fetch = provider.fetchStoredIndexPage.bind(provider);
+    provider.fetchStoredIndexPage = async (...args) => {
+      const value = await fetch(...args);
+      await database.query("UPDATE consents SET status='revoked',revoked_at=now() WHERE status='active'");
+      return value;
+    };
+    await expect(service.continue(first.runId)).rejects.toMatchObject({ code: 'CONSENT_REVOKED' });
+    expect(provider.detailCalls).toBe(0);
+    expect((await service.status(first.runId)).status).toBe('cancelled');
+  });
 
   it('creates a cursor, pauses after one bounded page, and resumes to short-page termination', async () => {
     const provider = new FixtureProvider(new Map([

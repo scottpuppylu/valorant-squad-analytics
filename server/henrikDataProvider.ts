@@ -198,6 +198,14 @@ export class HenrikDataProvider implements ValorantDataProvider {
     );
   }
 
+  async fetchStoredIndexPage(input: ConnectionInput, page: number, size: number): Promise<unknown> {
+    return this.request(`/valorant/v1/stored-matches/${encodeURIComponent(input.affinity)}/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`, { size: String(size), page: String(page) });
+  }
+
+  async fetchMatchDetail(input: ConnectionInput, matchId: string): Promise<unknown> {
+    return this.request(`/valorant/v4/match/${encodeURIComponent(input.affinity)}/${encodeURIComponent(matchId)}`);
+  }
+
   async auditEvidence(input: MatchImportInput): Promise<ProviderEvidenceAuditResult> {
     const firstHistory = await this.request(
       `/valorant/v4/matches/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`,

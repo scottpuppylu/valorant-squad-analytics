@@ -1,4 +1,14 @@
-export type SyncKind = 'backfill' | 'incremental';
+export type SyncKind = 'backfill' | 'incremental' | 'deep_backfill';
+export type HistoryPhase = 'live_v4' | 'stored_index' | 'complete';
+export interface DeepCursorState {
+  historyPhase: HistoryPhase;
+  storedPage: number;
+  storedItemIndex: number;
+  storedTotal?: number;
+  discoveryPage?: number;
+  liveHistoryExhausted: boolean;
+  storedHistoryExhausted: boolean;
+}
 export type SyncStatus = 'pending' | 'running' | 'paused' | 'complete' | 'failed' | 'cancelled';
 export type SyncErrorCategory =
   | 'RATE_LIMITED'
@@ -15,7 +25,9 @@ export type SyncTerminationReason =
   | 'known_boundary'
   | 'repeated_page'
   | 'no_older_unique_matches'
-  | 'configured_horizon';
+  | 'configured_horizon'
+  | 'source_exhausted'
+  | 'provider_repeated_page';
 
 export interface SyncSubject {
   playerId: string;
@@ -27,6 +39,7 @@ export interface SyncSubject {
 }
 
 export interface SyncCursorRecord {
+  deep?: DeepCursorState;
   id: string;
   playerId: string;
   kind: SyncKind;
@@ -53,6 +66,10 @@ export interface SyncRunRecord {
 }
 
 export interface SyncChunkMetrics {
+  providerRequests?: number;
+  storedMatchesSeen?: number;
+  detailRequests?: number;
+  detailUnavailableCount?: number;
   providerFetchMs: number;
   normalizationMs: number;
   databaseMs: number;
@@ -64,6 +81,7 @@ export interface SyncChunkMetrics {
 }
 
 export interface PublicSyncStatus {
+  history?: DeepCursorState & { ruleVersion: 'deep-history-v1'; sourceExhausted: boolean; lifetimeComplete: false };
   runId: string;
   kind: SyncKind;
   status: SyncStatus;
@@ -73,6 +91,9 @@ export interface PublicSyncStatus {
     matchesPersisted: number;
     overlapsUpdated: number;
     retries: number;
+    storedMatchesSeen?: number;
+    detailRequests?: number;
+    detailUnavailableCount?: number;
   };
   coverage: {
     from?: string;

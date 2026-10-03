@@ -19,7 +19,7 @@ export function createHistoricalSyncService(): HistoricalSyncService {
   singleton = new HistoricalSyncService(
     new PostgresSyncStore(database),
     new DurableEvidenceService(database, hmacKey),
-    new HenrikDataProvider(apiKey),
+    new HenrikDataProvider(apiKey, { retries: 0 }),
     hmacKey,
   );
   return singleton;

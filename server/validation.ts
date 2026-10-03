@@ -71,7 +71,7 @@ function publicUuid(value: unknown, label: string): string {
 
 export function parseSyncStartInput(value: unknown): { playerId: string; kind: SyncKind } {
   const body = asRecord(value);
-  const kind = body.kind === 'incremental' ? 'incremental' : body.kind === 'backfill' ? 'backfill' : undefined;
+  const kind = body.kind === 'incremental' ? 'incremental' : body.kind === 'backfill' ? 'backfill' : body.kind === 'deep_backfill' ? 'deep_backfill' : undefined;
   if (!kind) throw new PublicApiError(400, 'BAD_REQUEST', '同步類型不正確。');
   return { playerId: publicUuid(body.playerId, '玩家識別碼'), kind };
 }
