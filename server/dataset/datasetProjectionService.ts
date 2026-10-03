@@ -241,11 +241,15 @@ export class DatasetProjectionService {
         const player = playerRowByInternalId.get(row.internal_player_id);
         const reconstructed = reconstruction.players.get(row.internal_participant_id)?.metrics;
         const observedRounds = matchRounds.length;
+        const visibleRoundIds = new Set(matchRoundParticipants
+          .filter((presence) => presence.internal_participant_id === row.internal_participant_id && presence.present)
+          .map((presence) => presence.internal_round_id));
+        const basicRoundEvidenceComplete = observedRounds > 0
+          && matchRounds.every((round) => visibleRoundIds.has(round.internal_round_id));
         if (!reconstructed?.kast.value || !reconstructed.opening.value) completeRoundEvidence = false;
         if (!player || row.stats_evidence_status !== 'observed' || !row.agent_name
           || !finite(row.kills) || !finite(row.deaths) || !finite(row.assists)
-          || !finite(row.score) || !finite(row.damage_dealt) || observedRounds === 0
-          || !reconstructed?.kast.value || !reconstructed.opening.value) return [];
+          || !finite(row.score) || !finite(row.damage_dealt) || !basicRoundEvidenceComplete) return [];
         let headshotPercentage: number | undefined;
         if (finite(row.headshots) && finite(row.bodyshots) && finite(row.legshots)) {
           const shotTotal = row.headshots + row.bodyshots + row.legshots;
@@ -265,11 +269,17 @@ export class DatasetProjectionService {
           assists: row.assists,
           acs: row.score / observedRounds,
           adr: row.damage_dealt / observedRounds,
-          kast: reconstructed.kast.value.rate,
+          eventEvidence: {
+            kast: reconstructed?.kast.status === 'reconstructed' ? 'reconstructed' : reconstructed?.kast.status === 'partial' ? 'partial' : 'unavailable',
+            opening: reconstructed?.opening.status === 'reconstructed' ? 'reconstructed' : reconstructed?.opening.status === 'partial' ? 'partial' : 'unavailable',
+          },
+          ...(reconstructed?.kast.status === 'reconstructed' && reconstructed.kast.value ? { kast: reconstructed.kast.value.rate } : {}),
           ...(headshotPercentage === undefined ? {} : { headshotPercentage }),
-          firstKills: reconstructed.opening.value.firstKills,
-          firstDeaths: reconstructed.opening.value.firstDeaths,
-          advancedMetrics: publicAdvancedMetrics(reconstructed),
+          ...(reconstructed?.opening.status === 'reconstructed' && reconstructed.opening.value ? {
+            firstKills: reconstructed.opening.value.firstKills,
+            firstDeaths: reconstructed.opening.value.firstDeaths,
+          } : {}),
+          ...(reconstructed ? { advancedMetrics: publicAdvancedMetrics(reconstructed) } : {}),
         }];
       });
       if (performances.length === 0) continue;
@@ -301,7 +311,7 @@ export class DatasetProjectionService {
       });
     }
     matches.sort((a, b) => b.playedAt.localeCompare(a.playedAt) || a.id.localeCompare(b.id));
-    const dataset = { players, matches, sourceId: 'durable-neon-v3', isDemo: false as const, mode: 'REAL' as const };
+    const dataset = { players, matches, sourceId: 'durable-neon-v4', isDemo: false as const, mode: 'REAL' as const };
     const availability = {
       acs: 'derived' as const,
       adr: 'derived' as const,
@@ -318,12 +328,12 @@ export class DatasetProjectionService {
       boundedMatchLimit: datasetWindowSize,
       lifetimeComplete: false as const,
     };
-    const version = createHash('sha256').update(JSON.stringify({ dataset, coverage, evidence: availability })).digest('base64url').slice(0, 24);
+    const version = createHash('sha256').update(JSON.stringify({ schemaVersion: datasetSchemaVersion, projectionVersion: datasetProjectionVersion, dataset, coverage, evidence: availability })).digest('base64url').slice(0, 24);
     const payload = {
       ok: true as const,
       schemaVersion: datasetSchemaVersion,
       state: matches.length === 0 ? 'empty' as const : 'ready' as const,
-      snapshot: { version, generation: 'dataset-read-v3' as const, source: 'durable-neon' as const, projectionVersion: datasetProjectionVersion },
+      snapshot: { version, generation: 'dataset-read-v4' as const, source: 'durable-neon' as const, projectionVersion: datasetProjectionVersion },
       coverage,
       evidence: availability,
       dataset,

@@ -12,16 +12,20 @@ function summarize(id: string, label: string, entries: PerformanceEntry[]): Grou
   const rounds = entries.reduce((sum, entry) => sum + entry.rounds, 0);
   const kills = entries.reduce((sum, entry) => sum + entry.performance.kills, 0);
   const deaths = entries.reduce((sum, entry) => sum + entry.performance.deaths, 0);
-  const weighted = (key: 'acs' | 'adr' | 'kast') => safeDivide(
+  const weighted = (key: 'acs' | 'adr') => safeDivide(
     entries.reduce((sum, entry) => sum + entry.performance[key] * entry.rounds, 0), rounds,
   );
+  const kastEntries = entries.filter((entry) => entry.performance.kast !== undefined
+    && (!entry.performance.eventEvidence || entry.performance.eventEvidence.kast === 'reconstructed'));
+  const kastRounds = kastEntries.reduce((sum, entry) => sum + entry.rounds, 0);
+  const kast = kastRounds > 0 ? kastEntries.reduce((sum, entry) => entry.performance.kast === undefined ? sum : sum + entry.performance.kast * entry.rounds, 0) / kastRounds : undefined;
   return {
     id, label, appearances: entries.length,
     matches: new Set(entries.map((entry) => entry.match.id)).size,
     rounds, players: new Set(entries.map((entry) => entry.playerId)).size,
     wins: entries.filter((entry) => entry.match.won).length,
     winRate: safeDivide(entries.filter((entry) => entry.match.won).length, entries.length),
-    acs: weighted('acs'), adr: weighted('adr'), kd: deaths > 0 ? kills/deaths : undefined, kast: weighted('kast'),
+    acs: weighted('acs'), adr: weighted('adr'), kd: deaths > 0 ? kills/deaths : undefined, kast,
   };
 }
 

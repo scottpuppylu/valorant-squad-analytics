@@ -15,8 +15,9 @@ export const canonicalPair = (a: string, b: string) => {
 };
 interface Appearance { match: MatchRecord; performance: MatchPerformance }
 function usable(p: MatchPerformance): boolean {
-  return (p.teamGroup === 'A' || p.teamGroup === 'B') && [p.kills, p.deaths, p.assists, p.acs, p.adr, p.kast]
-    .every((value) => Number.isFinite(value) && value >= 0) && p.kast <= 1;
+  return (p.teamGroup === 'A' || p.teamGroup === 'B') && [p.kills, p.deaths, p.assists, p.acs, p.adr]
+    .every((value) => Number.isFinite(value) && value >= 0)
+    && (p.kast === undefined || Number.isFinite(p.kast) && p.kast >= 0 && p.kast <= 1);
 }
 const roundsFor = (p: MatchPerformance, m: MatchRecord) => p.teamRoundsWon !== undefined && p.teamRoundsLost !== undefined
   ? p.teamRoundsWon + p.teamRoundsLost : m.scoreFor + m.scoreAgainst;
@@ -40,7 +41,8 @@ function windowFor(player: Player, entries: Appearance[]): PairWindow {
   const rounds = entries.reduce((total, { match, performance: p }) => total + roundsFor(p, match), 0);
   const kastEntries = entries.filter(({ match, performance: p }) => {
     const coverage = p.advancedMetrics?.coverage;
-    return roundsFor(p, match) > 0 && (!p.advancedMetrics || p.advancedMetrics.ruleVersion === 'event-metrics-v1'
+    return p.kast !== undefined && Number.isFinite(p.kast) && (!p.eventEvidence || p.eventEvidence.kast === 'reconstructed')
+      && roundsFor(p, match) > 0 && (!p.advancedMetrics || p.advancedMetrics.ruleVersion === 'event-metrics-v1'
       && coverage?.eligibleRounds === roundsFor(p, match) && coverage.reconstructedRounds === roundsFor(p, match) && coverage.omittedRounds === 0);
   });
   const kastRounds = kastEntries.reduce((total, { match, performance: p }) => total + roundsFor(p, match), 0);
@@ -48,7 +50,7 @@ function windowFor(player: Player, entries: Appearance[]): PairWindow {
   const outcomeEntries = entries.filter(({ performance: p }) => typeof p.teamWon === 'boolean');
   const outcomesValid = entries.length > 0 && outcomeEntries.length === entries.length;
   return { matches: entries.length, rounds, overall,
-    kast: kastValid ? kastEntries.reduce((total, { match, performance: p }) => total + p.kast * roundsFor(p, match), 0) / kastRounds : undefined,
+    kast: kastValid ? kastEntries.reduce((total, { match, performance: p }) => p.kast === undefined ? total : total + p.kast * roundsFor(p, match), 0) / kastRounds : undefined,
     kastStatus: !kastValid ? 'unavailable' : kastRounds === rounds ? 'available' : 'partial',
     winRate: outcomesValid ? outcomeEntries.filter((e) => e.performance.teamWon).length / entries.length : undefined,
     winRateStatus: outcomesValid ? 'available' : 'unavailable' };

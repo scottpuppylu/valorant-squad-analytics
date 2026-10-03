@@ -44,7 +44,7 @@ export function aggregatePlayerStats(player: Player, matches: MatchRecord[]): Ra
   const clutchWins = sumOptional(entries, ({ performance }) => performance.clutchWins);
   const acs = weightedAverage(entries, ({ performance }) => performance.acs, ({ match }) => match.scoreFor + match.scoreAgainst) ?? 0;
   const adr = weightedAverage(entries, ({ performance }) => performance.adr, ({ match }) => match.scoreFor + match.scoreAgainst) ?? 0;
-  const kast = weightedAverage(entries, ({ performance }) => performance.kast, ({ match }) => match.scoreFor + match.scoreAgainst) ?? 0;
+  const kast = weightedAverage(entries, ({ performance }) => performance.eventEvidence && performance.eventEvidence.kast !== 'reconstructed' ? undefined : performance.kast, ({ match }) => match.scoreFor + match.scoreAgainst);
   const headshotPercentage = weightedAverage(entries, ({ performance }) => performance.headshotPercentage, ({ performance }) => Math.max(performance.kills, 1));
 
   return {

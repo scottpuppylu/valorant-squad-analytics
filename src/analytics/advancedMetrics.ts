@@ -72,8 +72,8 @@ export function aggregateAdvancedMetrics(performances: MatchPerformance[]): Aggr
   }
   const eligible = coverage.eligibleRounds;
   const reconstructed = coverage.reconstructedRounds;
-  const invalidKast = inputs.some(({performance,advanced}) => !Number.isFinite(performance.kast) || performance.kast<0 || performance.kast>1 || !Number.isFinite(advanced.coverage.reconstructedRounds));
-  const qualified = inputs.reduce((sum,{advanced,performance}) => sum+(Number.isFinite(performance.kast) ? performance.kast : 0)*(advanced.coverage.reconstructedRounds ?? 0),0);
+  const invalidKast = inputs.some(({performance,advanced}) => performance.kast === undefined || !Number.isFinite(performance.kast) || performance.kast<0 || performance.kast>1 || performance.eventEvidence && performance.eventEvidence.kast !== 'reconstructed' || !Number.isFinite(advanced.coverage.reconstructedRounds));
+  const qualified = inputs.reduce((sum,{advanced,performance}) => sum+(performance.kast !== undefined && Number.isFinite(performance.kast) ? performance.kast : 0)*(advanced.coverage.reconstructedRounds ?? 0),0);
   const kast: MetricEvidence<KastMetrics> = {ruleVersion,coverage,status:invalidKast ? 'unavailable' : reconstructed > 0 ? coverage.omittedRounds > 0 || reconstructed < eligible || inputs.length !== performances.length ? 'partial' : 'reconstructed' : 'unavailable',
     ...(!invalidKast && reconstructed > 0 ? {value:{qualifiedRounds:qualified,eligibleRounds:reconstructed,rate:qualified/reconstructed}} : {})};
   return {ruleVersion,coverage,trade,kast,clutch,economy,

@@ -32,6 +32,8 @@ function observe(metric: ComponentMetric, entries: Entry[]): Observation {
       : metric === 'kd' || metric === 'kpr' ? 'kills' : metric === 'apr' ? 'assists' : metric;
     eligible = entries.filter(({performance,rounds}) => rounds > 0 && finite(performance[field as keyof MatchPerformance])
       && (metric !== 'kd' || finite(performance.deaths))
+      && (!performance.eventEvidence || !['kast','firstKillsPerRound','fdpr'].includes(metric)
+        || performance.eventEvidence[metric === 'kast' ? 'kast' : 'opening'] === 'reconstructed')
       && (!['kast','firstKillsPerRound','fdpr'].includes(metric) || !performance.advancedMetrics
         || performance.advancedMetrics.ruleVersion === 'event-metrics-v1' && performance.advancedMetrics.coverage.eligibleRounds === rounds && performance.advancedMetrics.coverage.reconstructedRounds === rounds && performance.advancedMetrics.coverage.omittedRounds === 0));
     denominator = sum(eligible.map((entry) => entry.rounds));
@@ -49,8 +51,9 @@ function observe(metric: ComponentMetric, entries: Entry[]): Observation {
     eligible = entries.filter(({performance,rounds}) => {
       const advanced = performance.advancedMetrics;
       return advanced?.ruleVersion === 'event-metrics-v1' && complete(advanced.evidence[domain])
-        && advanced.coverage.eligibleRounds === rounds && advanced.coverage.reconstructedRounds === rounds
-        && advanced.coverage.omittedRounds === 0;
+        && advanced.coverage.eligibleRounds === rounds
+        && (domain === 'economy' || domain === 'objectives'
+          || advanced.coverage.reconstructedRounds === rounds && advanced.coverage.omittedRounds === 0);
     });
     denominator = sum(eligible.map((entry) => entry.rounds));
     const advanced = aggregateAdvancedMetrics(eligible.map((entry) => entry.performance));
@@ -101,8 +104,9 @@ function component(metric: ComponentMetric, weight: number, entries: Entry[], ro
 }
 function consistency(entries: Entry[], sample: ScoreResult['sample']): ScoreResult {
   const valid = entries.filter(({performance,rounds}) => rounds > 0 && finite(performance.acs) && finite(performance.kast)
+    && (!performance.eventEvidence || performance.eventEvidence.kast === 'reconstructed')
     && (!performance.advancedMetrics || performance.advancedMetrics.coverage.reconstructedRounds === rounds && performance.advancedMetrics.coverage.omittedRounds === 0));
-  const acs=valid.map(({performance}) => performance.acs), kast=valid.map(({performance}) => performance.kast);
+  const acs=valid.map(({performance}) => performance.acs), kast=valid.flatMap(({performance}) => finite(performance.kast) ? [performance.kast] : []);
   const mean=acs.length ? sum(acs)/acs.length : 0;
   const coverage=entries.length ? valid.length/entries.length : 0;
   const rawValues: Partial<Record<ComponentMetric,number>> = valid.length>=5 && coverage>=.7 ? { ...(mean>0 ? {acsCv:standardDeviation(acs)/mean} : {}),kastSd:standardDeviation(kast)} : {};

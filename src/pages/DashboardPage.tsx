@@ -51,7 +51,7 @@ export function DashboardPage() {
           </div>
           <div className="relative z-10 mt-5 grid grid-cols-3 gap-3 border-t border-white/10 pt-5">
             <div><p className="metric-label"><MetricInfo metricId="kd" /></p><p className="stat-value">{formatRatio(leader.stats.kd)}</p></div>
-            <div><p className="metric-label"><MetricInfo metricId="kast" /></p><p className="stat-value">{formatPercent(leader.stats.kast)}</p></div>
+            <div><p className="metric-label"><MetricInfo metricId="kast" /></p><p className="stat-value">{(leader.stats.kast === undefined ? '—' : formatPercent(leader.stats.kast))}</p></div>
             <div><p className="metric-label"><MetricInfo metricId="win-rate" label="小隊勝率" /></p><p className="stat-value">{formatPercent(teamWinRate)}</p></div>
           </div>
         </article>

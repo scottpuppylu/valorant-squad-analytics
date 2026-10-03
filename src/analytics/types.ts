@@ -52,7 +52,7 @@ export interface GroupSummary {
   acs: number;
   adr: number;
   kd?: number;
-  kast: number;
+  kast?: number;
 }
 
 export interface RecentForm {

@@ -2,7 +2,7 @@ import type { MatchRecord } from '../../types/valorant';
 
 const integer = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 const optionalInteger = (value: unknown) => value === undefined || integer(value);
-const performanceKeys = new Set(['playerId','agent','kills','deaths','assists','acs','adr','kast','headshotPercentage','firstKills','firstDeaths','clutchAttempts','clutchWins','advancedMetrics','teamGroup','teamWon','teamRoundsWon','teamRoundsLost']);
+const performanceKeys = new Set(['playerId','agent','kills','deaths','assists','acs','adr','kast','eventEvidence','headshotPercentage','firstKills','firstDeaths','clutchAttempts','clutchWins','advancedMetrics','teamGroup','teamWon','teamRoundsWon','teamRoundsLost']);
 const pairKeys = new Set(['ruleVersion','status','reconstructedRounds','pairs']);
 
 /** Reject, rather than retain, malformed identity/topology at the new public boundary. */
@@ -14,7 +14,10 @@ export function validSynergyContract(match: MatchRecord, publicPlayerIds: Set<st
     if (p.teamGroup !== undefined && p.teamGroup !== 'A' && p.teamGroup !== 'B') return false;
     if (p.teamWon !== undefined && typeof p.teamWon !== 'boolean') return false;
     if (!optionalInteger(p.teamRoundsWon) || !optionalInteger(p.teamRoundsLost)) return false;
-    if (typeof p.agent !== 'string' || ![p.kills,p.deaths,p.assists,p.acs,p.adr,p.kast].every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0) || p.kast > 1) return false;
+    if (typeof p.agent !== 'string' || !p.agent || ![p.kills,p.deaths,p.assists,p.acs,p.adr].every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0)) return false;
+    if (p.kast !== undefined && (typeof p.kast !== 'number' || !Number.isFinite(p.kast) || p.kast < 0 || p.kast > 1)) return false;
+    if (!optionalInteger(p.firstKills) || !optionalInteger(p.firstDeaths)) return false;
+    if (p.headshotPercentage !== undefined && (typeof p.headshotPercentage !== 'number' || !Number.isFinite(p.headshotPercentage) || p.headshotPercentage < 0 || p.headshotPercentage > 1)) return false;
   }
   if (match.synergyEvidence === undefined) return true;
   const evidence = match.synergyEvidence;

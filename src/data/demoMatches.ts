@@ -115,7 +115,7 @@ function buildMatch(index: number): MatchRecord {
       return { ...performance, teamGroup, teamWon: sameSide ? won : !won,
         teamRoundsWon: sameSide ? scoreFor : scoreAgainst, teamRoundsLost: sameSide ? scoreAgainst : scoreFor,
         acs: performance.acs * (1 + delta), adr: performance.adr * (1 + delta),
-        kast: clamp(performance.kast + delta * .4, 0, 1) };
+        ...(performance.kast === undefined ? {} : { kast: clamp(performance.kast + delta * .4, 0, 1) }) };
     }),
   };
 }

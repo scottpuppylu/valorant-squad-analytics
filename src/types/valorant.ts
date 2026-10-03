@@ -35,7 +35,11 @@ export interface MatchPerformance {
   assists: number;
   acs: number;
   adr: number;
-  kast: number;
+  kast?: number;
+  eventEvidence?: {
+    kast: 'reconstructed' | 'partial' | 'unavailable';
+    opening: 'reconstructed' | 'partial' | 'unavailable';
+  };
   headshotPercentage?: number;
   firstKills?: number;
   firstDeaths?: number;
@@ -90,7 +94,7 @@ export interface RawPlayerStats {
   kd?: number;
   kpr: number;
   apr: number;
-  kast: number;
+  kast?: number;
   headshotPercentage?: number;
   firstKills?: number;
   firstDeaths?: number;

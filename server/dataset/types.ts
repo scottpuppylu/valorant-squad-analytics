@@ -1,8 +1,8 @@
 import type { NormalizedAnalyticsDataset } from '../../src/dataSources/types.js';
 import type { SqlExecutor } from '../db/types.js';
 
-export const datasetSchemaVersion = 3 as const;
-export const datasetProjectionVersion = 'synergy-ready-projection-v1' as const;
+export const datasetSchemaVersion = 4 as const;
+export const datasetProjectionVersion = 'evidence-decoupled-projection-v1' as const;
 export const datasetWindowSize = 300;
 
 export interface DatasetPlayerRow extends Record<string, unknown> {
@@ -124,7 +124,7 @@ export interface DatasetEvidenceAvailability {
 
 export interface DatasetSnapshot {
   version: string;
-  generation: 'dataset-read-v3';
+  generation: 'dataset-read-v4';
   source: 'durable-neon';
   projectionVersion: typeof datasetProjectionVersion;
 }

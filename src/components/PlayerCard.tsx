@@ -37,7 +37,7 @@ export function PlayerCard({ analytics, rank }: PlayerCardProps) {
         </div>
         <div>
           <p className="metric-label"><MetricInfo metricId="kast" linked={false} /></p>
-          <p className="mt-1 font-mono text-sm text-slate-100">{formatPercent(stats.kast)}</p>
+          <p className="mt-1 font-mono text-sm text-slate-100">{(stats.kast === undefined ? '—' : formatPercent(stats.kast))}</p>
         </div>
         <div>
           <p className="metric-label"><MetricInfo metricId="confidence" label={zhTW.scores.confidence} linked={false} /></p>
