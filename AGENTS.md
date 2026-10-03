@@ -38,6 +38,8 @@
 
 ## Current stage
 
+- DATA-03A implementation is complete, initial CI/Pages/Vercel deployment and normal-path migration 0007 verified. Final local gates: 339 tests, lint/build, 16 DB checks, production audit zero; full audit retains the five-high SEC-2026-001 disposition. This is NOT production deep-crawl acceptance: bounded/full provider execution remains gated and NOT STARTED. Deployment success never grants crawl approval.
+
 - TASK-DATA-03A is authorized under SDD STRICT: implement/deploy `deep-history-v1`, separate `deep_backfill`, and append-only migration 0007 through the normal Vercel build path. Read `docs/DEEP_HISTORY.md` before changing this boundary. Preserve legacy cursors and migrations 0001–0006. Production deep start/continue, bounded provider validation and full P1/P2 crawl require a separate explicit human gate: DO NOT execute them on deployment. Production crawl NOT STARTED. Public schema 4/newest-300 read unchanged; TASK-DATA-03B NOT STARTED. RELEASE-01/01A PAUSED FOR DATA-03; V1 NOT YET RELEASED. Prior diagnosis and SEC-2026-001 are historical evidence, not release/repair/delete/crawl authorization. No scoring/Synergy change.
 
 - TASK-RELEASE-01A.3 security disposition is complete under SEC-2026-001, but final production acceptance is ON HOLD: after its documentation push, read-only dataset GET showed two players / seventeen matches instead of the authorized one / ten. Cause NOT VERIFIED. This supersedes the historical one-player/ten-match state below. RELEASE-01A remains IN PROGRESS / ON HOLD until human confirmation and revised read-only acceptance scope. Do not repair, reimport, sync, delete or rerun production health SQL; no provider calls or data writes are authorized. No release level or v1.0.0. See `docs/RELEASE_V1.md`.

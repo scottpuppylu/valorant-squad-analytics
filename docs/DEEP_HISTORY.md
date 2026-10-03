@@ -1,6 +1,6 @@
 # Deep historical acquisition
 
-TASK-DATA-03A — SDD STRICT, IMPLEMENTED; deployment verification pending. Rule: `deep-history-v1`.
+TASK-DATA-03A — SDD STRICT, IMPLEMENTATION COMPLETE; production execution gated. Rule: `deep-history-v1`.
 Starting HEAD: f3c870f5ee7b93dbbd6fcadf470a5f3053866c17. The preceding release
 diagnosis was preserved and pushed first. Checkpoint: checkpoint-before-data-03a-deep-history.
 Release acceptance is PAUSED FOR DATA-03; V1 NOT YET RELEASED.
@@ -68,10 +68,10 @@ NOT STARTED. No scoring, metric-reconstruction or Synergy change.
 
 ## Current-worktree verification (2026-10-04 Asia/Taipei)
 
-- lint PASS, exit 0; 23 files / 338 tests PASS, 58.02s; source boundary PASS.
-- Build PASS, exit 0, 712 modules, Vite 3.90s, dist boundary PASS. Main
+- lint PASS, exit 0; 23 files / 339 tests PASS, 68.66s; source boundary PASS.
+- Build PASS, exit 0, 712 modules, Vite 8.69s, dist boundary PASS. Main
   363.14 kB / 116.46 gzip; charts 339.21 / 99.53; CSS 40.17 / 9.15;
-  lazy Connect 22.01 / 7.31. No dependency, runtime-read cap or scoring change.
+  lazy Connect 22.05 / 7.33. No dependency, runtime-read cap or scoring change.
 - db:validate: 16 tests PASS, 35.85s. Includes populated 0006 -> 0007 upgrade,
   unchanged legacy cursor/run/evidence and ledger rerun. Disposable PGlite only.
 - Production audit: zero vulnerabilities. Full audit: exit 1, exactly five high
@@ -80,6 +80,22 @@ NOT STARTED. No scoring, metric-reconstruction or Synergy change.
   entry closures have zero affected dependency inputs; external node:crypto only.
   New provider input is URL-encoded and SQL parameterized, not build/glob input.
   Remote function-artifact bytes remain NOT VERIFIED.
+- Initial implementation deployment 228c4f8: CI
+  [37135937278](https://github.com/scottpuppylu/valorant-squad-analytics/actions/runs/37135937278)
+  SUCCESS (83s); Pages
+  [37135937355](https://github.com/scottpuppylu/valorant-squad-analytics/actions/runs/37135937355)
+  SUCCESS (109s). Vercel
+  [Df5hV1zJw](https://vercel.com/scottpuppys-projects/valorant-squad-analytics/Df5hV1zJw3FyEnTwhu12XWC1RLTv)
+  Ready, 3m31s; build log at 00:11:40 Asia/Taipei confirms
+  Applied production migrations: 0007. Subsequent build passes report already up to date.
+- The Ready deployment also logged three nonfatal compiler diagnostics: two legacy
+  type-import extensions and new Array.at under the function builder's older lib.
+  Minimal .js type imports/indexing corrections are included without changing logic.
+  Final follow-up commit/deployment checks are reported in the handoff, not inferred
+  from the initial deployment. Completed-source UI now clears automatic-running state.
+- Public API readonly: HTTP 200/no-store, schema 4, dataset-read-v4, REAL ready,
+  two players/17 matches, limit 300, lifetimeComplete=false. Public Connect and
+  Pages Connect render with zero console errors; Pages remains Demo-only.
 - >300 fixture persists 303 source matches across 102 live requests, then stored
   exhaustion. Shared P1/P2 fixture advances past three shared sources and adds
   one older source, with seven consenting participant links and four unique sources.
@@ -88,7 +104,7 @@ NOT STARTED. No scoring, metric-reconstruction or Synergy change.
 - Crash after evidence commit/before cursor commit retries idempotently and skips
   already durable detail. Consent revocation between index/detail blocks detail.
 - Browser orchestration fixtures verify explicit resume, >=7-second spacing,
-  persisted backoff, pause/unmount/error stop and safe localStorage fallback.
+  persisted backoff, pause/unmount/error/completion stop and safe localStorage fallback.
 - Real Chrome local Demo Connect and home navigation PASS, zero console errors,
   no blank page/overlay, 390px Connect no horizontal overflow. Active production
   deep progress UI/real provider pagination NOT VERIFIED: intentionally gated.

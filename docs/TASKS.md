@@ -370,7 +370,7 @@ TASK-RELEASE-01A remains ON HOLD; TASK-RELEASE-01 IN PROGRESS; V1 NOT YET RELEAS
 
 ## TASK-DATA-03A — Deep Historical Acquisition
 
-Status: **IMPLEMENTED — deployment verification pending; SDD STRICT; PRODUCTION CRAWL NOT STARTED**.
+Status: **IMPLEMENTATION COMPLETE — SDD STRICT; PRODUCTION EXECUTION GATED / NOT STARTED**.
 Starting HEAD f3c870f5ee7b93dbbd6fcadf470a5f3053866c17 after preserving/pushing
 prior diagnosis; checkpoint-before-data-03a-deep-history at that HEAD.
 Independent deep_backfill/deep-history-v1: live size/start then 1-based stored
@@ -378,6 +378,9 @@ index and bounded full-detail recovery, no total cap or full-overlap stop.
 Append-only 0007, phase/page/item, consent/lease/backoff, aggregate status and
 explicit browser auto-continuation. Legacy records, public schema 4/newest-300,
 privacy, reconstruction, scoring/Synergy unchanged. See DEEP_HISTORY.md.
+Initial implementation CI/Pages/Vercel and migration 0007 verified; final follow-up
+deployment status is reported at handoff. Current local gates: 339 tests, lint,
+build, 16 DB checks, production audit zero; full audit retains SEC-2026-001.
 Deployment/migration authorized; even bounded production provider/write tests
 and full P1/P2 crawl require separate human approval. No lifetime guarantee.
 
