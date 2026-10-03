@@ -156,7 +156,7 @@ describe('dataset runtime migrations', () => {
     await database.query("INSERT INTO match_teams (id,source_match_id,team_key,won,rounds_won,rounds_lost) VALUES ($1,$2,'Red',false,0,1)",[uuid(7,999),uuid(5,1)]);
     await database.query("UPDATE match_participants SET team_key='Red' WHERE id=$1",[uuid(8,2)]);
     const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
-    expect(result.payload.schemaVersion).toBe(3);
+    expect(result.payload.schemaVersion).toBe(4);
     const match = result.payload.dataset.matches[0]!;
     expect(match.performances[0]).toMatchObject({teamGroup:'A',teamWon:true,teamRoundsWon:1,teamRoundsLost:0});
     expect(match.performances[1]).toMatchObject({teamGroup:'B',teamWon:false,teamRoundsWon:0,teamRoundsLost:1});
@@ -402,7 +402,7 @@ describe('bounded projection performance', () => {
     const pairs = buildSynergy(result.payload.dataset);
     const pairMs = performance.now() - pairStarted;
     expect(pairs.length).toBe(players * (players - 1) / 2);
-    expect(result.metrics.serializedBytes).toBeLessThan(players === 1 ? 27000 : 850000);
+    expect(result.metrics.serializedBytes).toBeLessThan(players === 1 ? 30000 : 950000);
     process.stdout.write(`SYNERGY_PERFORMANCE ${players}p/${matches}m ${JSON.stringify({pairMs,observedPairs:pairs.length,pairMatchRecords:result.payload.dataset.matches.reduce((n,m)=>n+(m.synergyEvidence?.pairs.length??0),0)})}\n`);
     process.stdout.write(`DATASET_PERFORMANCE ${players}p/${matches}m ${JSON.stringify(result.metrics)}\n`);
   }, 30_000);
@@ -445,7 +445,7 @@ describe('dataset read gate', () => {
       else process.env.REAL_DATASET_READ_MODE = previous;
     }
     expect(status).toBe(200);
-    expect(body).toEqual({ ok: true, schemaVersion: 3, state: 'disabled', source: 'REAL_SERVER' });
+    expect(body).toEqual({ ok: true, schemaVersion: 4, state: 'disabled', source: 'REAL_SERVER' });
     expect(JSON.stringify(body)).not.toMatch(/player|match|count/iu);
     expect(headers.get('cache-control')).toBe('no-store');
     expect(request.headers).toEqual({});

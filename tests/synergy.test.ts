@@ -116,7 +116,7 @@ describe('same-team selection and independent context', () => {
   it('filters shared AND baseline before scoring, no all-map leakage', () => {
     const dataset = fixture();
     for (const m of dataset.matches.filter((m) => m.id.startsWith('shared'))) for (const p of m.performances) {
-      p.acs *= m.map === 'Ascent' ? 1.2 : .8; p.kast += m.map === 'Ascent' ? .04 : -.04;
+      p.acs *= m.map === 'Ascent' ? 1.2 : .8; if (p.kast !== undefined) p.kast += m.map === 'Ascent' ? .04 : -.04;
     }
     const ascent = buildSynergy(dataset,{...defaultSynergyFilters,map:'Ascent'})[0]!;
     const bind = buildSynergy(dataset,{...defaultSynergyFilters,map:'Bind'})[0]!;

@@ -12,15 +12,16 @@ import { useDataset } from '../src/hooks/useDataset';
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 function realResponse(state: 'ready' | 'empty' = 'ready'): DatasetReadyResponse {
-  const demo = demoDataSource.snapshot();
+  const demo = structuredClone(demoDataSource.snapshot());
+  for (const match of demo.matches) for (const p of match.performances) p.eventEvidence = { kast: 'reconstructed', opening: 'reconstructed' };
   const dataset = state === 'empty'
     ? { players: [], matches: [], sourceId: 'durable-neon-v1', isDemo: false as const, mode: 'REAL' as const }
     : { players: demo.players, matches: demo.matches.slice(0, 1), sourceId: 'durable-neon-v3', isDemo: false as const, mode: 'REAL' as const };
   return {
     ok: true,
-    schemaVersion: 3,
+    schemaVersion: 4,
     state,
-    snapshot: { version: `snapshot-${state}`, generation: 'dataset-read-v3', source: 'durable-neon', projectionVersion: 'synergy-ready-projection-v1' },
+    snapshot: { version: `snapshot-${state}`, generation: 'dataset-read-v4', source: 'durable-neon', projectionVersion: 'evidence-decoupled-projection-v1' },
     coverage: { completeForProviderWindow: false, boundedMatchLimit: 300, lifetimeComplete: false },
     evidence: { acs: 'derived', adr: 'derived', headshotPercentage: 'derived', kast: 'reconstructed', firstKills: 'reconstructed', firstDeaths: 'reconstructed' },
     dataset,
@@ -80,7 +81,7 @@ describe('DatasetProvider runtime states', () => {
     expect(container.textContent).toContain('demo|DEMO|32');
     await act(async () => root.unmount());
     root = createRoot(container);
-    const disabled: DatasetApiClient = { load: async () => ({ ok: true, schemaVersion: 3, state: 'disabled', source: 'REAL_SERVER' }) };
+    const disabled: DatasetApiClient = { load: async () => ({ ok: true, schemaVersion: 4, state: 'disabled', source: 'REAL_SERVER' }) };
     await act(async () => { root.render(<DatasetProvider client={disabled} forceDemo={false}><Probe /></DatasetProvider>); });
     expect(container.textContent).toContain('demo|DEMO|32');
     expect(container.textContent).toContain('刻意關閉');
@@ -127,7 +128,7 @@ describe('DatasetProvider runtime states', () => {
 
   it('deletes the retired browser REAL envelope on startup', async () => {
     localStorage.setItem(realDatasetStorageKey, '{"legacy":true}');
-    const client: DatasetApiClient = { load: async () => ({ ok: true, schemaVersion: 3, state: 'disabled', source: 'REAL_SERVER' }) };
+    const client: DatasetApiClient = { load: async () => ({ ok: true, schemaVersion: 4, state: 'disabled', source: 'REAL_SERVER' }) };
     await act(async () => { root.render(<DatasetProvider client={client} forceDemo={false}><Probe /></DatasetProvider>); });
     expect(localStorage.getItem(realDatasetStorageKey)).toBeNull();
   });
