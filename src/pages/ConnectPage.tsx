@@ -16,6 +16,7 @@ import { BackendApiError, valorantBackendClient } from '../dataSources/server/Va
 import type { Affinity, ConnectionRequest, ImportSize, PublicAccount, PublicDeletionProgress, PublicSyncProgress } from '../dataSources/server/contracts';
 import { useDataset } from '../hooks/useDataset';
 import { PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy';
+import { clearDeepSyncSession, deepContinuationDelay, loadDeepSyncSession, saveDeepSyncSession } from '../dataSources/server/deepSyncSession';
 
 type ProviderState = 'checking' | 'configured' | 'unconfigured' | 'unavailable';
 type FlowState = 'IDLE' | 'CONNECTING' | 'CONNECTED' | 'ACCOUNT_NOT_FOUND' | 'RATE_LIMITED' | 'PROVIDER_ERROR' | 'NO_MATCHES' | 'IMPORTING' | 'IMPORT_COMPLETE' | 'SYNCING' | 'REVOCING' | 'DELETION_WORKING' | 'REVOKED';
@@ -43,12 +44,75 @@ export function ConnectPage() {
   const [limit, setLimit] = useState<ImportSize>(10);
   const [message, setMessage] = useState('');
   const [syncProgress, setSyncProgress] = useState<PublicSyncProgress | null>(null);
+  const [automaticSync, setAutomaticSync] = useState(false);
+  const syncMounted = useRef(true);
   const [storedCredential, setStoredCredential] = useState<StoredConsentCredential | null>(() => loadBrowserConsentCredential());
   const [deletionProgress, setDeletionProgress] = useState<PublicDeletionProgress | null>(null);
   const [revokeConfirmation, setRevokeConfirmation] = useState(false);
   const [revoked, setRevoked] = useState(false);
   const requestActive = useRef(false);
   const deletionSessionActive = storedCredential?.revocationAccepted === true;
+
+  useEffect(() => {
+    syncMounted.current = true;
+    const saved = loadDeepSyncSession();
+    if (saved && !deletionSessionActive) {
+      void valorantBackendClient.syncStatus(saved.runId).then(({ sync }) => {
+        if (syncMounted.current) setSyncProgress(sync);
+      }).catch(() => { /* Recovery remains explicitly user-triggered. */ });
+    }
+    return () => { syncMounted.current = false; };
+  }, [deletionSessionActive]);
+
+  useEffect(() => {
+    if (!automaticSync || !syncProgress || deletionSessionActive || revoked) return;
+    const delay = deepContinuationDelay(syncProgress);
+    if (delay === undefined) return;
+    const timer = window.setTimeout(() => { void continueDeepSync(syncProgress.runId); }, delay);
+    return () => window.clearTimeout(timer);
+  }, [automaticSync, syncProgress, deletionSessionActive, revoked]);
+
+  async function continueDeepSync(runId: string) {
+    if (requestActive.current || !syncMounted.current) return;
+    requestActive.current = true;
+    setFlow('SYNCING');
+    try {
+      const { sync } = await valorantBackendClient.continueSync(runId);
+      if (syncMounted.current) { setSyncProgress(sync); setFlow('CONNECTED'); }
+    } catch (error) {
+      // Read-only status carries persisted backoff; never retry an unknown error tightly.
+      const safe = error instanceof BackendApiError ? error : new BackendApiError('PROVIDER_ERROR', '同步暫時失敗，進度已保留。');
+      if (['RATE_LIMITED', 'SYNC_BACKOFF', 'PROVIDER_TIMEOUT', 'PROVIDER_ERROR'].includes(safe.code)) {
+        try {
+          const { sync } = await valorantBackendClient.syncStatus(runId);
+          if (syncMounted.current) { setSyncProgress(sync); setFlow('CONNECTED'); }
+          if (syncMounted.current && (!sync.nextAttemptAt || sync.status !== 'paused')) setAutomaticSync(false);
+        } catch { if (syncMounted.current) setAutomaticSync(false); }
+      } else if (syncMounted.current) setAutomaticSync(false);
+      if (syncMounted.current) setMessage(safe.message);
+    } finally { requestActive.current = false; }
+  }
+
+  async function beginDeepSync() {
+    if (requestActive.current || deletionSessionActive || revoked) return;
+    if (syncProgress?.kind === 'deep_backfill' && syncProgress.status !== 'complete' && syncProgress.status !== 'cancelled') {
+      setAutomaticSync(true);
+      // Resume through the same timer, including persisted provider backoff.
+      if (syncProgress.status === 'failed') await continueDeepSync(syncProgress.runId);
+      return;
+    }
+    if (!account?.playerId || !form.consent) return;
+    requestActive.current = true;
+    setFlow('SYNCING');
+    try {
+      const { sync } = await valorantBackendClient.startSync(account.playerId, 'deep_backfill');
+      saveDeepSyncSession(account.playerId, sync.runId);
+      if (syncMounted.current) { setSyncProgress(sync); setAutomaticSync(true); setFlow('CONNECTED'); }
+    } catch (error) {
+      setAutomaticSync(false);
+      if (syncMounted.current) { setFlow('PROVIDER_ERROR'); setMessage(error instanceof BackendApiError ? error.message : '同步暫時失敗，可安全重試。'); }
+    } finally { requestActive.current = false; }
+  }
 
   useEffect(() => {
     let active = true;
@@ -120,9 +184,9 @@ export function ConnectPage() {
     setFlow('SYNCING');
     setMessage('');
     try {
-      const result = syncProgress && syncProgress.status !== 'complete'
+      const result = syncProgress?.kind === 'incremental' && syncProgress.status !== 'complete' && syncProgress.status !== 'cancelled'
         ? await valorantBackendClient.continueSync(syncProgress.runId)
-        : await valorantBackendClient.startSync(account.playerId, syncProgress?.status === 'complete' ? 'incremental' : 'backfill');
+        : await valorantBackendClient.startSync(account.playerId, 'incremental');
       setSyncProgress(result.sync);
       setFlow('CONNECTED');
       setMessage(result.sync.status === 'complete'
@@ -142,6 +206,8 @@ export function ConnectPage() {
   }
 
   function applyDeletionUpdate(update: DeletionSessionUpdate) {
+    setAutomaticSync(false);
+    clearDeepSyncSession();
     setDeletionProgress(update.deletion);
     setStoredCredential(update.session);
     setRevoked(true);
@@ -258,7 +324,7 @@ export function ConnectPage() {
           <label>Riot ID<input autoComplete="off" maxLength={32} required value={form.gameName} onChange={(event) => setForm((current) => ({ ...current, gameName: event.target.value }))} placeholder="Game Name" /></label>
           <label>Tag<input autoComplete="off" maxLength={10} required value={form.tag} onChange={(event) => setForm((current) => ({ ...current, tag: event.target.value }))} placeholder="Tag" /></label>
           <label>區域（affinity）<select value={form.affinity} onChange={(event) => setForm((current) => ({ ...current, affinity: event.target.value as Affinity }))}>{affinities.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-          <label className="consent-row"><input type="checkbox" checked={form.consent} onChange={(event) => setForm((current) => ({ ...current, consent: event.target.checked }))} /><span>我同意哥布林大調查讀取、保存並分析我的 VALORANT 公開戰績，並同意將我的 Riot ID、Tag、戰績統計、排名、地圖／特務分析等結果公開顯示於本站；任何取得網站網址的人都可以瀏覽。取消參與後將停止同步，並依資料刪除流程移除或匿名化資料。 <Link to="/privacy">查看隱私說明</Link></span></label>
+          <label className="consent-row"><input type="checkbox" checked={form.consent} onChange={(event) => { if (!event.target.checked) setAutomaticSync(false); setForm((current) => ({ ...current, consent: event.target.checked })); }} /><span>我同意哥布林大調查讀取、保存並分析我的 VALORANT 公開戰績，並同意將我的 Riot ID、Tag、戰績統計、排名、地圖／特務分析等結果公開顯示於本站；任何取得網站網址的人都可以瀏覽。取消參與後將停止同步，並依資料刪除流程移除或匿名化資料。 <Link to="/privacy">查看隱私說明</Link></span></label>
           <button className="button-primary" type="submit" disabled={!form.consent || busy || provider !== 'configured'}>{flow === 'CONNECTING' ? '連接中…' : '連接戰績'}</button>
           {provider !== 'configured' && provider !== 'checking' ? <p className="connect-notice">{datasetSource === 'REAL_SERVER' ? '此部署暫時無法連接新帳號，既有公開真實戰績不會改成 Demo。' : '此部署只提供虛構示範資料，真實連接請使用正式網站。'}</p> : null}
         </form>
@@ -281,12 +347,27 @@ export function ConnectPage() {
             <div className="connect-history-sync">
               <p className="metric-label">歷史戰績同步</p>
               <p>每次只處理一個安全區塊，進度會保存；範圍僅代表目前資料供應商可取得的歷史紀錄，不代表完整生涯。</p>
-              <button className="button-secondary" type="button" disabled={busy} onClick={syncAvailableHistory}>
-                {flow === 'SYNCING' ? '同步中…' : syncProgress?.status === 'paused' ? '繼續同步下一區塊' : syncProgress?.status === 'complete' ? '檢查新增或修正紀錄' : '開始歷史同步'}
+              <button className="button-secondary" type="button" disabled={busy || automaticSync || !form.consent} onClick={beginDeepSync}>
+                同步所有目前可取得歷史
               </button>
+              <button className="button-secondary" type="button" disabled={busy || automaticSync} onClick={syncAvailableHistory}>檢查新增或修正紀錄</button>
               {syncProgress ? <p>區塊 {syncProgress.progress.pages} · 已處理 {syncProgress.progress.matchesSeen} 場 · 重疊更新 {syncProgress.progress.overlapsUpdated} 場</p> : null}
             </div>
           ) : null}
+        </section>
+      ) : null}
+
+      {syncProgress?.kind === 'deep_backfill' && !deletionSessionActive && !revoked ? (
+        <section className="surface-card connect-panel" aria-label="歷史同步進度" aria-live="polite">
+          <h2>{syncProgress.history?.sourceExhausted ? '已達目前資料來源最舊可取得紀錄' : automaticSync ? '歷史同步中' : '歷史同步進度已保存'}</h2>
+          <p>階段：{syncProgress.history?.historyPhase === 'live_v4' ? '最新歷史' : syncProgress.history?.historyPhase === 'stored_index' ? '較舊已保存歷史' : '資料來源已掃描'}</p>
+          <p>已發現 {syncProgress.progress.matchesSeen} · 已保存 {syncProgress.progress.matchesPersisted} · 重疊 {syncProgress.progress.overlapsUpdated} · 詳細資料無法取得 {syncProgress.progress.detailUnavailableCount ?? 0} · 資料來源請求 {syncProgress.performance.providerRequests}</p>
+          <p>最早已保存日期：{syncProgress.coverage.from ?? '—'} · 最新已保存日期：{syncProgress.coverage.to ?? '—'}</p>
+          <p>進度持久保存；關閉頁面後停止自動續跑，重新開啟可恢復。不保證完整生涯；分析仍顯示最近有界範圍。</p>
+          {syncProgress.nextAttemptAt ? <p>可重試時間：{syncProgress.nextAttemptAt}</p> : null}
+          {syncProgress.terminationReason === 'provider_repeated_page' ? <p>資料來源重複回傳相同頁面，已停止；尚未證明來源耗盡。</p> : null}
+          {automaticSync ? <button className="button-secondary" type="button" onClick={() => setAutomaticSync(false)}>暫停自動續跑</button>
+            : syncProgress.status !== 'complete' && syncProgress.status !== 'cancelled' ? <button className="button-secondary" type="button" disabled={busy || provider !== 'configured'} onClick={beginDeepSync}>恢復歷史同步</button> : null}
         </section>
       ) : null}
 
