@@ -78,7 +78,7 @@ export function ConnectPage() {
     setFlow('SYNCING');
     try {
       const { sync } = await valorantBackendClient.continueSync(runId);
-      if (syncMounted.current) { setSyncProgress(sync); setFlow('CONNECTED'); }
+      if (syncMounted.current) { setSyncProgress(sync); setFlow('CONNECTED'); if (sync.status !== 'paused') setAutomaticSync(false); }
     } catch (error) {
       // Read-only status carries persisted backoff; never retry an unknown error tightly.
       const safe = error instanceof BackendApiError ? error : new BackendApiError('PROVIDER_ERROR', '同步暫時失敗，進度已保留。');
@@ -107,7 +107,7 @@ export function ConnectPage() {
     try {
       const { sync } = await valorantBackendClient.startSync(account.playerId, 'deep_backfill');
       saveDeepSyncSession(account.playerId, sync.runId);
-      if (syncMounted.current) { setSyncProgress(sync); setAutomaticSync(true); setFlow('CONNECTED'); }
+      if (syncMounted.current) { setSyncProgress(sync); setAutomaticSync(sync.status === 'paused'); setFlow('CONNECTED'); }
     } catch (error) {
       setAutomaticSync(false);
       if (syncMounted.current) { setFlow('PROVIDER_ERROR'); setMessage(error instanceof BackendApiError ? error.message : '同步暫時失敗，可安全重試。'); }

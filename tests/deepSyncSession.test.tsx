@@ -71,4 +71,14 @@ describe('deep sync browser orchestration', () => {
     await click('恢復歷史同步'); await act(async () => root.render(<p>離開頁面</p>));
     await act(async () => vi.advanceTimersByTimeAsync(60_000)); expect(request).toHaveBeenCalledOnce();
   });
+  it('source exhaustion stops automatic continuation and does not display an active pause control', async () => {
+    saveDeepSyncSession(playerId, runId);
+    vi.spyOn(valorantBackendClient, 'syncStatus').mockResolvedValue({ ok: true, sync: progress() });
+    const complete = { ...progress(), status: 'complete' as const, history: { ...progress().history!, historyPhase: 'complete' as const, storedHistoryExhausted: true, sourceExhausted: true } };
+    const request = vi.spyOn(valorantBackendClient, 'continueSync').mockResolvedValue({ ok: true, sync: complete });
+    await render(); await click('恢復歷史同步'); await act(async () => vi.advanceTimersByTimeAsync(7_000));
+    expect(host.textContent).toContain('已達目前資料來源最舊可取得紀錄');
+    expect(host.textContent).not.toContain('暫停自動續跑');
+    await act(async () => vi.advanceTimersByTimeAsync(60_000)); expect(request).toHaveBeenCalledOnce();
+  });
 });
