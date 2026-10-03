@@ -317,12 +317,12 @@ by UI-01. Current non-empty production scoring and Synergy remain NOT YET EXERCI
 
 ## TASK-RELEASE-01A — Production release preflight
 
-Status: **IN PROGRESS**. Read-only checks only; no release level selected.
-Baseline audit currently reports five high vulnerabilities; no forced dependency
-upgrade is included in the projection hotfix. See RELEASE_V1.md.
+Status: **COMPLETE — SDD STRICT WITH DOCUMENTED DEV-ONLY SECURITY EXCEPTION SEC-2026-001**. No release level selected. See RELEASE_V1.md and SECURITY_EXCEPTIONS.md.
+Full audit still reports five high findings, NOT FIXED; production audit is zero.
 The 2026-10-03 human-verified production health checks now pass: 27 orphan edges,
 cross-match references, migrations 0001–0006, consent, sync and deletion health.
-Dependency audit remediation remains the only outstanding preflight blocker.
+TASK-RELEASE-01A.3 formally dispositions the unpatched dev/build-only risk until
+2026-11-03 or an earlier upstream fix. Changed scope/exposure or expiry reopens the gate.
 
 ## TASK-RELEASE-01A.2 — Basic / Advanced Evidence Decoupling Hotfix
 
@@ -333,3 +333,26 @@ remain independently reconstructed/partial/unavailable; no numeric substitutes.
 Formulas, engine, privacy and migrations unchanged. CI/Pages/Vercel and read-only
 production API/browser acceptance succeeded (see RELEASE_V1.md). No provider call,
 import/sync, consent change, deletion, release tag or release level is authorized.
+
+## TASK-RELEASE-01A.3 — Dependency Audit Resolution and Security Disposition
+
+Status: **COMPLETE — SDD STRICT; SEC-2026-001**.
+Starting HEAD 846c464f28f54d4e22c53e50d32d99bdaf63041e; pushed checkpoint-before-release-01a3-security.
+All five findings classified, production-only install and browser/API dependency
+closures checked, compatible update trial reproduced the findings. No dependencies,
+application behavior, CI workflow, schema, scoring or Synergy changed. Remote Vercel
+artifact bytes NOT VERIFIED; no production-input path exists into affected application
+code. See TASK_RELEASE_01A3_PLAN.md and SECURITY_EXCEPTIONS.md for evidence and limits.
+Deployment acceptance is recorded at handoff; this does not authorize V1 release.
+
+## TASK-SECURITY-01 — braces advisory follow-up
+
+Status: **MONITORING / BLOCKED ON UPSTREAM**.
+Owner: site operator / repository maintainer. Manual review at every release or
+dependency/boundary change, and no later than 2026-11-03; no scheduled automation created.
+GHSA-vfj7-8cjw-p6xm / CVE-2026-93687 remains unpatched. Completion trigger: patched braces,
+safe compatible parent removal, or separately approved and verified toolchain migration.
+Rerun full and production audits, physical production-only install, browser/API boundary
+checks and regression gates. New high/critical, changed exact five-finding scope, runtime
+promotion, input-path change or expired exception blocks release. No automatic renewal.
+Do not begin Tailwind 4 migration, provider calls or Release Level validation implicitly.

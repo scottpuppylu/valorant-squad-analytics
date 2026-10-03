@@ -2,6 +2,8 @@
 
 Governance: SDD STRICT. TASK-RELEASE-01 remains IN PROGRESS; V1 is NOT YET RELEASED. No release level or release tag is authorized.
 
+Current preflight: TASK-RELEASE-01A COMPLETE — SDD STRICT WITH DOCUMENTED DEV-ONLY SECURITY EXCEPTION SEC-2026-001. Historical blocker statements below are superseded by the 01A.3 disposition, not erased. Full audit remains five high, NOT FIXED; production audit zero. No release Level A/B/C or v1.0.0 authorization follows from preflight completion.
+
 ## TASK-RELEASE-01A.2 — approved Option A
 
 Status: COMPLETE — SDD STRICT. Production API and browser acceptance succeeded.
@@ -55,3 +57,17 @@ The preceding database-verification blocker is now resolved after human verifica
 Public API recheck: HTTP 200, schema 4, REAL ready, 1 player, 10 matches. Final implementation HEAD before this documentation update was 8f182654ec5a580e275dfb908e45e5d634b7d99d: CI 37111689980 succeeded (93s), Pages 37111690005 succeeded (107s), Vercel 4o82jAnFhTG4js8AhfSZ6HYixJDt Ready (3m42s). These are historical aligned deployment checkpoints, not assertions about later documentation commits.
 
 This continuation reran lint PASS, 21 files/317 tests PASS (32.39s), build PASS (711 modules, 5.00s; unchanged bundle sizes), source/dist secret scans PASS and DB validation 15 tests PASS (18.90s). npm audit still FAILS with five high development-chain advisories. The only outstanding preflight blocker is dependency audit remediation; no forced Tailwind 4 migration is authorized here. TASK-RELEASE-01A remains IN PROGRESS; TASK-RELEASE-01A.2 remains COMPLETE; V1 NOT YET RELEASED. Do not choose a release level until the remaining gate is resolved.
+
+## TASK-RELEASE-01A.3 — security disposition, 2026-10-03
+
+Starting HEAD 846c464f28f54d4e22c53e50d32d99bdaf63041e, clean main equal to origin/main. Created and pushed checkpoint-before-release-01a3-security before changes. See TASK_RELEASE_01A3_PLAN.md for baseline results and SECURITY_EXCEPTIONS.md for all five exact findings, paths, accepted-risk criteria and limitations.
+
+One underlying GHSA-vfj7-8cjw-p6xm / CVE-2026-93687 affects braces <=3.0.3, patched NONE at authoritative review. Installed braces 3.0.3, chokidar 3.6.0, micromatch 4.0.8, fast-glob 3.3.3 and Tailwind 3.4.19 are all dev-only. Physical isolated production-only install has no braces and zero vulnerabilities. Browser emitted module graph excludes all five packages. All 11 application API entry-point bundles exclude them, with only node:crypto external; production inputs have no glob/compiler execution path. Remote Vercel artifact bytes are NOT VERIFIED; exception criterion 4 uses the authorized no-untrusted-production-input-path alternative, not an unsupported artifact-absence claim.
+
+Compatible-parent update trial and registry metadata reproduce the same five high findings; no safe compatible fix exists today. Dependency files and application/CI behavior remain unchanged. No force fix, fake override, vendoring, fork or major upgrade. Tailwind 4 is NOT REQUIRED for this authorized disposition; actual migration/remediation requires separate human approval and actual tree verification.
+
+SEC-2026-001 accepts this dev/build-only risk temporarily, not as fixed. Expiry/review 2026-11-03 or earlier upstream fix; named maintainer manually reviews at every release/dependency/boundary change. TASK-SECURITY-01 is MONITORING / BLOCKED ON UPSTREAM. Full audit must still be run and reported honestly; production audit must remain zero. New high/critical, changed five-finding scope, runtime promotion, input-path change or expiry invalidates the exception. Existing CI never included audit; no audit gate was removed and no blanket suppression or custom automated gate was added.
+
+TASK-RELEASE-01A is COMPLETE — SDD STRICT WITH DOCUMENTED DEV-ONLY SECURITY EXCEPTION SEC-2026-001. TASK-RELEASE-01 remains IN PROGRESS, V1 NOT YET RELEASED. CI/Pages/Vercel final-commit verification and schema 4 / REAL / ready / one player / ten matches read-only acceptance are reported at handoff. Migration NONE, Henrik calls 0, production data writes NONE. No Connect/import/sync, production health SQL rerun, release level or release tag.
+
+Final local rerun for this disposition: lint PASS; 21 files / 317 tests PASS (21.97s); source secret scan PASS; build PASS (711 modules, 3.18s; main 363.14 kB / 116.46 gzip, charts 339.21 / 99.53, CSS 40.17 / 9.15; unchanged output hashes); dist secret scan PASS; DB foundation validation 1 file / 15 tests PASS (17.49s). Full audit still FAILS, exactly five high; production audit PASS, zero vulnerabilities. No new tests were needed for documentation-only changes.
