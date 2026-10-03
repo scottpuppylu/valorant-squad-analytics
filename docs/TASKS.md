@@ -323,10 +323,10 @@ upgrade is included in the projection hotfix. See RELEASE_V1.md.
 
 ## TASK-RELEASE-01A.2 — Basic / Advanced Evidence Decoupling Hotfix
 
-Status: **IN PROGRESS — SDD STRICT**. Option A explicitly approved.
+Status: **COMPLETE — SDD STRICT**. Option A explicitly approved.
 Schema 4 preserves valid basic performances with exact visible-player presence
 for every distinct durable round. KAST/Opening and topology-dependent domains
 remain independently reconstructed/partial/unavailable; no numeric substitutes.
 Formulas, engine, privacy and migrations unchanged. CI/Pages/Vercel and read-only
-production acceptance must succeed before marking complete. No provider call,
+production API/browser acceptance succeeded (see RELEASE_V1.md). No provider call,
 import/sync, consent change, deletion, release tag or release level is authorized.

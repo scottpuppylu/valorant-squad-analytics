@@ -83,3 +83,6 @@ presence in every durable round. Missing KAST/Opening remain absent, not zero.
 Event/scoring/Synergy rules and privacy policy are unchanged. No migration or
 provider call is authorized. Deployment acceptance is tracked in
 [docs/RELEASE_V1.md](docs/RELEASE_V1.md). V1 is NOT YET RELEASED.
+Hotfix API/browser acceptance passed: REAL ready, 1 player, 10 matches;
+317 tests passed. Release preflight remains open for the audit and pending
+read-only database health checks; no release level has been selected.

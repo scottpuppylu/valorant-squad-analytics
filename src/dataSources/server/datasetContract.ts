@@ -55,5 +55,3 @@ function isEventEvidence(performance: Record<string, unknown>): boolean {
   } else if (performance.firstKills !== undefined || performance.firstDeaths !== undefined) return false;
   return true;
 }
-
-
