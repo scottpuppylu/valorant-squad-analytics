@@ -317,14 +317,15 @@ by UI-01. Current non-empty production scoring and Synergy remain NOT YET EXERCI
 
 ## TASK-RELEASE-01A — Production release preflight
 
-Status: **IN PROGRESS / ON HOLD — production fixture confirmation required**. Dependency security gate is resolved with SEC-2026-001. No release level selected. See RELEASE_V1.md and SECURITY_EXCEPTIONS.md.
+Status: **IN PROGRESS / ON HOLD — human approval of revised fixture/invariant baseline required**. Dependency security gate is resolved with SEC-2026-001. No release level selected. See RELEASE_V1.md and SECURITY_EXCEPTIONS.md.
 Full audit still reports five high findings, NOT FIXED; production audit is zero.
 The 2026-10-03 human-verified production health checks now pass: 27 orphan edges,
 cross-match references, migrations 0001–0006, consent, sync and deletion health.
 TASK-RELEASE-01A.3 formally dispositions the unpatched dev/build-only risk until
 2026-11-03 or an earlier upstream fix. Changed scope/exposure or expiry reopens the gate.
-Post-push dataset GET unexpectedly shows two players / seventeen matches, not the
-required one / ten. Cause NOT VERIFIED; no repair or production mutation authorized.
+Post-push dataset GET shows two players / seventeen matches, not the required one / ten.
+TASK-RELEASE-01A.4 verifies supported Connect/sync/import activity; actor NOT VERIFIED.
+Exact acceptance remains unchanged pending approval; no repair or production mutation authorized.
 
 ## TASK-RELEASE-01A.2 — Basic / Advanced Evidence Decoupling Hotfix
 
@@ -348,6 +349,24 @@ code. See TASK_RELEASE_01A3_PLAN.md and SECURITY_EXCEPTIONS.md for evidence and 
 Deployment acceptance is recorded at handoff; this does not authorize V1 release.
 Required production fixture acceptance is NOT MET (two players / seventeen matches).
 Human confirmation and a revised read-only acceptance scope are required; do not repair data.
+
+## TASK-RELEASE-01A.4 — Production Fixture Drift Diagnosis
+
+Status: **DIAGNOSIS COMPLETE — SDD STRICT; HUMAN BASELINE GATE OPEN**.
+Starting/final HEAD remains 81c2832d65dcedaccfcded611cc9e6ce798b6031.
+SELECT-only anonymous timestamps/health, existing public GET, bounded Vercel route
+logs and source inspection classify drift as EXPECTED_SUPPORTED_ACTIVITY.
+Two eligible players each have 10 basic performances, sharing 3 same-team matches:
+union 17. Seven sources are newly persisted (1 during backfill, 6 during bounded
+import); no duplication or revoked/deleted-player contradiction was found.
+P2 has one healthy paused backfill, incomplete coverage, no lease/error; do not resume it.
+Public Connect is login-free/current-policy self_asserted, so counts can change
+without a deployment. Actor/ownership NOT VERIFIED. Requested older log window
+was outside retention; observed window 22:15–22:48 Asia/Taipei only. See RELEASE_V1.md.
+No application/package changes, provider calls, production writes or migration.
+Level B/C prerequisites POSSIBLE only; no release level executed or tag created.
+Recommend human-approved invariant-based acceptance; do not adopt it automatically.
+TASK-RELEASE-01A remains ON HOLD; TASK-RELEASE-01 IN PROGRESS; V1 NOT YET RELEASED.
 
 ## TASK-SECURITY-01 — braces advisory follow-up
 

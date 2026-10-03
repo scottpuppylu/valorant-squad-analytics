@@ -2,7 +2,7 @@
 
 Governance: SDD STRICT. TASK-RELEASE-01 remains IN PROGRESS; V1 is NOT YET RELEASED. No release level or release tag is authorized.
 
-Current preflight: TASK-RELEASE-01A IN PROGRESS / ON HOLD for an unexpected production fixture change detected during 01A.3 acceptance. Dependency security disposition is complete under SEC-2026-001, but the required one-player/ten-match acceptance is not met. Historical dependency blocker statements below are superseded by that disposition, not erased. Full audit remains five high, NOT FIXED; production audit zero. No release Level A/B/C or v1.0.0 authorization.
+Current preflight: TASK-RELEASE-01A IN PROGRESS / ON HOLD pending human approval of a revised production fixture/invariant baseline. TASK-RELEASE-01A.4 classifies the one-player/ten-match to two-player/seventeen-match drift as EXPECTED_SUPPORTED_ACTIVITY from existing Connect, sync and import records, not a code change. Actor attribution is NOT VERIFIED. The exact one-player/ten-match requirement remains unchanged and not met until human approval. Dependency security disposition remains complete under SEC-2026-001. Historical statements below are retained as historical evidence. Full audit remains five high, NOT FIXED; production audit zero. No release Level A/B/C or v1.0.0 authorization.
 
 ## TASK-RELEASE-01A.2 — approved Option A
 
@@ -77,3 +77,196 @@ Final local rerun for this disposition: lint PASS; 21 files / 317 tests PASS (21
 After pushing 988c372, the canonical dataset GET returned HTTP 200/no-store, schema 4, ready, **two players / seventeen matches**, instead of the explicitly expected one / ten. A second read-only aggregate check confirmed the same counts. No identities, payloads or rows were archived; no provider calls or production writes were made by this task. Cause and authorization of this external state change are NOT VERIFIED. Dependencies, application code and output hashes remain unchanged in this task.
 
 Stop data-related validation and do not repair, delete, reimport, sync or rerun production SQL. Human confirmation of the intended current fixture and authorization of revised read-only acceptance are required before closing RELEASE-01A or selecting a release level. The security disposition remains valid for the unchanged application dependency boundary; the exact production acceptance is NOT MET. Final-commit deployment status can still be observed read-only without altering data.
+
+## TASK-RELEASE-01A.4 — read-only fixture drift diagnosis, 2026-10-03
+
+Status: diagnosis COMPLETE; human baseline adoption gate OPEN. Classification:
+**EXPECTED_SUPPORTED_ACTIVITY**. This task explicitly authorized SELECT-only SQL,
+existing public dataset GET and bounded runtime-log reads, superseding the preceding
+SQL pause only for this diagnosis. No application/package changes, production writes,
+provider calls, migration, release-level execution or release tag.
+
+Starting HEAD: `81c2832d65dcedaccfcded611cc9e6ce798b6031`, clean main equal to
+origin/main. Changes since `846c464` are governance/documentation only. Final HEAD
+remains unchanged; this diagnosis is a local documentation update, not a deployment.
+
+### Sources, cutoff and limitations
+
+Three successful SELECT-only aggregate queries used the Vercel Neon Query console
+with Read-only checked. P1/P2 are assigned by players.created_at ascending (internal
+tie-breaker only); no identity mapping is retained. Evidence below contains only
+anonymous aggregate counts, states and timestamps. Current canonical dataset GET
+returned HTTP 200, no-store, schema 4, REAL, ready, two players, seventeen matches,
+twenty performances, snapshot present and isDemo=false. The snapshot is the actual
+`snapshot` object, not a presumed `snapshotId` field.
+
+The documented prior 1/10 acceptance GET window is 2026-10-03 16:56:28–16:57:33
+Asia/Taipei. Its end, `2026-10-03T08:57:33Z`, is the source-observation cutoff.
+Later historical 1/10 closure has no exact timestamp in this document; do not invent
+one. All timestamps in the following tables are UTC unless explicitly marked local.
+
+Requested runtime-log window: 16:55–22:48 Asia/Taipei. Vercel rejected its start as
+outside the allowed range. Successfully inspected 22:15–22:48 instead, with no more
+logs to show. The older 16:55–22:15 portion is NOT VERIFIED. Logs cover the causal
+activity and first previously observed 2/17 reads, but do not prove complete historical
+activity or human identity. Only route/method/status/timestamp are recorded here.
+
+### Anonymous creation and eligibility
+
+| Field | P1 | P2 |
+|---|---|---|
+| Player created_at | 2026-10-02 17:06:47.684854 | 2026-10-03 14:41:29.825320 |
+| Player updated_at | 2026-10-03 14:36:08.335240 | 2026-10-03 14:41:29.825320 |
+| Provider identity created_at / updated_at | Both 2026-10-02 17:06:47.684854 | Both 2026-10-03 14:41:29.825320 |
+| Consent consented_at | 2026-10-02 17:06:47.576000 | 2026-10-03 14:41:29.714000 |
+| Consent created_at | 2026-10-02 17:06:47.684854 | 2026-10-03 14:41:29.825320 |
+| Membership joined_at | 2026-10-02 17:06:47.684854 | 2026-10-03 14:41:29.825320 |
+
+Both players: non-anonymized=true, active membership=true, exactly one active
+self_asserted consent on `2026-10-02-public-v1`, provider identity present=true,
+management verifier present=true and verifier version valid=true. P2 was created
+at 22:41:29.825320 Asia/Taipei, after the documented acceptance cutoff. This is a
+new player, not merely an old player becoming publicly eligible.
+
+### Visibility, seven-match delta and source timeline
+
+| Matrix | Count |
+|---|---:|
+| P1 visible performances | 10 |
+| P2 visible performances | 10 |
+| Shared matches | 3 |
+| P1-only | 7 |
+| P2-only | 7 |
+| Union | 17 |
+| Shared same-team matches | 3 |
+
+Union reconciles exactly: 10 + 10 - 3 = 17. Of the current union, 10 source matches
+were observed before the cutoff and 7 were first observed after it. The seven-match
+increase is **seven newly persisted unique source matches**, not seven previously
+stored source matches becoming public. P2 also links to three already-public shared
+matches; those links add performances, not unique matches.
+
+| Source timeline | P1 (10) | P2 (10) |
+|---|---|---|
+| Minimum first_observed_at | 2026-10-02 17:07:03.855 | 2026-10-02 17:07:03.855 |
+| Maximum first_observed_at | 2026-10-02 17:09:02.350 | 2026-10-03 14:41:56.423 |
+| Minimum last_observed_at | 2026-10-03 14:37:06.676 | 2026-10-03 14:41:56.423 |
+| Maximum last_observed_at | 2026-10-03 14:41:56.423 | 2026-10-03 14:41:56.423 |
+| First observed before / after cutoff | 10 / 0 | 3 / 7 |
+
+The seven new sources split into one at 14:41:38.022 and six at 14:41:56.423 UTC.
+Their timestamps align with P2's backfill then bounded import respectively. This
+path attribution is supported by matching DB chronology, successful route logs and
+the source-code persistence path, not by actor identity or raw request-body access.
+
+### Sync runs and cursors
+
+All runs below have trigger_kind=manual. Counters are persisted run counters, not
+unique newly inserted source totals; overlap/upsert must not be counted as new matches.
+
+| Player/kind/status | Started UTC | Completed UTC | Pages | Seen | Persisted | Overlap | Provider requests | Termination |
+|---|---|---|---:|---:|---:|---:|---:|---|
+| P1/backfill/complete (before cutoff) | 10-02 17:06:59.362 | 10-02 17:09:46.770 | 2 | 6 | 6 | 3 | 2 | no_older_unique_matches |
+| P1/incremental/complete | 10-03 14:36:22.339 | 10-03 14:36:33.505 | 1 | 3 | 3 | 3 | 1 | known_boundary |
+| P1/incremental/complete | 10-03 14:36:38.372 | 10-03 14:36:48.563 | 1 | 3 | 3 | 3 | 1 | known_boundary |
+| P2/backfill/paused | 10-03 14:41:35.254 | NULL | 1 | 3 | 3 | 2 | 1 | NULL |
+
+| Player/kind | Last success = updated_at UTC | Coverage from UTC | Coverage to UTC | Complete provider window | Retries |
+|---|---|---|---|---|---:|
+| P1/backfill | 10-02 17:09:46.770 | 09-27 13:00:31.840 | 10-02 16:03:54.035 | false | 0 |
+| P1/incremental | 10-03 14:36:48.563 | 09-30 16:48:19.871 | 10-02 16:03:54.035 | true | 0 |
+| P2/backfill | 10-03 14:41:45.901 | 10-02 15:29:21.925 | 10-03 09:35:27.566 | false | 0 |
+
+Coverage dates are all in 2026. After acceptance, P1 had two successful incremental
+runs and P2 one successful persisted backfill chunk. P2 paused is an intended chunk
+boundary, not a failed sync or complete history: postgresSyncStore.commitPage sets
+paused/completed_at=NULL when there is no terminal reason and releases the lease.
+Current scoped sync health: failed=0, running=0, paused=1, run errors=0, cursor errors=0,
+lease presence=0, invalid coverage ranges=0. Do not resume the paused run in this task.
+
+### Bounded Vercel route activity
+
+22:15–22:48 Asia/Taipei, displayed request rows, including existing deployment aliases
+for dataset reads; successful write-route rows are on the canonical production host.
+
+| Method/route | HTTP | Count |
+|---|---:|---:|
+| POST /api/valorant/account/resolve | 200 | 2 |
+| POST /api/valorant/account/resolve | 400 | 3 |
+| POST /api/valorant/matches/import | 200 | 2 |
+| POST /api/valorant/sync/start | 200 | 4 |
+| GET /api/valorant/dataset | 200 | 9 |
+| GET /api/valorant/provider/status | 200 | 2 |
+
+No consent/revocation/deletion or sync/continue rows were shown in this window.
+This is not proof that those routes have never been used. HTTP 400 resolve rows
+do not establish their request content/cause or actor; none were inspected.
+
+Successful relevant request timestamps (local): resolve 22:36:05.993 and
+22:41:26.652; import 22:37:03.376 and 22:41:52.542; sync/start 22:36:12.212,
+22:36:21.569, 22:36:37.367 and 22:41:33.752. Extra sync/start success is not an
+extra persisted run: only the DB run records above establish persisted work.
+First historical 2/17 read observations align with GETs at 22:46:46.843 and
+22:47:25.486. Runtime logs alone contain no dataset-count payload proof.
+
+### Public Connect mutability and data health
+
+Code inspection confirms **YES**: a normal visitor can use Connect without a
+site account/login, supply Riot Game Name/Tag/affinity and explicit current-policy
+consent, then resolve and bounded-import. Resolve/import handlers apply validation,
+rate limits and durable consent gates, not a viewer login or Riot ownership proof.
+The server retains provider credentials. See src/pages/ConnectPage.tsx,
+api/valorant/account/resolve.ts, api/valorant/matches/import.ts, server/validation.ts,
+server/henrikDataProvider.ts and server/persistence/durableEvidenceService.ts.
+Production counts are consequently mutable independently of Git deployments.
+Self_asserted consent is product-flow consent, not proof of human identity/ownership.
+
+P2: candidates=10, basic-gate emitted=10, failures=0, observed stats=10,
+complete participant round presence=10; durable-evidence-v2=10; rounds total=191,
+minimum=8, maximum=28; source rounds/kills evidence observed/observed=10.
+P1 likewise emits 10/10, failures=0, complete presence=10, total rounds=222.
+Public response contains 20 performances: KAST/Opening statuses partial/partial=19,
+reconstructed/reconstructed=1 across both players. Raw observed events do not imply
+all advanced metrics or scores are reconstructed. No scoring/Synergy recalculation
+or formal release-level validation was performed.
+
+Duplicate active-consent, provider-identity, membership, source-match uniqueness,
+public-player duplication and active-consent/revoked-timestamp checks: all 0.
+P1/P2 revoked consent counts=0, open deletion jobs=0, non-anonymized=true and
+current active membership/consent valid. No revoked/deleted player reappearing is
+indicated. These are scoped checks, not a repeat of the full historical 27-edge audit.
+
+### Release implication and human gate
+
+Actor attribution: **NOT VERIFIED**; do not name or infer the actor. The supported
+path is verified separately from actor/ownership. SEC-2026-001 remains valid for the
+unchanged dependency/runtime/input-path boundary; no security fix is claimed.
+
+Level B prerequisite: POSSIBLE (two independent valid basic REAL performance sets).
+Level C prerequisite: POSSIBLE (three shared same-team matches). These are prerequisite
+discoveries only, not Level B/C acceptance, score availability or a V1 release.
+
+Recommend retiring an exact 1/10 fixture in favor of a human-approved dynamic baseline:
+schema 4, REAL, ready, an agreed minimum of current-policy consenting players, valid
+projection contracts, no Demo fallback and zero relational/consent/sync/deletion
+inconsistencies (legitimate paused/incomplete coverage represented honestly).
+**Recommendation only; acceptance criteria are not adopted or rewritten by this diagnosis.**
+Ask the human to approve current validated 2/17 state and invariant-based acceptance.
+TASK-RELEASE-01A stays IN PROGRESS / ON HOLD; TASK-RELEASE-01 IN PROGRESS;
+V1 NOT YET RELEASED. No Level A/B/C starts automatically.
+
+### Documentation quality gates — current worktree
+
+- npm run lint: PASS, exit 0.
+- npm test: PASS, 21 files / 317 tests, 29.97s; source secret-boundary check PASS.
+- npm run build: PASS, exit 0, 711 modules, Vite build 5.32s; built secret-boundary
+  check PASS. Main 363.14 kB / 116.46 gzip; charts 339.21 / 99.53; CSS 40.17 / 9.15.
+- npm audit --omit=dev: PASS, exit 0, zero vulnerabilities.
+- npm run db:validate: PASS, 1 file / 15 tests, 27.12s; local PGlite validation,
+  not a production migration or write.
+- npm audit: exit 1, exactly five high findings in the unchanged documented
+  dev/build dependency chain. NOT FIXED; existing SEC-2026-001 applies.
+- git diff --check: PASS. No new tests or dependency changes needed for docs only.
+
+Only docs/RELEASE_V1.md and docs/TASKS.md changed locally. No commit, push or
+deployment was requested/performed by this read-only diagnosis.
