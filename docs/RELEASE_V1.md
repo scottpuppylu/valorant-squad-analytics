@@ -2,6 +2,8 @@
 
 ## Current release gate — TASK-DATA-04A, 2026-10-04
 
+TASK-DATA-04A is **WAITING ON RIOT — ticket #139243830**, **OPEN — WAITING FOR RIOT RESPONSE**. TASK-DATA-04B is **BLOCKED ON DATA-04A**. TASK-RELEASE-01 remains **PAUSED**; V1 is **NOT YET RELEASED**. No Riot provider/RSO implementation or another Production/RSO application before clarification; no API calls, production changes, DATA-03A.2 or DATA-03B execution.
+
 **RELEASE-01 remains PAUSED; V1 NOT RELEASED.** Full lifetime history is an unmet hard requirement, not source exhaustion or newest-300 coverage. Completed docs-only [LIFETIME_HISTORY.md](LIFETIME_HISTORY.md) concludes Outcome D: reviewed Riot contracts do not document a lifetime guarantee, and `lifetimeComplete=true` cannot currently be proven. Actual Riot Production/OAuth approval is NOT VERIFIED; private friend-group eligibility requires clarification.
 
 Acquisition is frozen: no DATA-03A.2/P1/P2 continuation, Riot/Henrik game calls, production writes, DATA-03B or release Level A/B/C / v1.0.0. DATA-03A hard-stop evidence and 30 durable sources remain preserved. DATA-04B is BLOCKED / NOT STARTED pending its access/security/product gates and explicit authorization. This supersedes earlier continuation permissions; historical preflight/security evidence below is retained, not new release approval.

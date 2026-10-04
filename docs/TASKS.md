@@ -6,15 +6,17 @@ The hard requirement is **FULL LIFETIME MATCH HISTORY**, earliest actual VALORAN
 
 ### TASK-DATA-04A — Authoritative Lifetime History Feasibility
 
-Status: **COMPLETE — docs-only research and access readiness**. See [LIFETIME_HISTORY.md](LIFETIME_HISTORY.md) for the official-source matrix, proof standard, current integration audit, draft application and future reconciliation/RSO design.
+Status: **WAITING ON RIOT — ticket #139243830**. [Support ticket](https://support-developer.riotgames.com/hc/en-us/requests/139243830) is **OPEN — WAITING FOR RIOT RESPONSE** (maintainer-confirmed 2026-10-04; no live status query in this update). Docs-only research is complete, but official lifetime guarantees, pagination/retention/missing-match semantics, private community eligibility and Production/RSO sequence remain pending. See [LIFETIME_HISTORY.md](LIFETIME_HISTORY.md) for the submitted questions and preserved research/design.
 
 Primary outcome **D: FULL_LIFETIME_HISTORY_NOT_PROVABLE_WITH_CURRENT_AVAILABLE_SOURCES**. Riot lifetime guarantee **NOT DOCUMENTED**; actual Production/OAuth approval **NOT VERIFIED**. `lifetimeComplete=true` cannot currently be proven. The current private friend-group scope requires Riot eligibility clarification; no application was submitted.
 
 ### TASK-DATA-04B — Riot Official Provider / RSO Integration
 
-Status: **BLOCKED / NOT STARTED**. Requires explicit authorization, eligible product scope, approved Production and separate OAuth access, reviewed token/identity/consent lifecycle and a documented decision on the unmet lifetime requirement. No invented VAL matchlist pagination. Henrik is secondary reconciliation only; existing players, public UUIDs and durable history must be preserved.
+Status: **BLOCKED ON DATA-04A / NOT STARTED**. Requires Riot clarification first, then explicit authorization, eligible product scope, approved Production and separate OAuth access, reviewed token/identity/consent lifecycle and a documented decision on the unmet lifetime requirement. No invented VAL matchlist pagination. Henrik is secondary reconciliation only; existing players, public UUIDs and durable history must be preserved.
 
 ### Acquisition / release freeze
+
+Do not implement DATA-04B/Riot provider/RSO or submit another Production/RSO application until Riot clarifies the required sequence. The submitted support inquiry is not an application or access approval. TASK-RELEASE-01 is **PAUSED**; V1 is **NOT YET RELEASED**.
 
 This decision supersedes earlier continuation permissions. Preserve DATA-03A implementation and DATA-03A.1 hard-stop evidence: P1 paused, P2 failed `provider_repeated_page`, 30 durable unique sources, `lifetimeComplete=false`. DATA-03A production acceptance remains **BLOCKED**; DATA-03A.2 and P1/P2 continuation are frozen. DATA-03B remains **NOT STARTED**. RELEASE-01 remains **PAUSED**, V1 not released. No Riot/Henrik game API calls, production writes, migration or release levels/tags are authorized by DATA-04A. Historical roadmap entries below are retained, not renewed authorization.
 

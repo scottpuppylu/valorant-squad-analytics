@@ -2,6 +2,8 @@
 
 ## Superseding acquisition freeze — TASK-DATA-04A, 2026-10-04
 
+TASK-DATA-04A is **WAITING ON RIOT — ticket #139243830**, **OPEN — WAITING FOR RIOT RESPONSE**. TASK-DATA-04B is **BLOCKED ON DATA-04A**; no Riot provider/RSO implementation or another Production/RSO application before clarification. Support inquiry submission does not authorize API calls, production changes or resumed acquisition.
+
 **FULL LIFETIME MATCH HISTORY** is now the hard requirement: earliest actual match through latest, no known missing matches. [LIFETIME_HISTORY.md](LIFETIME_HISTORY.md) records completed docs-only feasibility research: primary Outcome D, Riot lifetime guarantee NOT DOCUMENTED, Production access NOT VERIFIED, `lifetimeComplete=false` required.
 
 Do not continue P1/P2, DATA-03A.2, Henrik live/stored/detail retrieval, Riot game calls or production writes. Preserve the 30 durable matches and two consenting players. Henrik is secondary reconciliation only, not lifetime authority. DATA-03A production acceptance remains BLOCKED; DATA-03B NOT STARTED; RELEASE-01 PAUSED. Future DATA-04B is BLOCKED / NOT STARTED. No operational states or historical evidence below were changed; prior permissions do not override this freeze.

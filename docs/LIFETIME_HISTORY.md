@@ -1,8 +1,23 @@
 # Authoritative lifetime history feasibility
 
 TASK-DATA-04A — SDD STRICT. Research date: 2026-10-04.
-Status: **COMPLETE — feasibility and access-readiness research only**.
+Status: **WAITING ON RIOT — ticket #139243830**. Docs-only research is complete; official clarification remains pending.
 Starting repository HEAD: `8ffe12e15544fd03eb53879341a867a6c6d9febe` (clean `main`, equal to `origin/main`).
+
+## Current governance — Riot clarification pending (2026-10-04)
+
+[Riot Developer Support ticket #139243830](https://support-developer.riotgames.com/hc/en-us/requests/139243830): **OPEN — WAITING FOR RIOT RESPONSE**, as confirmed by the maintainer for this governance update. No live ticket query was performed in this update.
+
+Questions submitted:
+
+1. Whether VAL-MATCH-V1 guarantees full lifetime match history.
+2. Pagination, retention/window limits and missing-match semantics.
+3. Eligibility of a private friends/community analytics product.
+4. Required order and prerequisites for Production API access and RSO.
+
+The inquiry was submitted, not a Production/RSO application. Do not submit another Production/RSO application until Riot clarifies the required sequence. Do not resume Henrik deep crawl, implement DATA-03A.2, start DATA-03B, implement DATA-04B/Riot provider/RSO, call Riot or Henrik APIs, or change production data. TASK-DATA-04B is **BLOCKED ON DATA-04A**; TASK-RELEASE-01 **PAUSED**; V1 **NOT YET RELEASED**. Research findings and the application draft below are preserved, not official answers or permission to proceed.
+
+Governance-update verification (2026-10-04): `npm run lint` exit 0; `npm test` exit 0, 23 files / 339 tests passed in 56.89s, source secret boundary passed; `npm run build` exit 0, 712 modules, Vite build 9.86s, dist secret boundary passed; `git diff --check` passed. Changes are limited to AGENTS.md and the four governance documents. Audit/DB/browser checks were not repeated for this status-only update. No live provider calls, production reads/writes, push or deployment were performed.
 
 ## Hard requirement and acquisition freeze
 
@@ -211,11 +226,11 @@ Not ready to assert completed official onboarding. No application submitted and 
 
 With approved access and future implementation, the defensible ceiling may be all Riot-authoritative history actually returned, plus reconciled Henrik-discoverable/durable history, plus future matches accumulated in Neon, with no known internal gaps. This still **does not satisfy the hard lifetime requirement** without A–G; `lifetimeComplete=false`. No promise that this ceiling is currently achieved or that any source returns more than current records.
 
-Exact next human action: the maintainer should use [Riot Developer Support](https://support-developer.riotgames.com/) to request written clarification of (1) full-lifetime enumeration/retention/boundary, all-mode/platform scope and unavailable-detail guarantees, (2) eligibility of the accurately described private friend-group use case, and (3) registration, Production and separate OAuth onboarding requirements. Confirm any existing approval status privately in the Developer Portal; share only non-secret status/contract answers. Do not paste keys, tokens, codes or private identities. A formal application may follow once eligibility, Terms and demo/mockup gaps are resolved.
+Exact next human action: wait for Riot's response on [ticket #139243830](https://support-developer.riotgames.com/hc/en-us/requests/139243830), then review its non-secret contract/policy answers with the maintainer. Do not submit another Production/RSO application until Riot clarifies the required sequence. Confirm any existing approval status privately in the Developer Portal if needed; do not paste keys, tokens, codes or private identities. A response does not automatically authorize acquisition, implementation or production changes: those still require the separate explicit human gate after reviewing feasibility and eligibility.
 
-DATA-04B — Riot Official Provider / RSO Integration: **BLOCKED / NOT STARTED** pending explicit authorization, eligible scope, approved Production/OAuth access, reviewed identity/consent/security design, and a documented decision on the still-unmet lifetime requirement. If Riot cannot supply the proof contract, the maintainer must decide whether to keep the hard requirement blocked; this task does not weaken it automatically.
+DATA-04B — Riot Official Provider / RSO Integration: **BLOCKED ON DATA-04A / NOT STARTED** pending Riot clarification on ticket #139243830, explicit authorization, eligible scope, approved Production/OAuth access, reviewed identity/consent/security design, and a documented decision on the still-unmet lifetime requirement. If Riot cannot supply the proof contract, the maintainer must decide whether to keep the hard requirement blocked; this task does not weaken it automatically. The support inquiry has already been sent; do not send a duplicate inquiry or submit a Production/RSO application automatically.
 
-## Verification
+## Research verification (historical, preceding governance update)
 
 Executed in the current worktree on 2026-10-04:
 

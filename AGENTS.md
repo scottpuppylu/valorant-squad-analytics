@@ -38,6 +38,11 @@
 
 ## Current stage
 
+- Current governance decision (2026-10-04): TASK-DATA-04A is **WAITING ON RIOT — ticket #139243830**, status **OPEN — WAITING FOR RIOT RESPONSE**. TASK-DATA-04B is **BLOCKED ON DATA-04A**. TASK-RELEASE-01 is **PAUSED**; V1 is **NOT YET RELEASED**. Preserve the full lifetime-history requirement and existing evidence; research completion is not official clarification or access approval. See `docs/LIFETIME_HISTORY.md` and `docs/TASKS.md`.
+- Until the Riot clarification and a new explicit human gate: do not resume Henrik deep crawl, implement DATA-03A.2, start DATA-03B, implement DATA-04B/Riot provider/RSO, submit another Production/RSO application, call Riot or Henrik APIs, or change production data. The support inquiry is not a Production/RSO application. This current freeze supersedes continuation permissions in historical checkpoints below.
+
+### Historical checkpoints (not new execution authorization)
+
 - DATA-03A implementation is complete, initial CI/Pages/Vercel deployment and normal-path migration 0007 verified. Final local gates: 339 tests, lint/build, 16 DB checks, production audit zero; full audit retains the five-high SEC-2026-001 disposition. This is NOT production deep-crawl acceptance: bounded/full provider execution remains gated and NOT STARTED. Deployment success never grants crawl approval.
 
 - TASK-DATA-03A is authorized under SDD STRICT: implement/deploy `deep-history-v1`, separate `deep_backfill`, and append-only migration 0007 through the normal Vercel build path. Read `docs/DEEP_HISTORY.md` before changing this boundary. Preserve legacy cursors and migrations 0001–0006. Production deep start/continue, bounded provider validation and full P1/P2 crawl require a separate explicit human gate: DO NOT execute them on deployment. Production crawl NOT STARTED. Public schema 4/newest-300 read unchanged; TASK-DATA-03B NOT STARTED. RELEASE-01/01A PAUSED FOR DATA-03; V1 NOT YET RELEASED. Prior diagnosis and SEC-2026-001 are historical evidence, not release/repair/delete/crawl authorization. No scoring/Synergy change.
