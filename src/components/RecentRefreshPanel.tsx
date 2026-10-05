@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { recentRefreshLabels as L } from '../analytics/presentation';
 import type { RecentRefreshOutcome } from '../dataSources/server/contracts';
 import { useDataset } from '../hooks/useDataset';
+import type { PublicAccount } from '../types/valorant';
 import { formatMinutesAgo, formatMinutesUntil } from '../utils/format';
 
-type PanelState = { playerId: string; checking: boolean; outcome?: RecentRefreshOutcome };
+type RowState = { accountId: string; checking: boolean; outcome?: RecentRefreshOutcome };
 
 function describe(outcome: RecentRefreshOutcome): string {
   const wait = formatMinutesUntil(outcome.nextEligibleAt);
@@ -19,32 +20,45 @@ function describe(outcome: RecentRefreshOutcome): string {
   }
 }
 
-/**
- * TASK-DATA-FASTSYNC-01 Profile freshness. Renders only for PUBLIC REAL (Demo/Pages: nothing, no API).
- * Stored data is already on screen; this never blocks it and never shows unconfirmed matches.
- */
-export function RecentRefreshPanel({ playerId }: { playerId: string }) {
+/** One ACCOUNT's freshness row. `auto` = one automatic attempt per account per tab. */
+function AccountRefresh({ account, auto, showAccount }: { account: PublicAccount; auto: boolean; showAccount: boolean }) {
   const { refreshRecent } = useDataset();
-  const [state, setState] = useState<PanelState>({ playerId, checking: true });
+  const [state, setState] = useState<RowState>({ accountId: account.id, checking: auto });
 
   useEffect(() => {
-    if (!refreshRecent) return undefined;
+    if (!refreshRecent || !auto) return undefined;
     let active = true;
-    void refreshRecent(playerId, 'auto').then((outcome) => { if (active) setState({ playerId, checking: false, outcome }); });
+    void refreshRecent(account.id, 'auto').then((outcome) => { if (active) setState({ accountId: account.id, checking: false, outcome }); });
     return () => { active = false; };
-  }, [playerId, refreshRecent]);
+  }, [account.id, auto, refreshRecent]);
 
   if (!refreshRecent) return null;
-  const current = state.playerId === playerId ? state : { playerId, checking: true };
+  const current = state.accountId === account.id ? state : { accountId: account.id, checking: auto };
   const manual = () => {
-    setState({ playerId, checking: true, outcome: current.outcome });
-    void refreshRecent(playerId, 'manual').then((outcome) => setState({ playerId, checking: false, outcome }));
+    setState({ accountId: account.id, checking: true, outcome: current.outcome });
+    void refreshRecent(account.id, 'manual').then((outcome) => setState({ accountId: account.id, checking: false, outcome }));
   };
-  return <section aria-label="戰績更新" className="surface-card flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
+  const message = current.checking ? L.checking : current.outcome ? describe(current.outcome) : '尚未檢查（多帳號成員不會自動更新）';
+  return <div className="flex flex-wrap items-center justify-between gap-3">
     <div aria-live="polite">
-      <p className="text-slate-300">{current.checking ? L.checking : current.outcome ? describe(current.outcome) : L.checking}</p>
+      {showAccount ? <p className="font-mono text-xs text-slate-400">{account.gameName}#{account.tag}</p> : null}
+      <p className="text-slate-300">{message}</p>
       {current.outcome?.lastSuccessAt ? <p className="text-xs text-slate-400">最近同步：{formatMinutesAgo(current.outcome.lastSuccessAt)}（近期戰績，非完整生涯）</p> : null}
     </div>
     <button className="button-secondary" disabled={current.checking} onClick={manual} type="button">更新戰績</button>
+  </div>;
+}
+
+/**
+ * TASK-DATA-FASTSYNC-01 Profile freshness, made explicit for TASK-IDENTITY-01: sync is ACCOUNT-scoped.
+ * One public account → the original automatic refresh-if-stale. Several accounts → NO automatic
+ * provider fan-out; each account has its own manual action. Demo/Pages renders nothing (no API).
+ */
+export function RecentRefreshPanel({ accounts }: { accounts: PublicAccount[] }) {
+  const { refreshRecent } = useDataset();
+  if (!refreshRecent || accounts.length === 0) return null;
+  const single = accounts.length === 1;
+  return <section aria-label="戰績更新" className="surface-card space-y-3 p-4 text-sm">
+    {accounts.map((account) => <AccountRefresh account={account} auto={single} key={account.id} showAccount={!single} />)}
   </section>;
 }

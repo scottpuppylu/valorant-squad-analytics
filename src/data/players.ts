@@ -4,6 +4,11 @@ export const players: Player[] = [
   {
     id: 'nova-hex',
     handle: 'NovaHex',
+    nameSource: 'community',
+    accounts: [
+      { id: '00000000-0000-4000-8000-00000000d001', gameName: 'NovaMain', tag: 'DEMO', isPrimary: true, label: '主帳' },
+      { id: '00000000-0000-4000-8000-00000000da01', gameName: 'NovaAlt', tag: 'ALT', isPrimary: false, label: '小帳' },
+    ],
     displayName: 'Nova Hex',
     role: 'Duelist',
     agents: ['Jett', 'Raze'],
@@ -15,6 +20,8 @@ export const players: Player[] = [
   {
     id: 'echo-vale',
     handle: 'EchoVale',
+    nameSource: 'community',
+    accounts: [{ id: '00000000-0000-4000-8000-00000000d002', gameName: 'EchoVale', tag: 'DEMO', isPrimary: true }],
     displayName: 'Echo Vale',
     role: 'Initiator',
     agents: ['Sova', 'Fade'],
@@ -26,6 +33,8 @@ export const players: Player[] = [
   {
     id: 'moss-byte',
     handle: 'MossByte',
+    nameSource: 'community',
+    accounts: [{ id: '00000000-0000-4000-8000-00000000d003', gameName: 'MossByte', tag: 'DEMO', isPrimary: true }],
     displayName: 'Moss Byte',
     role: 'Controller',
     agents: ['Omen', 'Viper'],
@@ -37,6 +46,8 @@ export const players: Player[] = [
   {
     id: 'quartz',
     handle: 'Quartz',
+    nameSource: 'community',
+    accounts: [{ id: '00000000-0000-4000-8000-00000000d004', gameName: 'Quartz', tag: 'DEMO', isPrimary: true }],
     displayName: 'Quartz',
     role: 'Sentinel',
     agents: ['Killjoy', 'Cypher'],
@@ -48,6 +59,8 @@ export const players: Player[] = [
   {
     id: 'blitz-lark',
     handle: 'BlitzLark',
+    nameSource: 'community',
+    accounts: [{ id: '00000000-0000-4000-8000-00000000d005', gameName: 'BlitzLark', tag: 'DEMO', isPrimary: true }],
     displayName: 'Blitz Lark',
     role: 'Duelist',
     agents: ['Raze', 'Phoenix'],
@@ -59,6 +72,8 @@ export const players: Player[] = [
   {
     id: 'anchor-mint',
     handle: 'AnchorMint',
+    nameSource: 'community',
+    accounts: [{ id: '00000000-0000-4000-8000-00000000d006', gameName: 'AnchorMint', tag: 'DEMO', isPrimary: true }],
     displayName: 'Anchor Mint',
     role: 'Controller',
     agents: ['Brimstone', 'Omen'],
@@ -70,6 +85,8 @@ export const players: Player[] = [
   {
     id: 'pulse-fern',
     handle: 'PulseFern',
+    nameSource: 'community',
+    accounts: [{ id: '00000000-0000-4000-8000-00000000d007', gameName: 'PulseFern', tag: 'DEMO', isPrimary: true }],
     displayName: 'Pulse Fern',
     role: 'Initiator',
     agents: ['Breach', 'Fade'],
@@ -81,6 +98,8 @@ export const players: Player[] = [
   {
     id: 'vanta-kite',
     handle: 'VantaKite',
+    nameSource: 'community',
+    accounts: [{ id: '00000000-0000-4000-8000-00000000d008', gameName: 'VantaKite', tag: 'DEMO', isPrimary: true }],
     displayName: 'Vanta Kite',
     role: 'Sentinel',
     agents: ['Cypher', 'Sage'],
