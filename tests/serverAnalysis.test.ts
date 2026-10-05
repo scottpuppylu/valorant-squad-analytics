@@ -28,18 +28,13 @@ class PGliteDatabase implements SqlDatabase {
   constructor(readonly pg: PGlite) { open.push(pg); }
   async query<Row extends Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<SqlResult<Row>> {
     const value = await this.pg.query<Row>(sql, params);
+    // Test hook simulates a concurrent write right after the phase-1 observation statement.
+    if (this.hook && sql.includes('first_team_key')) { const hook = this.hook; this.hook = undefined; await hook(sql); }
     return { rows: value.rows, rowCount: value.affectedRows ?? value.rows.length };
   }
   async transaction<T>(work: (transaction: SqlExecutor) => Promise<T>): Promise<T> {
     await this.pg.exec('BEGIN');
-    const executor: SqlExecutor = { query: async <Row extends Record<string, unknown>>(sql: string, params: unknown[] = []) => {
-      // Test hook simulates writes between phases (only possible here because PGlite is one session).
-      if (this.hook && sql.startsWith('SET TRANSACTION')) return { rows: [] as Row[], rowCount: 0 };
-      const result = await this.query<Row>(sql, params);
-      if (this.hook && sql.includes('first_team_key')) { const hook = this.hook; this.hook = undefined; await hook(sql); }
-      return result;
-    } };
-    try { const value = await work(executor); await this.pg.exec('COMMIT'); return value; }
+    try { const value = await work(this); await this.pg.exec('COMMIT'); return value; }
     catch (error) { await this.pg.exec('ROLLBACK'); throw error; }
   }
   async close(): Promise<void> { await this.pg.close(); }

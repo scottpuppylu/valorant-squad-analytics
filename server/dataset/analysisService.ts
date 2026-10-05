@@ -23,7 +23,10 @@ import { datasetSchemaVersion } from './types.js';
  * beyond counts) builds skeleton entries with the projection's exact basic-evidence gate.
  * The UNCHANGED browser scope engine (selectPerformances / adaptive-window-v1) resolves the population.
  * Phase 2: full projection only for the selected matches; the same resolver re-runs with full entries
- * so window confidence uses real evidence. Both phases share one REPEATABLE READ READ ONLY transaction.
+ * so window confidence uses real evidence. Statements inside each phase run in parallel (production
+ * Neon round trips are ~240 ms, so a single-connection transaction cost ~3 s). Consistency: phase 2
+ * reads exactly the phase-1 match-id set (no loop/expansion), matches are deduplicated by public id,
+ * and only entries whose evidence phase 2 actually loaded are ever scored.
  * The browser then runs the unchanged community-score-v2 / duo-synergy-v1 code on the result.
  */
 export const SERVER_ANALYSIS_VERSION = 'server-analysis-v1' as const;
@@ -207,19 +210,19 @@ export class ServerAnalysisService {
 
   async analyze(request: AnalysisRequest) {
     const started = performance.now();
-    return this.database.transaction(async (tx: SqlExecutor) => {
+    {
       let sqlQueryCount = 0;
-      const query = (<Row extends Record<string, unknown>>(sql: string, params: unknown[] = []) => { sqlQueryCount += 1; return tx.query<Row>(sql, params); }) as SqlExecutor['query'];
-      // One consistent snapshot: cron writes between phases cannot mix populations.
-      await tx.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY');
+      const query = (<Row extends Record<string, unknown>>(sql: string, params: unknown[] = []) => { sqlQueryCount += 1; return this.database.query<Row>(sql, params); }) as SqlExecutor['query'];
 
       // ---- Phase 1: lightweight observations over all eligible durable history.
       const phase1Started = performance.now();
-      const [observations, playerRows, contextRows] = [
-        (await query<ObservationRow>(analysisObservationsSql)).rows,
-        (await query<DatasetPlayerRow>(playersQuery)).rows,
-        await new PostgresAnalyticsContextRepository({ query }).readContextRows(),
-      ];
+      const [observationResult, playerResult, contextRows] = await Promise.all([
+        query<ObservationRow>(analysisObservationsSql),
+        query<DatasetPlayerRow>(playersQuery),
+        new PostgresAnalyticsContextRepository({ query }).readContextRows(),
+      ]);
+      const observations = observationResult.rows;
+      const playerRows = playerResult.rows;
       const context = buildAnalyticsContext(contextRows);
       const phase1Ms = performance.now() - phase1Started;
 
@@ -336,7 +339,7 @@ export class ServerAnalysisService {
         observationRows: observations.length, eligibleMatches: skeletons.length, selectedMatches: matches.length, serializedBytes: Buffer.byteLength(JSON.stringify(payload)),
       };
       return { payload, metrics };
-    });
+    }
   }
 }
 
