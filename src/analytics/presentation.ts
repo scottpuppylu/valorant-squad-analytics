@@ -73,6 +73,7 @@ export const scopeReasonLabels: Record<ScopeReason, string> = {
   insufficient_dimension_overlap: '兩個區間共同可計分的表現維度不足',
   outlier_sensitive: '變化主要來自少數場次，已依穩健性收斂',
   trend_stability_unavailable: '無法評估趨勢穩定度',
+  low_progress_confidence: '比較信心過低，不顯示方向或數值',
 };
 
 /** e.g. "22 場 / 412 回合 / 18.4 小時 / 17 天". Display rounding only. */

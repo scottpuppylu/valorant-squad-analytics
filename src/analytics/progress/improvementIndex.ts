@@ -149,6 +149,11 @@ export function computeImprovementIndex(player: Player, resolved: ProgressWindow
   }
 
   const demonstratedDelta = rawDelta * shrink * stabilityFactor;
+  // A weak comparison must not look confident: below the floor no value or direction is shown.
+  if (confidence.overall < B.minimumConfidence) {
+    reasons.add('low_progress_confidence');
+    return { ...base, status: 'unavailable', performance: { rawDelta, coverage, dimensions: dimensionDeltas, shrink, trendStability, demonstratedDelta }, confidence, reasons: [...reasons].sort() };
+  }
   const performanceNorm = clamp(demonstratedDelta / B.performanceRange, -1, 1);
   // Rank is optional evidence: renormalize when absent (never zero, never a neutral observation).
   const value = rankStatus.status === 'available'

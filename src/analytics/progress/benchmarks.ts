@@ -24,6 +24,8 @@ export const improvementBenchmarks = {
   comparability: { same_act: 1, act_unknown: 0.85, previous_act_fallback: 0.7 } as const,
   /** Overall confidence below this keeps a numeric result `partial`. */
   availableConfidence: 0.5,
+  /** Below this no directional claim is made at all (no value, no direction): `unavailable`. */
+  minimumConfidence: 0.25,
   /** Future rank component (TASK-DATA-RANK-01): weight when real rank evidence exists, tier range for ±1. */
   rank: { weight: 0.25, tierRange: 3 },
 } as const;

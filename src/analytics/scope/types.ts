@@ -22,7 +22,7 @@ export type ScopeReason =
   | 'population_coverage_unverified' | 'no_matching_evidence' | 'season_crossed_in_baseline'
   | 'stale_recent_evidence' | 'server_population_limit'
   | 'same_act_baseline' | 'previous_act_fallback' | 'act_evidence_unknown'
-  | 'insufficient_dimension_overlap' | 'outlier_sensitive' | 'trend_stability_unavailable';
+  | 'insufficient_dimension_overlap' | 'outlier_sensitive' | 'trend_stability_unavailable' | 'low_progress_confidence';
 
 export interface WindowSample {
   matches: number;

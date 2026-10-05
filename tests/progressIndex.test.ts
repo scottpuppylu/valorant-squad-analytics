@@ -14,7 +14,7 @@ const pool = createPerformanceEntries(demo).filter((entry) => entry.playerId ===
 const day = 86_400_000;
 const anchor = Date.UTC(2026, 9, 5, 12);
 
-interface Spec { daysAgo: number; factor?: number; season?: string; template?: number; partialEvidence?: boolean; mode?: string; rounds?: number }
+interface Spec { daysAgo: number; factor?: number; season?: string; template?: number; partialEvidence?: boolean; mode?: string; rounds?: number; thin?: boolean }
 
 /** Clones fictional Demo performances (all eight dimensions scoreable) and scales skill by `factor`. */
 function history(specs: Spec[], prefix = 'm'): MatchRecord[] {
@@ -23,6 +23,12 @@ function history(specs: Spec[], prefix = 'm'): MatchRecord[] {
     const f = spec.factor ?? 1;
     const performance = { ...base.performance, kills: Math.round(base.performance.kills * f), acs: base.performance.acs * f, adr: base.performance.adr * f,
       ...(spec.partialEvidence ? { eventEvidence: { kast: 'partial' as const, opening: 'partial' as const }, kast: undefined, firstKills: undefined, firstDeaths: undefined } : {}) };
+    // `thin`: production-like evidence — only basic stats and the economy domain are scoreable.
+    if (spec.thin && performance.advancedMetrics) {
+      const adv = performance.advancedMetrics;
+      Object.assign(performance, { eventEvidence: { kast: 'partial', opening: 'partial' }, kast: undefined, firstKills: undefined, firstDeaths: undefined,
+        advancedMetrics: { ...adv, evidence: { trade: 'unavailable', clutch: 'unavailable', objectives: 'unavailable', abilityCasts: 'unavailable', economy: adv.evidence.economy, impactContext: 'unavailable', roleValueInputs: 'unavailable' } } });
+    }
     const extra = spec.rounds !== undefined ? { scoreFor: Math.ceil(spec.rounds / 2), scoreAgainst: Math.floor(spec.rounds / 2) } : {};
     return { ...base.match, ...extra, id: `${prefix}-${String(index).padStart(4, '0')}`, playedAt: new Date(anchor - spec.daysAgo * day).toISOString(),
       gameMode: spec.mode ?? 'Competitive', ...(spec.season ? { seasonKey: spec.season } : { seasonKey: undefined }), performances: [performance] };
@@ -178,6 +184,28 @@ describe('improvement-index-v1 evidence and rank', () => {
     const p = Math.max(-1, Math.min(1, none.performance.demonstratedDelta! / improvementBenchmarks.performanceRange));
     const q = Math.max(-1, Math.min(1, (3 * none.performance.shrink) / improvementBenchmarks.rank.tierRange));
     expect(withRank.value).toBeCloseTo(100 * (0.75 * p + 0.25 * q), 10);
+  });
+
+  it('never shows a numeric direction below the confidence floor (production acceptance regression)', () => {
+    const fixtures = [
+      history(spread(30, 28, (i) => ({ factor: i < 12 ? 1.1 : 0.7, season: 'e11a5' }))),
+      history(spread(30, 28, (i) => ({ factor: i < 12 ? 0.6 : 1.1, partialEvidence: true }))),
+      history(spread(16, 225, (i) => ({ factor: i < 5 ? 0.6 : 1.1, partialEvidence: true }))),
+      history(spread(16, 225, (i) => ({ factor: i < 5 ? 0.6 : 1.1, partialEvidence: true, template: 0 }))),
+      history(spread(14, 200, (i) => ({ factor: i < 5 ? 1.3 : 0.7, partialEvidence: i % 3 !== 0 }))),
+      history(spread(30, 28, (i) => ({ factor: i < 12 ? 0.6 : 1.1, thin: true }))),
+    ];
+    const results = fixtures.map((matches) => run(matches));
+    for (const result of results) {
+      if (result.value !== undefined) expect(result.confidence.overall).toBeGreaterThanOrEqual(improvementBenchmarks.minimumConfidence);
+      if (result.performance.rawDelta !== undefined && result.confidence.overall < improvementBenchmarks.minimumConfidence) {
+        expect(result).toMatchObject({ status: 'unavailable' });
+        expect(result.value).toBeUndefined();
+        expect(result.direction).toBeUndefined();
+        expect(result.reasons).toContain('low_progress_confidence');
+      }
+    }
+    expect(results.some((result) => result.reasons.includes('low_progress_confidence'))).toBe(true);
   });
 
   it('insufficient samples are unavailable with no numeric value', () => {

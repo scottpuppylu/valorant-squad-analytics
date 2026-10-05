@@ -93,8 +93,8 @@ never creates a direction. More games raise confidence, not the index.
 - `overall = sqrt(sample·temporal) × (0.5 + 0.5·evidence) × comparability`
 
 **Status:**
-- `unavailable`: either window is insufficient or coverage < 0.25. There is no value and no
-  direction.
+- `unavailable`: either window is insufficient, coverage < 0.25, or overall confidence < 0.25
+  (`low_progress_confidence`). There is no value and no direction.
 - `partial`: a value is shown with the 部分證據 label when overall < 0.5, coverage < 0.75,
   stability is unavailable, the Act is not `same_act`, or a window is partial.
 - `available`: otherwise.
@@ -110,6 +110,8 @@ never creates a direction. More games raise confidence, not the index.
 | fullDimensionCoverage | 0.75 | Matches overall-profile-v1's 75 % Overall gate |
 | minJackknifeShare | 0.8 | Stability must be assessable on most leave-one-out runs |
 | comparability | 1 / 0.85 / 0.7 | Same Act / unknown Act / explicit previous-Act fallback |
+| availableConfidence | 0.5 | Below this a numeric result is only `partial` |
+| minimumConfidence | 0.25 | Below this no direction or value is shown at all (a weak comparison must not look confident) |
 | rank weight / tierRange | 0.25 / 3 tiers | Future only; rank supports but never dominates performance |
 
 Boundary values (±9.999 stable, ±10 directional, shrink and jackknife formulas) are unit-tested.
