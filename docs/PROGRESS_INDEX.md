@@ -140,6 +140,48 @@ shrunk performance change with the dimensions used, the shrink and stability fac
 - Demo/Pages computes locally on fictional data, with no API.
 - Dashboard and Leaderboard are not changed; the ranking is never reordered by progress.
 
-## Acceptance
+## Production acceptance (2026-10-06, read-only)
 
-Recorded in the "Production acceptance" section below after deployment.
+Accepted at code commit `566c46c`. CI, GitHub Pages and Vercel all passed. No writes, no provider
+calls, no secrets read. Cron untouched.
+
+**Endpoint**
+- `GET view=analysis&feature=improvementIndex`: 200, `no-store`, 215 KB.
+- Versions: improvement-index-v1 / feature-scope-policy-v2 / adaptive-window-v1 /
+  server-analysis-v1.
+- Server-Timing: phase 1 1.30 s, phase 2 2.07 s, total 3.38 s.
+- Phase 2 loaded only 76 window matches out of 183 tracked.
+- No identifier or secret pattern in the body, and no NaN/Infinity.
+
+**Local parity:** the snapshot covers the tracked history, and local resolution matches the server
+result exactly. The existing feature parity script still reports parity true for every Score,
+window and Synergy check.
+
+**Results:** 9 players, all `unavailable`. No numeric value is shown, which is the correct
+outcome for current production evidence.
+
+| Reason | Players | Detail |
+|---|---|---|
+| `low_progress_confidence` | 3 | Common dimensions only firepower + economy (coverage 0.28), KAST/Opening evidence partial, confidence 13–16 % |
+| `insufficient_baseline` | 4 | Low-volume history |
+| `insufficient_dimension_overlap` | 2 | |
+
+- One of the low-confidence players showed −100 at 16 % confidence before the confidence floor was
+  added. That is exactly why the floor exists.
+- Current windows legitimately differ: 7–10 matches, 151–219 rounds, 1–7 days.
+- Rank is `unavailable / not_ingested` for everyone. It is never 0 and never a penalty.
+
+**Act handling**
+- Production has one observed Act (E11:A5) with partial coverage.
+- Same-Act baselines and `act_unknown` crossings into unknown-season matches were observed.
+- **Previous-Act fallback was NOT exercised in production.** It is verified only by deterministic
+  multi-Act fixtures.
+
+**UI**
+- Every production Profile card shows 資料不足 with confidence and Act policy. There is no signed
+  value, and the disclosure shows the windows and reasons.
+- GitHub Pages Demo computes locally and makes 0 `/api` requests.
+- Leaderboard and Dashboard are unchanged.
+
+**Production DB health** (duplicate/orphan SQL): NOT VERIFIED. No authorized read-only DB path
+exists, and no admin endpoint was built. This remains a V1 release gate.

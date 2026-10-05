@@ -6,7 +6,7 @@
 
 ## Current decision — TASK-PROGRESS-01 (2026-10-05)
 
-Adaptive Improvement Index authorized and implemented: `improvement-index-v1`,
+**COMPLETE / ACCEPTED (2026-10-06).** Adaptive Improvement Index authorized and implemented: `improvement-index-v1`,
 `improvement-benchmarks-v1`, `feature-scope-policy-v2`. See [PROGRESS_INDEX.md](PROGRESS_INDEX.md).
 Production acceptance is recorded there. TASK-DATA-RANK-01 NOT STARTED. DATA-03B.2C DEFERRED —
 required before a true LIFETIME/ACT/PAIR population can exceed the 2000-match analytical bound
@@ -40,8 +40,8 @@ See [ANALYTICS_SCOPES.md](ANALYTICS_SCOPES.md).
 - **DATA-03B.2B — server aggregate consumption: COMPLETE / ACCEPTED** (2026-10-05, see above).
 - **TASK-DATA-SEASON-01** (persist season metadata): started 2026-10-05, see above.
   **TASK-DATA-RANK-01** (rank ingestion): NOT STARTED, separately gated.
-- **TASK-PROGRESS-01 — Adaptive Improvement Index**: RECOMMENDED, design only
-  ([PROGRESS_INDEX.md](PROGRESS_INDEX.md)); depends on DATA-03B.2A.
+- **TASK-PROGRESS-01 — Adaptive Improvement Index**: COMPLETE / ACCEPTED 2026-10-06
+  ([PROGRESS_INDEX.md](PROGRESS_INDEX.md)). [SUPERSEDED: was RECOMMENDED, design only.]
 - DATA-05A PRODUCTION ACTIVATED / ACCEPTED; DATA-04B DEFERRED; RELEASE-01 PAUSED; V1 NOT RELEASED.
 
 ## Earlier decision — TASK-DATA-03B (2026-10-05)

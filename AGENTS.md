@@ -46,9 +46,9 @@
 | DATA-03B.1 history pagination | COMPLETE / ACCEPTED |
 | DATA-03B.2A scope engine | COMPLETE / ACCEPTED |
 | DATA-03B.2B server analytics (`view=analysis`) | COMPLETE / ACCEPTED |
-| DATA-03B.2C scalable LIFETIME/ACT/PAIR aggregation (>2000 phase-2 bound) | DEFERRED |
+| DATA-03B.2C scalable LIFETIME/ACT/PAIR aggregation (>2000 phase-2 bound) | DEFERRED — required before a true LIFETIME/ACT/PAIR population can exceed the 2000-match analytical bound without becoming partial |
 | TASK-DATA-SEASON-01 season evidence | COMPLETE / ACCEPTED (Act data available; coverage partial and dynamic) |
-| TASK-PROGRESS-01 Adaptive Improvement Index | IN PROGRESS (authorized 2026-10-05) — see docs/PROGRESS_INDEX.md |
+| TASK-PROGRESS-01 Adaptive Improvement Index | COMPLETE / ACCEPTED (2026-10-06; improvement-index-v1) — see docs/PROGRESS_INDEX.md |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
 | Riot ticket #139243830 | OPEN — informational / non-blocking |
@@ -59,6 +59,13 @@ they were written; lines marked **[SUPERSEDED]** must not be read as current sta
 
 ### Dated stage log
 
+- TASK-PROGRESS-01 COMPLETE / ACCEPTED (2026-10-06, SDD STRICT): `improvement-index-v1` /
+  `improvement-benchmarks-v1` / `feature-scope-policy-v2`. Profile-only signed −100..+100
+  progress metric via `view=analysis&feature=improvementIndex`; separate confidence; overall
+  confidence < 0.25 shows no value or direction. Rank is optional and never fabricated. It never
+  reorders the ranking, and Score/Synergy formulas are unchanged. No migration; nothing persisted.
+  Cross-Act fallback is fixture-verified only. Read docs/PROGRESS_INDEX.md before changing it.
+
 - TASK-DATA-03B.2B COMPLETE / ACCEPTED (2026-10-05, SDD STRICT): analytics pages consume
   `GET /api/valorant/dataset?view=analysis` (`server-analysis-v1`). Clients declare only a
   feature plus context. The server runs the SAME src/ scope engine over ALL eligible durable
@@ -66,7 +73,7 @@ they were written; lines marked **[SUPERSEDED]** must not be read as current sta
   and the browser runs the unchanged scoring/Synergy code. The newest-300 snapshot stays the
   bootstrap but is not an analytics boundary. Never let a failed analysis request substitute
   another scope. LIFETIME/ACT/PAIR phase 2 is capped at 2000 with a disclosed reason. Read
-  docs/SERVER_ANALYTICS.md before changing analysis populations. TASK-PROGRESS-01 is DESIGN ONLY [SUPERSEDED: authorized / in progress, see status table];
+  docs/SERVER_ANALYTICS.md before changing analysis populations. TASK-PROGRESS-01 is DESIGN ONLY [SUPERSEDED: COMPLETE / ACCEPTED, see status table];
   TASK-DATA-RANK-01 is NOT STARTED.
 
 - TASK-DATA-SEASON-01 COMPLETE / ACCEPTED (2026-10-05, SDD STRICT): match season evidence from Henrik v4
