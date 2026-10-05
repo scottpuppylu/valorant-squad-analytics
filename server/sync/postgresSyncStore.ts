@@ -14,6 +14,7 @@ import type {
   DeepCursorState,
 } from './types.js';
 import { PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
+import type { ScheduledJob, ScheduledCandidate } from './scheduledSyncService.js';
 
 type SubjectRow = {
   player_id: string;
@@ -138,6 +139,52 @@ function deepFromRow(row: Pick<CursorRow, 'history_phase' | 'stored_page' | 'sto
 export class PostgresSyncStore {
   constructor(private readonly database: SqlDatabase) {}
 
+  async withScheduledLock<T>(work: () => Promise<T>): Promise<T | undefined> {
+    // Transaction-scoped advisory lock uses a dedicated pool connection, not a
+    // session lock that can leak across pooled callers. Work commits independently.
+    return this.database.transaction(async (tx) => {
+      const lock = await tx.query<{ acquired: boolean }>(
+        'SELECT pg_try_advisory_xact_lock(50501,1) AS acquired');
+      if (!lock.rows[0]?.acquired) return undefined;
+      return work();
+    });
+  }
+
+  async duePlayers(job: ScheduledJob, at: string): Promise<ScheduledCandidate[]> {
+    const kind = job === 'recent' ? 'incremental' : 'deep_backfill';
+    const result = await this.database.query<{ public_id: string }>(`
+      SELECT p.public_id FROM players p
+      JOIN LATERAL (SELECT affinity FROM provider_identities WHERE player_id=p.id
+        AND provider='HenrikDev' ORDER BY created_at LIMIT 1) pi ON true
+      LEFT JOIN sync_cursors sc ON sc.player_id=p.id AND sc.provider='HenrikDev'
+        AND sc.affinity=pi.affinity AND sc.queue_scope='*' AND sc.sync_kind=$4
+      LEFT JOIN LATERAL (SELECT status,termination_reason,completed_at,started_at FROM sync_runs
+        WHERE player_id=p.id AND provider='HenrikDev' AND sync_kind=$4
+        ORDER BY started_at DESC LIMIT 1) sr ON true
+      WHERE p.anonymized_at IS NULL
+        AND EXISTS(SELECT 1 FROM squad_memberships WHERE player_id=p.id AND status='active')
+        AND EXISTS(SELECT 1 FROM consents WHERE player_id=p.id AND status='active'
+          AND consent_method=$2 AND privacy_version=$3)
+        AND NOT EXISTS(SELECT 1 FROM deletion_jobs WHERE player_id=p.id AND status<>'complete')
+        AND (sc.lease_token IS NULL OR sc.lease_expires_at <= $1::timestamptz)
+        AND (sc.next_attempt_at IS NULL OR sc.next_attempt_at <= $1::timestamptz)
+        AND CASE WHEN $4='incremental' THEN
+          (sc.last_success_at IS NULL OR sc.last_success_at <= $1::timestamptz - interval '20 hours' OR sr.status IS NULL)
+        ELSE sr.status IS NULL OR sr.status IN ('paused','pending','running')
+          OR (sr.status='failed' AND sr.termination_reason='provider_repeated_page')
+          OR (sr.status='complete' AND sr.completed_at <= $1::timestamptz -
+            CASE WHEN sc.live_history_exhausted AND sc.stored_history_exhausted
+              THEN interval '30 days' ELSE interval '7 days' END) END
+      ORDER BY CASE WHEN $4='incremental' THEN 0
+        WHEN sr.status IN ('paused','pending','running','failed') THEN 0
+        WHEN sr.status IS NULL THEN 1
+        WHEN sc.live_history_exhausted AND sc.stored_history_exhausted THEN 3 ELSE 2 END,
+        CASE WHEN $4='incremental' THEN sc.last_success_at ELSE sc.updated_at END ASC NULLS FIRST,
+        sc.updated_at ASC NULLS FIRST,
+        p.public_id`, [at, PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION, kind]);
+    return result.rows.map((row) => ({ publicPlayerId: row.public_id }));
+  }
+
   async findSubject(publicPlayerId: string): Promise<SyncSubject | undefined> {
     const result = await this.database.query<SubjectRow>(
       `SELECT p.id AS player_id, p.public_id AS public_player_id, sm.squad_id,
@@ -155,8 +202,11 @@ export class PostgresSyncStore {
   async hasActiveConsent(playerId: string): Promise<boolean> {
     const result = await this.database.query<{ active: boolean }>(
       `SELECT EXISTS(
-         SELECT 1 FROM consents
+         SELECT 1 FROM consents c JOIN players p ON p.id=c.player_id
          WHERE player_id=$1 AND status='active' AND consent_method=$2 AND privacy_version=$3
+           AND p.anonymized_at IS NULL
+           AND EXISTS(SELECT 1 FROM squad_memberships WHERE player_id=p.id AND status='active')
+           AND NOT EXISTS(SELECT 1 FROM deletion_jobs WHERE player_id=p.id AND status<>'complete')
        ) AS active`,
       [playerId, PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION],
     );
@@ -186,6 +236,7 @@ export class PostgresSyncStore {
     now: string,
     leaseExpiresAt: string,
     resetCompletedIncremental = false,
+    resetTerminalDeep = false,
   ): Promise<{ cursor: SyncCursorRecord; leaseToken: string } | undefined> {
     return this.database.transaction(async (transaction) => {
       const consent = await transaction.query<{ id: string }>(
@@ -197,6 +248,30 @@ export class PostgresSyncStore {
         throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家同意目前不是有效狀態，未建立同步租約。');
       }
       const cursorId = await this.ensureCursor(transaction, subject, kind);
+      if (kind === 'deep_backfill' && resetTerminalDeep) {
+        // Conditional reset under the cursor lease transaction: audit/data are preserved.
+        await transaction.query(`UPDATE sync_cursors sc SET next_start=0, history_phase='live_v4',
+          stored_page=1,stored_item_index=0,stored_total=NULL,discovery_page=NULL,
+          live_history_exhausted=false,stored_history_exhausted=false,
+          last_page_fingerprint_hmac=NULL,last_provider_match_boundary_hmac=NULL,
+          last_successful_page=NULL,retry_count=0,next_attempt_at=NULL,
+          last_error_category=NULL,last_success_at=NULL,coverage_complete_for_provider_window=false,
+          coverage_incomplete_reason=NULL,updated_at=$2
+          WHERE sc.id=$1 AND (lease_token IS NULL OR lease_expires_at <= $2)
+          AND (SELECT status FROM sync_runs WHERE player_id=sc.player_id AND sync_kind='deep_backfill'
+            ORDER BY started_at DESC LIMIT 1)='complete'
+          AND (SELECT completed_at FROM sync_runs WHERE player_id=sc.player_id AND sync_kind='deep_backfill'
+            ORDER BY started_at DESC LIMIT 1) <= $2::timestamptz -
+            CASE WHEN sc.live_history_exhausted AND sc.stored_history_exhausted
+              THEN interval '30 days' ELSE interval '7 days' END`, [cursorId, now]);
+        const latest = await transaction.query<{ status: string; history_phase: string; next_start: number; last_success_at: string | null }>(
+          `SELECT sr.status,sc.history_phase,sc.next_start,sc.last_success_at FROM sync_cursors sc JOIN LATERAL
+           (SELECT status FROM sync_runs WHERE player_id=sc.player_id AND sync_kind='deep_backfill'
+            ORDER BY started_at DESC LIMIT 1) sr ON true WHERE sc.id=$1`, [cursorId]);
+        if (latest.rows[0] && (latest.rows[0].status !== 'complete'
+          || latest.rows[0].history_phase !== 'live_v4' || latest.rows[0].next_start !== 0
+          || latest.rows[0].last_success_at !== null)) return undefined;
+      }
       if (kind === 'incremental' && resetCompletedIncremental) {
         await transaction.query(
           `UPDATE sync_cursors SET next_start=0, last_successful_page=NULL,
@@ -218,14 +293,14 @@ export class PostgresSyncStore {
     });
   }
 
-  async createRun(subject: SyncSubject, kind: SyncKind, cursorStart: number, at: string): Promise<SyncRunRecord> {
+  async createRun(subject: SyncSubject, kind: SyncKind, cursorStart: number, at: string, trigger: 'manual' | 'scheduled' = 'manual'): Promise<SyncRunRecord> {
     const id = randomUUID();
     const publicId = randomUUID();
     await this.database.query(
       `INSERT INTO sync_runs (
          id, public_id, squad_id, player_id, provider, trigger_kind, sync_kind, status, started_at, cursor_start
-       ) VALUES ($1,$2,$3,$4,'HenrikDev','manual',$5,'running',$6,$7)`,
-      [id, publicId, subject.squadId, subject.playerId, kind, at, cursorStart],
+       ) VALUES ($1,$2,$3,$4,'HenrikDev',$8,$5,'running',$6,$7)`,
+      [id, publicId, subject.squadId, subject.playerId, kind, at, cursorStart, trigger],
     );
     return { id, publicId, subject, kind, status: 'running', cursorStart };
   }
@@ -399,7 +474,10 @@ export class PostgresSyncStore {
   }): Promise<void> {
     await this.database.transaction(async (transaction) => {
       const cursor = await transaction.query(
-        `UPDATE sync_cursors SET retry_count=retry_count+1, last_error_category=$3,
+        `UPDATE sync_cursors SET retry_count=CASE WHEN $3='PROVIDER_PAGINATION_UNSTABLE'
+             AND coverage_incomplete_reason IS DISTINCT FROM 'pagination_repeat' THEN 1 ELSE retry_count+1 END,
+           coverage_incomplete_reason=CASE WHEN $3='PROVIDER_PAGINATION_UNSTABLE'
+             THEN 'pagination_repeat' ELSE coverage_incomplete_reason END, last_error_category=$3,
            last_error_at=$4, next_attempt_at=$5, lease_token=NULL, lease_expires_at=NULL, updated_at=$4
          WHERE id=$1 AND lease_token=$2`,
         [input.cursorId, input.leaseToken, input.category, input.at, input.nextAttemptAt ?? null],

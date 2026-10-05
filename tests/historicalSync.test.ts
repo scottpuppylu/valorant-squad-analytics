@@ -9,6 +9,7 @@ import { HistoricalSyncService } from '../server/sync/historicalSyncService';
 import { PostgresSyncStore } from '../server/sync/postgresSyncStore';
 import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy';
 import type { HistoricalDiscoveryProvider } from '../server/sync/historicalDiscoveryProvider';
+import { ScheduledSyncService } from '../server/sync/scheduledSyncService';
 
 const hmacKey = 'test-sync-hmac-key-with-at-least-32-bytes';
 const connection = {
@@ -120,6 +121,148 @@ describe('bounded historical synchronization', () => {
     expect((await database.query('SELECT next_start,history_rule_version FROM sync_cursors')).rows[0]).toEqual({ next_start: 0, history_rule_version: 'deep-history-v1' });
   });
 
+  it('scheduled due selection excludes recent, revoked, obsolete, inactive and anonymized players', async () => {
+    let at = new Date('2026-10-05T00:00:00Z');
+    const provider = new FixtureProvider(new Map([[0, page(match(0))]]));
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey, { now: () => at });
+    expect(await store.duePlayers('recent', at.toISOString())).toHaveLength(1);
+    await service.start(publicPlayerId, 'incremental', 'scheduled');
+    expect((await database.query('SELECT trigger_kind FROM sync_runs')).rows[0]).toEqual({ trigger_kind: 'scheduled' });
+    expect(await store.duePlayers('recent', at.toISOString())).toHaveLength(0);
+    at = new Date(at.getTime() + 21 * 3600_000);
+    expect(await store.duePlayers('recent', at.toISOString())).toHaveLength(1);
+    await database.query("UPDATE consents SET privacy_version='obsolete'");
+    expect(await store.duePlayers('recent', at.toISOString())).toHaveLength(0);
+    await database.query('UPDATE consents SET privacy_version=$1', [PUBLIC_DATASET_PRIVACY_VERSION]);
+    await database.query("UPDATE squad_memberships SET status='inactive'");
+    expect(await store.duePlayers('recent', at.toISOString())).toHaveLength(0);
+    await expect(service.start(publicPlayerId,'incremental','scheduled')).rejects.toMatchObject({code:'SYNC_NOT_FOUND'});
+    await database.query("UPDATE squad_memberships SET status='active'");
+    await database.query('UPDATE players SET anonymized_at=now()');
+    expect(await store.duePlayers('recent', at.toISOString())).toHaveLength(0);
+    expect(provider.calls).toBe(1);
+  });
+
+  it('two due consenting players persist serial scheduled observations idempotently', async () => {
+    const other = { ...connection,gameName:'SecondSyncGoblin' };
+    await durable.persistConnection(other,'fictional-second-participant','2026-09-30T00:00:00Z');
+    let active=0;
+    const provider = { fetchHistoryPage:vi.fn(async(input:{gameName:string})=>{
+      active+=1;expect(active).toBe(1);
+      const value=match(input.gameName===connection.gameName?0:1);
+      if(input.gameName===other.gameName){
+        value.players[0]={...value.players[0]!,name:other.gameName,puuid:'fictional-second-participant'};
+        value.rounds[0]!.stats[0]!.player.puuid='fictional-second-participant';
+      }
+      await Promise.resolve();active-=1;return page(value);
+    }) };
+    const at=new Date('2026-10-05T00:00:00Z');
+    const runner=new HistoricalSyncService(store,durable,provider,hmacKey,{now:()=>at});
+    const scheduler=new ScheduledSyncService({duePlayers:store.duePlayers.bind(store),withScheduledLock:async(work)=>work()},runner,()=>0,()=>at,async()=>{});
+    expect(await scheduler.run('recent')).toMatchObject({processed:2,partial:false});
+    expect(await count(database,'source_matches')).toBe(2);
+    expect((await database.query('SELECT DISTINCT trigger_kind FROM sync_runs')).rows).toEqual([{trigger_kind:'scheduled'}]);
+    expect(await scheduler.run('recent')).toMatchObject({processed:0});
+    expect(provider.fetchHistoryPage).toHaveBeenCalledTimes(2);
+  });
+
+  it('repeated live offset persists 5/30-minute backoff then recovers a different page', async () => {
+    const pages = new Map([[0, page(match(0),match(1),match(2))], [3, page(match(0),match(1),match(2))]]);
+    const provider = new DeepFixtureProvider(pages);
+    let at = new Date('2026-10-05T00:00:00Z');
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey, { now: () => at });
+    const first = await service.start(publicPlayerId, 'deep_backfill');
+    const repeat = await service.continue(first.runId);
+    expect(repeat.nextAttemptAt).toBe('2026-10-05T00:05:00.000Z');
+    expect((await database.query('SELECT next_start FROM sync_cursors')).rows[0]?.next_start).toBe(3);
+    expect(await count(database,'source_matches')).toBe(3);
+    await expect(service.continue(first.runId)).rejects.toMatchObject({ code:'SYNC_BACKOFF' });
+    at = new Date(repeat.nextAttemptAt!);
+    const second = await service.continue(first.runId);
+    expect(second.nextAttemptAt).toBe('2026-10-05T00:35:00.000Z');
+    at = new Date(second.nextAttemptAt!);
+    pages.set(3, page(match(3),match(4),match(5)));
+    const recovered = await service.continue(first.runId);
+    expect(recovered.lastErrorCategory).toBeUndefined();
+    expect(recovered.nextAttemptAt).toBeUndefined();
+    expect(await count(database,'source_matches')).toBe(6);
+    expect((await database.query('SELECT next_start,retry_count FROM sync_cursors')).rows[0]).toEqual({next_start:6,retry_count:0});
+  });
+
+  it('third repeated live page falls back; partial sweep uses existing schema and weekly cooldown', async () => {
+    const same = page(match(0),match(1),match(2));
+    let at = new Date('2026-10-05T00:00:00Z');
+    const provider = new DeepFixtureProvider(new Map([[0,same],[3,same]]));
+    const service = new HistoricalSyncService(store,durable,provider,hmacKey,{now:()=>at});
+    const first = await service.start(publicPlayerId,'deep_backfill');
+    for (let n=0;n<2;n+=1) {
+      const repeated = await service.continue(first.runId);
+      at = new Date(repeated.nextAttemptAt!);
+    }
+    const fallback = await service.continue(first.runId);
+    expect(fallback).toMatchObject({status:'paused',history:{historyPhase:'stored_index',liveHistoryExhausted:false,sourceExhausted:false},coverage:{incompleteReason:'live_v4_pagination_stalled'}});
+    const final = await service.continue(first.runId);
+    expect(final).toMatchObject({status:'complete',history:{sourceExhausted:false,lifetimeComplete:false},coverage:{incompleteReason:'partial_source_coverage'}});
+    expect(await store.duePlayers('history',at.toISOString())).toHaveLength(0);
+    await expect(service.start(publicPlayerId,'deep_backfill','scheduled')).rejects.toMatchObject({code:'LOCK_BUSY'});
+    at = new Date(at.getTime()+7*86400_000);
+    expect(await store.duePlayers('history',at.toISOString())).toHaveLength(1);
+    const next = await service.start(publicPlayerId,'deep_backfill','scheduled');
+    expect(next.runId).not.toBe(first.runId);
+    expect(await count(database,'source_matches')).toBe(3);
+    expect(await count(database,'sync_runs')).toBe(2);
+  });
+
+  it('monthly reconciliation finds older D/E while later windows cannot remove A/B/C', async () => {
+    let at = new Date('2026-10-05T00:00:00Z');
+    const pages = new Map([[0,page(match(0),match(1),match(2))]]);
+    const provider = new DeepFixtureProvider(pages);
+    const service = new HistoricalSyncService(store,durable,provider,hmacKey,{now:()=>at});
+    const first = await service.start(publicPlayerId,'deep_backfill','scheduled');
+    await service.continue(first.runId);
+    await service.continue(first.runId);
+    at = new Date(at.getTime()+29*86400_000);
+    expect(await store.duePlayers('history',at.toISOString())).toHaveLength(0);
+    at = new Date(at.getTime()+86400_000);
+    pages.set(3,page(match(3),match(4)));
+    const second = await service.start(publicPlayerId,'deep_backfill','scheduled');
+    await service.continue(second.runId);
+    await service.continue(second.runId);
+    expect(await count(database,'source_matches')).toBe(5);
+    pages.set(0,page(match(9),match(0),match(1)));
+    at = new Date(at.getTime()+86400_000);
+    await service.start(publicPlayerId,'incremental','scheduled');
+    expect(await count(database,'source_matches')).toBe(6);
+    expect((await database.query("SELECT trigger_kind,count(*)::integer AS count FROM sync_runs GROUP BY trigger_kind")).rows).toEqual([{trigger_kind:'scheduled',count:3}]);
+  });
+
+  it('existing failed P2 pagination run is resumed without a replacement audit', async () => {
+    const pages=new Map([[0,page(match(0),match(1),match(2))],[3,page(match(3))]]);
+    const service=new HistoricalSyncService(store,durable,new DeepFixtureProvider(pages),hmacKey);
+    const first=await service.start(publicPlayerId,'deep_backfill');
+    await database.query("UPDATE sync_runs SET status='failed',termination_reason='provider_repeated_page',completed_at=now()");
+    const resumed=await service.start(publicPlayerId,'deep_backfill','scheduled');
+    expect(resumed.runId).toBe(first.runId);
+    expect(resumed.status).toBe('paused');
+    expect(await count(database,'sync_runs')).toBe(1);
+    expect((await database.query('SELECT trigger_kind FROM sync_runs')).rows[0]?.trigger_kind).toBe('manual');
+    expect(await count(database,'source_matches')).toBe(4);
+  });
+
+  it('persistent stored repetition ends an incomplete sweep without fabricating evidence', async () => {
+    let at=new Date('2026-10-05T00:00:00Z');
+    const provider=new DeepFixtureProvider(new Map(),new Map([[1,[0,1,2]],[2,[0,1,2]]]));
+    await durable.persistMatches({...connection,playerId:publicPlayerId,limit:3},page(match(0),match(1),match(2)));
+    const service=new HistoricalSyncService(store,durable,provider,hmacKey,{now:()=>at});
+    const first=await service.start(publicPlayerId,'deep_backfill');
+    await service.continue(first.runId);
+    for(let n=0;n<2;n+=1){const paused=await service.continue(first.runId);at=new Date(paused.nextAttemptAt!);}
+    const final=await service.continue(first.runId);
+    expect(final).toMatchObject({status:'complete',coverage:{incompleteReason:'partial_source_coverage'},history:{storedHistoryExhausted:false,sourceExhausted:false,lifetimeComplete:false}});
+    expect(provider.detailCalls).toBe(0);
+    expect(await count(database,'source_matches')).toBe(3);
+  });
+
   it('deep full overlap advances to older unique matches without rewriting legacy backfill', async () => {
     await durable.persistMatches({ ...connection, playerId: publicPlayerId, limit: 3 }, page(match(0), match(1), match(2)));
     const provider = new DeepFixtureProvider(new Map([[0, page(match(0), match(1), match(2))], [3, page(match(3), match(4), match(5))]]));
@@ -197,7 +340,7 @@ describe('bounded historical synchronization', () => {
     let progress = await service.start(publicPlayerId, 'deep_backfill');
     progress = await service.continue(progress.runId);
     progress = await service.continue(progress.runId);
-    expect(progress).toMatchObject({ status: 'failed', terminationReason: 'provider_repeated_page', history: { sourceExhausted: false, storedHistoryExhausted: false } });
+    expect(progress).toMatchObject({ status: 'paused', lastErrorCategory: 'PROVIDER_PAGINATION_UNSTABLE', history: { sourceExhausted: false, storedHistoryExhausted: false } });
     expect(provider.detailCalls).toBe(0);
     expect(await count(database, 'source_matches')).toBe(3);
   });
@@ -257,12 +400,12 @@ describe('bounded historical synchronization', () => {
     expect(provider.detailCalls).toBe(2);
   });
 
-  it('deep repeated live page is a failed stall, never source exhaustion', async () => {
+  it('deep repeated live page pauses retryably, never source exhaustion', async () => {
     const same = page(match(0), match(1), match(2));
     const provider = new DeepFixtureProvider(new Map([[0, same], [3, same]]));
     const service = new HistoricalSyncService(store, durable, provider, hmacKey);
     const first = await service.start(publicPlayerId, 'deep_backfill');
-    expect(await service.continue(first.runId)).toMatchObject({ status: 'failed', terminationReason: 'provider_repeated_page', history: { sourceExhausted: false } });
+    expect(await service.continue(first.runId)).toMatchObject({ status: 'paused', lastErrorCategory: 'PROVIDER_PAGINATION_UNSTABLE', history: { sourceExhausted: false } });
   });
 
   it('revocation between stored index and detail prevents that detail call and cancels run', async () => {

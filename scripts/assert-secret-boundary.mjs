@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
-const forbidden = ['HENRIK_API_KEY', 'DATABASE_URL', 'IDENTIFIER_HMAC_KEY'];
+const forbidden = ['HENRIK_API_KEY', 'DATABASE_URL', 'IDENTIFIER_HMAC_KEY', 'CRON_SECRET'];
 const textExtensions = new Set(['.js', '.css', '.html', '.map', '.ts', '.tsx']);
 
 async function walk(directory) {

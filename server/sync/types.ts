@@ -11,6 +11,7 @@ export interface DeepCursorState {
 }
 export type SyncStatus = 'pending' | 'running' | 'paused' | 'complete' | 'failed' | 'cancelled';
 export type SyncErrorCategory =
+  | 'PROVIDER_PAGINATION_UNSTABLE'
   | 'RATE_LIMITED'
   | 'PROVIDER_TIMEOUT'
   | 'PROVIDER_5XX'

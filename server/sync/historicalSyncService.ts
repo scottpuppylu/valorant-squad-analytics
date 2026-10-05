@@ -68,6 +68,7 @@ function retryStatus(category: SyncErrorCategory): SyncStatus {
 }
 
 function publicFailure(category: SyncErrorCategory): PublicApiError {
+  if (category === 'MALFORMED_RESPONSE') return new PublicApiError(502, 'MALFORMED_PROVIDER_RESPONSE', '資料格式不完整，排程已安全停止。');
   if (category === 'RATE_LIMITED') return new PublicApiError(429, 'RATE_LIMITED', '資料來源目前限制請求，已保留進度並排定稍後重試。');
   if (category === 'PROVIDER_TIMEOUT') return new PublicApiError(504, 'PROVIDER_TIMEOUT', '資料來源回應逾時，已保留同步進度。');
   if (category === 'DATABASE_ERROR') return new PublicApiError(503, 'DATABASE_ERROR', '同步資料暫時無法寫入，游標尚未前進。');
@@ -104,7 +105,7 @@ export class HistoricalSyncService {
     this.monotonicNow = options.monotonicNow ?? (() => performance.now());
   }
 
-  async start(publicPlayerId: string, kind: SyncKind): Promise<PublicSyncStatus> {
+  async start(publicPlayerId: string, kind: SyncKind, trigger: 'manual' | 'scheduled' = 'manual'): Promise<PublicSyncStatus> {
     const subject = await this.store.findSubject(publicPlayerId);
     if (!subject) throw new PublicApiError(404, 'SYNC_NOT_FOUND', '找不到可同步的玩家連接。');
     if (!await this.store.hasActiveConsent(subject.playerId)) {
@@ -112,7 +113,8 @@ export class HistoricalSyncService {
     }
     const existingRun = await this.store.findLatestRun(subject, kind);
     if (existingRun) {
-      if (existingRun.status === 'complete' && kind !== 'incremental') return this.requireStatus(existingRun.publicId);
+      if (existingRun.status === 'complete' && kind !== 'incremental'
+        && !(trigger === 'scheduled' && kind === 'deep_backfill')) return this.requireStatus(existingRun.publicId);
       if (existingRun.status !== 'complete' && existingRun.status !== 'cancelled') return this.continue(existingRun.publicId);
     }
     const at = this.now();
@@ -122,9 +124,10 @@ export class HistoricalSyncService {
       at.toISOString(),
       new Date(at.getTime() + LEASE_DURATION_MS).toISOString(),
       kind === 'incremental',
+      trigger === 'scheduled' && kind === 'deep_backfill',
     );
     if (!lease) throw new PublicApiError(409, 'LOCK_BUSY', '此玩家已有同步工作正在執行。');
-    const run = await this.store.createRun(subject, kind, lease.cursor.nextStart, at.toISOString());
+    const run = await this.store.createRun(subject, kind, lease.cursor.nextStart, at.toISOString(), trigger);
     return this.executeChunk(run, lease.cursor, lease.leaseToken, 9);
   }
 
@@ -209,12 +212,25 @@ export class HistoricalSyncService {
         chunk.metrics.totalMs = Math.round(this.monotonicNow() - invocationStarted);
         chunk.metrics.sqlQueryCount += initialSqlQueryCount + 5;
         databaseStage = true;
+        if (chunk.paginationPause) {
+          const repeats = cursor.incompleteReason === 'pagination_repeat' ? cursor.retryCount : 0;
+          await this.store.recordFailure({ cursorId: cursor.id, leaseToken, runId: run.id,
+            category: 'PROVIDER_PAGINATION_UNSTABLE', status: 'paused',
+            at: this.now().toISOString(),
+            nextAttemptAt: new Date(this.now().getTime() + (repeats === 0 ? 300_000 : 1_800_000)).toISOString(),
+            metrics: chunk.metrics,
+          });
+          released = true;
+          cursorCommitted = true;
+          return this.requireStatus(run.publicId);
+        }
         await this.store.recordSuccess({
           cursorId: cursor.id, leaseToken, runId: run.id, ...chunk,
           pageNumber: cursor.deep?.historyPhase === 'stored_index' ? cursor.deep.storedPage : Math.floor(cursor.nextStart / this.pageSize),
           at: this.now().toISOString(),
           completeForProviderWindow: chunk.deep.liveHistoryExhausted && chunk.deep.storedHistoryExhausted,
-          incompleteReason: chunk.runStatus === 'failed' ? 'provider_repeated_page' : undefined,
+          incompleteReason: chunk.incompleteReason ?? (chunk.deep.historyPhase === 'stored_index'
+            && !chunk.deep.liveHistoryExhausted ? 'live_v4_pagination_stalled' : undefined),
         });
         released = true;
         cursorCommitted = true;

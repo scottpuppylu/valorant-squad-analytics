@@ -19,6 +19,8 @@ export interface DeepChunkResult {
   coverageTo?: string;
   terminationReason?: SyncTerminationReason;
   runStatus: 'paused' | 'failed' | 'complete';
+  paginationPause?: boolean;
+  incompleteReason?: string;
   metrics: SyncChunkMetrics;
 }
 
@@ -94,8 +96,24 @@ export async function executeDeepHistoryChunk(options: {
     }
   }
   function stall(): DeepChunkResult {
-    result.terminationReason = 'provider_repeated_page';
-    result.runStatus = 'failed';
+    const consecutive = cursor.incompleteReason === 'pagination_repeat'
+      ? cursor.retryCount : 0;
+    if (consecutive < 2) {
+      result.paginationPause = true;
+      return result;
+    }
+    if (deep.historyPhase === 'live_v4') {
+      deep.historyPhase = 'stored_index';
+      deep.liveHistoryExhausted = false;
+      result.fingerprintHmac = undefined;
+      result.incompleteReason = 'live_v4_pagination_stalled';
+    } else {
+      // Migration 0007 permits phase=complete only for exhausted sources.
+      // A terminal incomplete run therefore retains its unresolved cursor phase.
+      result.runStatus = 'complete';
+      result.terminationReason = 'provider_repeated_page';
+      result.incompleteReason = 'partial_source_coverage';
+    }
     return result;
   }
   if (deep.historyPhase === 'live_v4') {
@@ -167,9 +185,14 @@ export async function executeDeepHistoryChunk(options: {
   }
   if (deep.storedItemIndex === rawIds.length) {
     if (after === 0 || (after === undefined && rawIds.length < pageSize)) {
-      deep.historyPhase = 'complete';
       deep.storedHistoryExhausted = true;
-      result.terminationReason = 'source_exhausted';
+      if (deep.liveHistoryExhausted) {
+        deep.historyPhase = 'complete';
+        result.terminationReason = 'source_exhausted';
+      } else {
+        result.terminationReason = 'provider_repeated_page';
+        result.incompleteReason = 'partial_source_coverage';
+      }
       result.runStatus = 'complete';
     } else {
       deep.storedPage += 1;
