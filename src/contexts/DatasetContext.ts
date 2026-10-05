@@ -1,6 +1,7 @@
 import { createContext } from 'react';
 import type { DatasetAnalytics } from '../data/analytics';
 import type { DatasetCoverageContract, DatasetEvidenceContract, DatasetSnapshotContract } from '../dataSources/server/contracts';
+import type { DatasetApiClient } from '../dataSources/server/DatasetApiClient';
 import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 
 export type DatasetRuntimeStatus = 'loading' | 'ready' | 'stale' | 'empty' | 'error' | 'demo';
@@ -15,6 +16,8 @@ export interface DatasetContextValue {
   coverage?: DatasetCoverageContract;
   evidence?: DatasetEvidenceContract;
   message?: string;
+  /** Present only for the PUBLIC REAL server runtime; Demo/Pages never request history. */
+  loadHistory?: NonNullable<DatasetApiClient['loadHistory']>;
   refresh(): Promise<void>;
 }
 

@@ -11,6 +11,9 @@ import type {
   RevocationResponse,
   DeletionResponse,
   DatasetResponse,
+  DatasetDisabledResponse,
+  DatasetHistoryQuery,
+  DatasetHistoryResponse,
 } from './contracts';
 
 export class BackendApiError extends Error {
@@ -53,6 +56,15 @@ export class ValorantBackendClient {
 
   dataset(signal?: AbortSignal): Promise<DatasetResponse> {
     return requestJson('/api/valorant/dataset', { signal });
+  }
+
+  /** DATA-03B.1 bounded history page; the cursor is an opaque position, never authorization. */
+  datasetHistory(query: DatasetHistoryQuery, signal?: AbortSignal): Promise<DatasetHistoryResponse | DatasetDisabledResponse> {
+    const params = new URLSearchParams({ view: 'history' });
+    if (query.limit !== undefined) params.set('limit', String(query.limit));
+    if (query.cursor) params.set('cursor', query.cursor);
+    else if (query.before) params.set('before', query.before);
+    return requestJson(`/api/valorant/dataset?${params.toString()}`, { signal });
   }
 
   resolveAccount(input: ConnectionRequest): Promise<AccountResponse> {

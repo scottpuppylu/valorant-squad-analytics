@@ -73,6 +73,7 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
   }, [load]);
 
   const analytics = useMemo(() => buildAnalytics(state.dataset), [state.dataset]);
+  const historyLoader = useMemo(() => client.loadHistory?.bind(client), [client]);
   const value = useMemo<DatasetContextValue>(() => ({
     status: state.status,
     source: state.source,
@@ -82,8 +83,9 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
     coverage: state.response?.coverage,
     evidence: state.response?.evidence,
     message: state.message,
+    ...(state.source === 'REAL_SERVER' && historyLoader ? { loadHistory: historyLoader } : {}),
     refresh: () => load(true),
-  }), [analytics, load, state]);
+  }), [analytics, historyLoader, load, state]);
 
   return <DatasetContext.Provider value={value}>{children}</DatasetContext.Provider>;
 }

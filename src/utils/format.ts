@@ -41,3 +41,13 @@ export function formatDate(value: string): string {
     day: 'numeric',
   }).format(new Date(value));
 }
+
+export function formatFullDate(value?: string): string {
+  if (!value || Number.isNaN(Date.parse(value))) return unavailable;
+  return new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric' }).format(new Date(value));
+}
+
+export function formatDateTime(value?: string): string {
+  if (!value || Number.isNaN(Date.parse(value))) return unavailable;
+  return new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
+}
