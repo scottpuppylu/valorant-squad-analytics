@@ -1,4 +1,5 @@
-import type { DatasetReadyResponse } from './contracts';
+import type { DatasetHistoryResponse, DatasetReadyResponse } from './contracts';
+import type { NormalizedAnalyticsDataset } from '../types';
 import { validSynergyContract } from './synergyContract';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -30,16 +31,48 @@ export function isDatasetResponse(value: unknown): value is DatasetReadyResponse
     && candidate.snapshot.projectionVersion === 'evidence-decoupled-projection-v1'
     && candidate.snapshot.generation === 'dataset-read-v4'
     && candidate.snapshot.source === 'durable-neon'
-    && candidate.dataset?.mode === 'REAL'
-    && candidate.dataset.isDemo === false
-    && Array.isArray(candidate.dataset.players)
-    && Array.isArray(candidate.dataset.matches)
-    && candidate.dataset.matches.every((match) => isRecord(match)
+    && isRealDataset(candidate.dataset);
+}
+
+function isRealDataset(dataset: unknown): dataset is NormalizedAnalyticsDataset {
+  if (!isRecord(dataset)) return false;
+  const candidate = dataset as Partial<NormalizedAnalyticsDataset>;
+  return candidate.mode === 'REAL'
+    && candidate.isDemo === false
+    && Array.isArray(candidate.players)
+    && Array.isArray(candidate.matches)
+    && candidate.matches.every((match) => isRecord(match)
       && Array.isArray(match.performances)
       && match.performances.every((performance) => isRecord(performance)
         && isEventEvidence(performance)
         && (performance.advancedMetrics === undefined || isAdvancedMetrics(performance.advancedMetrics)))
-      && validSynergyContract(match, new Set(candidate.dataset!.players.map((p) => p.id))));
+      && validSynergyContract(match, new Set(candidate.players!.map((p) => p.id))));
+}
+
+const optionalIso = (value: unknown) => value === undefined || (typeof value === 'string' && !Number.isNaN(Date.parse(value)));
+const count = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+
+/** TASK-DATA-03B.1 history page; rejects any lifetime-completeness claim or unbounded page. */
+export function isDatasetHistoryResponse(value: unknown): value is DatasetHistoryResponse {
+  if (!isRecord(value)) return false;
+  const candidate = value as Partial<DatasetHistoryResponse>;
+  const page = candidate.page;
+  const tracked = candidate.tracked;
+  return candidate.ok === true
+    && candidate.schemaVersion === 4
+    && candidate.view === 'history'
+    && candidate.historyVersion === 'dataset-history-v1'
+    && candidate.projectionVersion === 'evidence-decoupled-projection-v1'
+    && (candidate.state === 'ready' || candidate.state === 'empty')
+    && isRecord(page) && count(page.limit) && page.limit >= 1 && page.limit <= 100
+    && count(page.traversedMatchCount) && count(page.withheldMatchCount)
+    && typeof page.hasMore === 'boolean'
+    && (page.hasMore ? typeof page.nextCursor === 'string' && page.nextCursor.length <= 200 : page.nextCursor === null)
+    && optionalIso(page.from) && optionalIso(page.to)
+    && isRecord(tracked) && count(tracked.trackedMatchCount) && tracked.lifetimeComplete === false
+    && optionalIso(tracked.earliestTrackedAt) && optionalIso(tracked.latestTrackedAt) && optionalIso(tracked.lastSyncedAt)
+    && isRealDataset(candidate.dataset)
+    && candidate.dataset.matches.length <= page.limit * 2;
 }
 
 function isEventEvidence(performance: Record<string, unknown>): boolean {

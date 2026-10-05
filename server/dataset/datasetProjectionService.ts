@@ -5,10 +5,23 @@ import type { MatchPairTradeEvidence, MatchPerformance, MatchRecord, Player } fr
 import { primaryRoleForAgents } from '../../src/utils/agentRoles.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
 import type { EvidenceStatus } from '../evidence/types.js';
+import { PublicApiError } from '../errors.js';
 import { EventMetricEngine } from '../metrics/eventMetricEngine.js';
 import type { EventMetricMatchInput, MetricKillInput, MetricParticipantInput, MetricRoundInput, ReconstructedAdvancedMetrics } from '../metrics/types.js';
-import type { DatasetEventRow, DatasetPerformanceRow, DatasetProjectionResult, DatasetReadRepository } from './types.js';
-import { datasetProjectionVersion, datasetSchemaVersion, datasetWindowSize } from './types.js';
+import type {
+  DatasetEventRow,
+  DatasetEvidenceAvailability,
+  DatasetHistoryPageRequest,
+  DatasetHistoryResult,
+  DatasetPerformanceRow,
+  DatasetProjectionResult,
+  DatasetProjectionRows,
+  DatasetReadRepository,
+} from './types.js';
+import { datasetHistoryVersion, datasetProjectionVersion, datasetSchemaVersion, datasetWindowSize } from './types.js';
+import { encodeHistoryCursor } from './historyCursor.js';
+
+type ProjectableRows = Pick<DatasetProjectionRows, 'players' | 'performances' | 'rounds' | 'roundParticipants' | 'events'>;
 
 const accentPalette = ['#6ee7b7', '#67e8f9', '#c4b5fd', '#f9a8d4', '#fdba74', '#fde68a'];
 const playerEmojiSet = new Set<string>(playerEmojiOptions);
@@ -151,10 +164,11 @@ function publicAdvancedMetrics(metrics: ReconstructedAdvancedMetrics): AdvancedM
 export class DatasetProjectionService {
   private readonly metricEngine = new EventMetricEngine();
 
-  constructor(private readonly repository: DatasetReadRepository) {}
+  /** `cursorKey` is only for tests; production derives the cursor MAC from IDENTIFIER_HMAC_KEY. */
+  constructor(private readonly repository: DatasetReadRepository, private readonly cursorKey?: string) {}
 
-  async read(): Promise<DatasetProjectionResult> {
-    const rows = await this.repository.readProjectionRows(datasetWindowSize);
+  /** Shared per-match projection for the bounded snapshot and DATA-03B.1 history pages. */
+  private project(rows: ProjectableRows) {
     const projectionStarted = performance.now();
     let metricReconstructionMs = 0;
     let eventCount = 0;
@@ -312,7 +326,7 @@ export class DatasetProjectionService {
     }
     matches.sort((a, b) => b.playedAt.localeCompare(a.playedAt) || a.id.localeCompare(b.id));
     const dataset = { players, matches, sourceId: 'durable-neon-v4', isDemo: false as const, mode: 'REAL' as const };
-    const availability = {
+    const availability: DatasetEvidenceAvailability = {
       acs: 'derived' as const,
       adr: 'derived' as const,
       headshotPercentage: completeHeadshotEvidence ? 'derived' as const : 'partial' as const,
@@ -320,6 +334,13 @@ export class DatasetProjectionService {
       firstKills: completeRoundEvidence ? 'reconstructed' as const : 'partial' as const,
       firstDeaths: completeRoundEvidence ? 'reconstructed' as const : 'partial' as const,
     };
+    return { dataset, availability, eventCount, projectionStarted, metricReconstructionMs };
+  }
+
+  async read(): Promise<DatasetProjectionResult> {
+    const rows = await this.repository.readProjectionRows(datasetWindowSize);
+    const { dataset, availability, eventCount, projectionStarted, metricReconstructionMs } = this.project(rows);
+    const matches = dataset.matches;
     const coverage = {
       from: dateValue(rows.coverage?.coverage_from),
       to: dateValue(rows.coverage?.coverage_to),
@@ -349,6 +370,68 @@ export class DatasetProjectionService {
         serializedBytes: Buffer.byteLength(JSON.stringify(payload)),
         roundCount: rows.rounds.length,
         roundParticipantCount: rows.roundParticipants.length,
+        eventCount,
+      },
+    };
+  }
+
+  /**
+   * DATA-03B.1 bounded keyset page over ALL eligible durable history (newest -> oldest).
+   * Reuses the snapshot projection per match; analytics meaning is unchanged because
+   * history pages are browse-only and never merged into buildAnalytics().
+   */
+  async readHistory(request: DatasetHistoryPageRequest): Promise<DatasetHistoryResult> {
+    const rows = await this.repository.readHistoryPage(request);
+    if (!rows.startFound) throw new PublicApiError(400, 'BAD_REQUEST', '歷史分頁位置無效，請重新載入對戰紀錄。');
+    const { dataset, availability, eventCount, projectionStarted, metricReconstructionMs } = this.project(rows.rows);
+    const pageKeys = rows.keys.slice(0, request.pageSize);
+    const hasMore = rows.keys.length > request.pageSize;
+    const oldest = pageKeys.at(-1);
+    const newest = pageKeys[0];
+    const traversedMatchCount = pageKeys.length;
+    // Present each page in exact keyset order (started_at DESC, public_id DESC). A match
+    // inserted inside the range between the two phases has no rank and sorts by time.
+    const rank = new Map(pageKeys.map((entry, index) => [entry.key.publicMatchId, index]));
+    dataset.matches.sort((a, b) => b.playedAt.localeCompare(a.playedAt)
+      || (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER)
+      || b.id.localeCompare(a.id));
+    const payload = {
+      ok: true as const,
+      schemaVersion: datasetSchemaVersion,
+      view: 'history' as const,
+      historyVersion: datasetHistoryVersion,
+      projectionVersion: datasetProjectionVersion,
+      state: dataset.matches.length === 0 ? 'empty' as const : 'ready' as const,
+      page: {
+        limit: request.pageSize,
+        traversedMatchCount,
+        withheldMatchCount: Math.max(0, traversedMatchCount - dataset.matches.length),
+        ...(oldest ? { from: dateValue(oldest.startedAt) } : {}),
+        ...(newest ? { to: dateValue(newest.startedAt) } : {}),
+        hasMore,
+        nextCursor: hasMore && oldest ? encodeHistoryCursor(oldest.key, this.cursorKey) : null,
+      },
+      tracked: {
+        trackedMatchCount: rows.trackedMatchCount,
+        ...(dateValue(rows.earliestStartedAt) ? { earliestTrackedAt: dateValue(rows.earliestStartedAt) } : {}),
+        ...(dateValue(rows.latestStartedAt) ? { latestTrackedAt: dateValue(rows.latestStartedAt) } : {}),
+        ...(dateValue(rows.lastSyncedAt) ? { lastSyncedAt: dateValue(rows.lastSyncedAt) } : {}),
+        lifetimeComplete: false as const,
+      },
+      evidence: availability,
+      dataset,
+    };
+    const projectionMs = Math.round((performance.now() - projectionStarted) * 100) / 100;
+    return {
+      payload,
+      metrics: {
+        sqlQueryCount: rows.sqlQueryCount,
+        databaseMs: rows.databaseMs,
+        metricReconstructionMs: Math.round(metricReconstructionMs * 100) / 100,
+        projectionMs,
+        serializedBytes: Buffer.byteLength(JSON.stringify(payload)),
+        roundCount: rows.rows.rounds.length,
+        roundParticipantCount: rows.rows.roundParticipants.length,
         eventCount,
       },
     };

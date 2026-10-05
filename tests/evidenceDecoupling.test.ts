@@ -27,7 +27,7 @@ function fixture(kind: 'complete' | 'self' | 'repeat' | 'dead' = 'self', count =
   }
   return rows;
 }
-const project = (rows: DatasetProjectionRows) => new DatasetProjectionService({ readProjectionRows: async () => rows }).read();
+const project = (rows: DatasetProjectionRows) => new DatasetProjectionService({ readProjectionRows: async () => rows, readHistoryPage: async () => { throw new Error('unused'); } }).read();
 
 describe('approved basic / advanced evidence decoupling', () => {
   it.each(['self', 'repeat', 'dead'] as const)('retains basic stats with %s topology without inventing event values', async (kind) => {

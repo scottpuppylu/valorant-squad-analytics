@@ -102,6 +102,94 @@ export interface DatasetProjectionRows {
 
 export interface DatasetReadRepository {
   readProjectionRows(windowSize: number): Promise<DatasetProjectionRows>;
+  readHistoryPage(request: DatasetHistoryPageRequest): Promise<DatasetHistoryPageRows>;
+}
+
+/** TASK-DATA-03B.1: bounded keyset traversal of all eligible durable history. */
+export const datasetHistoryVersion = 'dataset-history-v1' as const;
+export const datasetHistoryDefaultPageSize = 50;
+export const datasetHistoryMaxPageSize = 100;
+
+/** Exact, server-side keyset position. Microseconds keep timestamptz ties exact. */
+export interface DatasetHistoryKey {
+  startedAtMicros: string;
+  publicMatchId: string;
+}
+
+export type DatasetHistoryStart =
+  | { kind: 'newest' }
+  | { kind: 'cursor'; key: DatasetHistoryKey }
+  | { kind: 'before'; publicMatchId: string };
+
+export interface DatasetHistoryPageRequest {
+  start: DatasetHistoryStart;
+  pageSize: number;
+}
+
+export interface DatasetHistoryKeyRow extends Record<string, unknown> {
+  tracked_match_count: number;
+  earliest_started_at: string | Date | null;
+  latest_started_at: string | Date | null;
+  last_synced_at: string | Date | null;
+  bound_count: number;
+  bound_started_us: string | null;
+  bound_public_id: string | null;
+  key_started_us: string | null;
+  key_public_id: string | null;
+  key_started_at: string | Date | null;
+}
+
+export interface DatasetHistoryPageRows {
+  /** False only when a `before` anchor is not a currently eligible match. */
+  startFound: boolean;
+  trackedMatchCount: number;
+  earliestStartedAt: string | Date | null;
+  latestStartedAt: string | Date | null;
+  lastSyncedAt: string | Date | null;
+  /** Up to pageSize + 1 keys, newest first; the extra key only signals hasMore. */
+  keys: { key: DatasetHistoryKey; startedAt: string | Date }[];
+  rows: Omit<DatasetProjectionRows, 'coverage' | 'sqlQueryCount' | 'databaseMs'>;
+  sqlQueryCount: number;
+  databaseMs: number;
+}
+
+export interface DatasetHistoryTracked {
+  /** Eligible durable matches currently stored in Neon; never a Riot lifetime total. */
+  trackedMatchCount: number;
+  earliestTrackedAt?: string;
+  latestTrackedAt?: string;
+  lastSyncedAt?: string;
+  lifetimeComplete: false;
+}
+
+export interface DatasetHistoryPage {
+  limit: number;
+  /** Eligible durable matches this page traversed, including withheld ones. */
+  traversedMatchCount: number;
+  /** Traversed matches omitted because no visible performance had complete core evidence. */
+  withheldMatchCount: number;
+  from?: string;
+  to?: string;
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
+export interface DatasetHistoryPayload {
+  ok: true;
+  schemaVersion: typeof datasetSchemaVersion;
+  view: 'history';
+  historyVersion: typeof datasetHistoryVersion;
+  projectionVersion: typeof datasetProjectionVersion;
+  state: 'ready' | 'empty';
+  page: DatasetHistoryPage;
+  tracked: DatasetHistoryTracked;
+  evidence: DatasetEvidenceAvailability;
+  dataset: NormalizedAnalyticsDataset;
+}
+
+export interface DatasetHistoryResult {
+  payload: DatasetHistoryPayload;
+  metrics: DatasetProjectionMetrics;
 }
 
 export interface DatasetCoverage {

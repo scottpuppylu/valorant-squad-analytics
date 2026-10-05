@@ -193,3 +193,42 @@ export interface DatasetDisabledResponse {
 }
 
 export type DatasetResponse = DatasetReadyResponse | DatasetDisabledResponse;
+
+/** TASK-DATA-03B.1 `GET /api/valorant/dataset?view=history` bounded keyset page. */
+export interface DatasetHistoryPageContract {
+  limit: number;
+  traversedMatchCount: number;
+  withheldMatchCount: number;
+  from?: string;
+  to?: string;
+  hasMore: boolean;
+  nextCursor: string | null;
+}
+
+/** Eligible durable matches tracked in Neon; never a Riot lifetime total. */
+export interface DatasetTrackedHistoryContract {
+  trackedMatchCount: number;
+  earliestTrackedAt?: string;
+  latestTrackedAt?: string;
+  lastSyncedAt?: string;
+  lifetimeComplete: false;
+}
+
+export interface DatasetHistoryResponse {
+  ok: true;
+  schemaVersion: 4;
+  view: 'history';
+  historyVersion: 'dataset-history-v1';
+  projectionVersion: 'evidence-decoupled-projection-v1';
+  state: 'ready' | 'empty';
+  page: DatasetHistoryPageContract;
+  tracked: DatasetTrackedHistoryContract;
+  evidence: DatasetEvidenceContract;
+  dataset: NormalizedAnalyticsDataset;
+}
+
+export interface DatasetHistoryQuery {
+  cursor?: string;
+  before?: string;
+  limit?: number;
+}
