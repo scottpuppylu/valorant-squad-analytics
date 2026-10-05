@@ -201,6 +201,34 @@ vulnerabilities; `npm run db:validate` 16 PASS (20.17s). Full `npm audit`: 5 hig
 (braces, chokidar, fast-glob, micromatch, tailwindcss) — unchanged SEC-2026-001
 scope, NOT FIXED, no force-fix. Function count unchanged at 12.
 
-## Deployment / production acceptance
+## Deployment / production acceptance — 2026-10-05
 
-Pending at commit time; recorded in a follow-up commit.
+Deployed commit 26dd8ab1b8206f1b3fffac2cde2178389c88639b: GitHub CI success,
+Deploy GitHub Pages success, Vercel production success. No migration ran.
+
+READ-ONLY production verification (GET only; no provider call, write, SQL or
+secret access):
+
+- Existing `/api/valorant/dataset`: HTTP 200, `no-store`, schema 4 ready,
+  `dataset-read-v4`, no `view` field, 9 players, 56 matches (56 unique),
+  `boundedMatchLimit` 300, `lifetimeComplete=false`, 85,660 bytes. No leak pattern
+  (provider/HMAC/internal/secret names, 64-hex strings).
+- `view=history&limit=100`: one page, 56 matches, traversed 56, withheld 0,
+  `hasMore=false`, `trackedMatchCount` 56, same 9 players, 85,769 bytes.
+- `view=history&limit=10`: six cursor pages (10/10/10/10/10/6, 11–21 KB, 1.2–1.8 s
+  each incl. latency), 56 unique, snapshot ⊆ history, cursor payload keys `v,t,p`
+  only, cursor position equals a returned public match id, final cursor null.
+- `before=<oldest snapshot match>`: 200, 0 matches, `hasMore=false` (all tracked
+  history fits in the snapshot today).
+- Malformed, forged-payload, flipped-signature, limit 0/101, unknown view,
+  cursor+before and unknown `before`: all 400 `BAD_REQUEST`, generic, no leakage.
+- Vercel `#/matches`: scope panel shows 分析範圍 最新 56 場 / 已載入 56 場 /
+  已追蹤戰績 56 場 / 最早已保存紀錄 2026/9/6 / 已載入全部已追蹤戰績; no console errors.
+- GitHub Pages `#/matches`: Demo, zero `/api` requests, no history panel.
+
+Counts are dynamic; acceptance used invariants. Tracked history (56) is currently
+below 300, so production pages beyond the snapshot window are **NOT YET
+EXERCISED** with real data; >300 behaviour is covered by local fixtures. No cron
+write occurred during the acceptance window, so live concurrent cron/pagination
+interaction is **NOT VERIFIED in production** (covered locally). DATA-05A cron was
+not paused or modified and remains PRODUCTION ACTIVATED / ACCEPTED.
