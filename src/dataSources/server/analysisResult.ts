@@ -1,6 +1,6 @@
 import { createPerformanceEntries } from '../../analytics/filters';
-import type { PerformanceEntry, SelectionResult } from '../../analytics/types';
-import type { AdaptiveWindowResult, PlayerScope, ScopeSummary, ScopeStatus, WindowSample } from '../../analytics/scope/types';
+import type { AnalysisFilters, PerformanceEntry, SelectionResult } from '../../analytics/types';
+import type { AdaptiveWindowResult, FeatureId, PlayerScope, ScopeSummary, ScopeStatus, WindowSample } from '../../analytics/scope/types';
 import type { NormalizedAnalyticsDataset } from '../types';
 import type { DatasetEvidenceContract } from './contracts';
 import { isRealDataset } from './datasetContract';
@@ -105,3 +105,19 @@ export function formWindowsFromAnalysis(response: DatasetAnalysisResponse): Map<
   const index = entryIndex(response.dataset);
   return new Map((response.forms ?? []).map((form) => [form.playerId, hydrateWindow(form.window, form.playerId, index)]));
 }
+
+export type LifetimeFeature = Extract<FeatureId, 'lifetimeTotals' | 'mapStats' | 'agentStats'>;
+
+/** Maps a page's filters to the server feature request; the server registry decides the population. */
+export function analysisQueryFor(filters: AnalysisFilters, lifetimeFeature: LifetimeFeature, form: boolean): AnalysisQuery | undefined {
+  const context = { map: filters.map, agent: filters.agent, role: filters.role, mode: filters.gameMode, player: filters.playerId, ...(form ? { form: true } : {}) };
+  switch (filters.period) {
+    case 'current': return { feature: 'currentStrength', ...context };
+    case 'act': return filters.act ? { feature: 'actOverview', act: filters.act, ...context } : undefined;
+    case 'recent10': return { feature: 'fixedRecent', recent: 10, ...context };
+    case 'recent30': return { feature: 'fixedRecent', recent: 30, ...context };
+    case 'custom': return { feature: lifetimeFeature, ...(filters.dateFrom ? { from: filters.dateFrom } : {}), ...(filters.dateTo ? { to: filters.dateTo } : {}), ...context };
+    default: return { feature: lifetimeFeature, ...context };
+  }
+}
+

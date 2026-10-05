@@ -8,6 +8,12 @@ import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 import type { DatasetContextValue, DatasetRuntimeSource, DatasetRuntimeStatus } from './DatasetContext';
 import { DatasetContext } from './DatasetContext';
 import { isDatasetAnalyticsContextResponse, isDatasetResponse } from '../dataSources/server/datasetContract';
+import { analysisQueryFor, type AnalysisQuery, type DatasetAnalysisResponse } from '../dataSources/server/analysisResult';
+import type { DatasetDisabledResponse } from '../dataSources/server/contracts';
+import { defaultAnalysisFilters } from '../analytics/filters';
+
+/** The Dashboard and default Leaderboard share this request (same JSON key). */
+const defaultCurrentStrengthQuery = analysisQueryFor({ ...defaultAnalysisFilters, period: 'current' }, 'lifetimeTotals', true)!;
 import type { DatasetAnalyticsContextResponse } from '../dataSources/server/contracts';
 
 interface RuntimeState {
@@ -44,6 +50,26 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
     stateRef.current = state;
   }, [state]);
 
+  // DATA-03B.2B per-tab, in-memory request cache. Cleared on every (re)load, so it never outlives the
+  // snapshot it accompanies (same retention semantics as the snapshot; nothing is persisted).
+  const analysisLoader = useMemo(() => {
+    const loadAnalysis = client.loadAnalysis?.bind(client);
+    if (!loadAnalysis) return undefined;
+    const cache = new Map<string, Promise<DatasetAnalysisResponse | DatasetDisabledResponse>>();
+    // Consumers handle their own abort; the shared request is never aborted by one unmount.
+    const cached = (query: AnalysisQuery) => {
+      const key = JSON.stringify(query);
+      let pending = cache.get(key);
+      if (!pending) {
+        pending = loadAnalysis(query);
+        cache.set(key, pending);
+        pending.catch(() => cache.delete(key));
+      }
+      return pending;
+    };
+    return Object.assign(cached, { clear: () => cache.clear() });
+  }, [client]);
+
   const load = useCallback(async (refreshing: boolean) => {
     const previous = stateRef.current;
     if (refreshing && previous.status === 'ready') setState({ ...previous, status: 'stale', message: '正在更新持久化資料…' });
@@ -53,6 +79,9 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
       return;
     }
     try {
+      analysisLoader?.clear();
+      // Prefetch the default 目前實力 population in parallel with the bootstrap snapshot.
+      if (analysisLoader) void analysisLoader(defaultCurrentStrengthQuery).catch(() => undefined);
       const response = await client.load();
       if (response.schemaVersion !== 4) throw new Error('Unsupported dataset schema.');
       if (response.state === 'disabled') {
@@ -68,7 +97,7 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
         setState({ status: 'error', source: 'REAL_SERVER', dataset: emptyRealDataset(), message: '持久化資料暫時無法讀取，未切換成 Demo。' });
       }
     }
-  }, [client, demo, forceDemo]);
+  }, [analysisLoader, client, demo, forceDemo]);
 
   useEffect(() => {
     removeBrowserRealDataset();
@@ -93,7 +122,6 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
   } : undefined, [activeContext]);
   const analytics = useMemo(() => buildAnalytics(state.dataset, state.source === 'REAL_SERVER' ? facts : undefined), [facts, state.dataset, state.source]);
   const historyLoader = useMemo(() => client.loadHistory?.bind(client), [client]);
-  const analysisLoader = useMemo(() => client.loadAnalysis?.bind(client), [client]);
   const value = useMemo<DatasetContextValue>(() => ({
     status: state.status,
     source: state.source,

@@ -25,7 +25,8 @@ export function DashboardPage() {
   // Community ranking population = feature currentStrength, resolved by the server over all durable
   // history (DATA-03B.2B) or locally for Demo; adaptive-window-v1, Competitive only.
   const currentFilters = useMemo(() => ({ ...defaultAnalysisFilters, period: 'current' as const }), []);
-  const analysis = useScopedAnalysis(currentFilters);
+  // form: true shares the prefetched default request with the Leaderboard.
+  const analysis = useScopedAnalysis(currentFilters, { form: true });
   const currentStrength = useMemo(() => ({ selection: analysis.selection, analytics: aggregateSelection(analysis.selection)
     .sort((a, b) => compareScoreResults(a.scores.overall, b.scores.overall) || a.player.handle.localeCompare(b.player.handle)) }), [analysis.selection]);
   const playerAnalytics = currentStrength.analytics;

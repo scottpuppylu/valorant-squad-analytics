@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { selectPerformances } from '../analytics/filters';
-import type { AdaptiveWindowResult, FeatureId } from '../analytics/scope/types';
+import type { AdaptiveWindowResult } from '../analytics/scope/types';
 import type { AnalysisFilters, SelectionResult } from '../analytics/types';
-import { formWindowsFromAnalysis, isDatasetAnalysisResponse, selectionFromAnalysis, type AnalysisQuery, type DatasetAnalysisResponse } from '../dataSources/server/analysisResult';
+import { analysisQueryFor, formWindowsFromAnalysis, isDatasetAnalysisResponse, selectionFromAnalysis, type AnalysisQuery, type DatasetAnalysisResponse, type LifetimeFeature } from '../dataSources/server/analysisResult';
+export { analysisQueryFor, type LifetimeFeature };
 import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 import { useDataset } from './useDataset';
 
 export type ScopedAnalysisStatus = 'local' | 'loading' | 'ready' | 'stale' | 'error';
-export type LifetimeFeature = Extract<FeatureId, 'lifetimeTotals' | 'mapStats' | 'agentStats'>;
 
 export interface ScopedAnalysis {
   status: ScopedAnalysisStatus;
@@ -18,19 +18,6 @@ export interface ScopedAnalysis {
   dataset: NormalizedAnalyticsDataset;
   formWindows?: Map<string, AdaptiveWindowResult>;
   trackedMatchCount?: number;
-}
-
-/** Maps a page's filters to the server feature request; the server registry decides the population. */
-export function analysisQueryFor(filters: AnalysisFilters, lifetimeFeature: LifetimeFeature, form: boolean): AnalysisQuery | undefined {
-  const context = { map: filters.map, agent: filters.agent, role: filters.role, mode: filters.gameMode, player: filters.playerId, ...(form ? { form: true } : {}) };
-  switch (filters.period) {
-    case 'current': return { feature: 'currentStrength', ...context };
-    case 'act': return filters.act ? { feature: 'actOverview', act: filters.act, ...context } : undefined;
-    case 'recent10': return { feature: 'fixedRecent', recent: 10, ...context };
-    case 'recent30': return { feature: 'fixedRecent', recent: 30, ...context };
-    case 'custom': return { feature: lifetimeFeature, ...(filters.dateFrom ? { from: filters.dateFrom } : {}), ...(filters.dateTo ? { to: filters.dateTo } : {}), ...context };
-    default: return { feature: lifetimeFeature, ...context };
-  }
 }
 
 const emptySelection: SelectionResult = { entries: [], byPlayer: new Map() };

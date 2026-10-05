@@ -66,11 +66,30 @@ describe('DATA-03B.2B production consumers', () => {
     window.location.hash = '#/leaderboard?period=all';
     await render({ load: async () => snapshotOf(snapshot), loadAnalysis: async (query) => serverAnswer(full, query, seen) });
     await settle(() => container.textContent?.includes('由伺服器依完整已追蹤歷史') ?? false);
-    expect(seen[0]).toEqual(analysisQueryFor({ playerId: 'all', period: 'all', map: 'all', agent: 'all', role: 'all', gameMode: 'all', minMatches: 0, minRounds: 0 }, 'lifetimeTotals', true));
+    // The provider's default prefetch may come first; the page's own request must be present.
+    expect(seen).toContainEqual(analysisQueryFor({ playerId: 'all', period: 'all', map: 'all', agent: 'all', role: 'all', gameMode: 'all', minMatches: 0, minRounds: 0 }, 'lifetimeTotals', true));
     expect(container.textContent).toContain(`由伺服器依完整已追蹤歷史（${full.matches.length} 場）選樣`);
     const matchCounts = [...container.querySelectorAll('table tbody tr')].map((row) => row.children[4]?.textContent).filter(Boolean).map(Number);
     expect(Math.max(...matchCounts)).toBe(20);
     expect(Math.max(...matchCounts)).toBeGreaterThan(snapshot.matches.length);
+  });
+
+  it('prefetches the default population in parallel with the snapshot and shares it across routes', async () => {
+    const full = realDemo();
+    const seen: AnalysisQuery[] = [];
+    let snapshotResolved = false;
+    let analysisBeforeSnapshot = false;
+    window.location.hash = '#/';
+    await render({
+      load: async () => { await new Promise((r) => setTimeout(r, 50)); snapshotResolved = true; return snapshotOf(full); },
+      loadAnalysis: async (query) => { if (!snapshotResolved) analysisBeforeSnapshot = true; return serverAnswer(full, query, seen); },
+    });
+    await settle(() => container.textContent?.includes('由伺服器依完整已追蹤歷史') ?? false);
+    expect(analysisBeforeSnapshot).toBe(true);
+    const link = [...container.querySelectorAll('a')].find((a) => a.getAttribute('href') === '#/leaderboard')!;
+    await act(async () => { link.click(); });
+    await settle(() => (container.querySelectorAll('table tbody tr').length > 0));
+    expect(seen.filter((q) => q.feature === 'currentStrength')).toHaveLength(1);
   });
 
   it('shows an explicit error and no substitute ranking when server analysis fails', async () => {
