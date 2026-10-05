@@ -1,6 +1,6 @@
 import { valorantBackendClient } from './ValorantBackendClient';
 import type { AnalysisQuery, DatasetAnalysisResponse } from './analysisResult';
-import type { DatasetAnalyticsContextResponse, DatasetDisabledResponse, DatasetHistoryQuery, DatasetHistoryResponse, DatasetResponse } from './contracts';
+import type { DatasetAnalyticsContextResponse, DatasetDisabledResponse, DatasetHistoryQuery, DatasetHistoryResponse, DatasetResponse, RecentRefreshResponse } from './contracts';
 
 export interface DatasetApiClient {
   load(signal?: AbortSignal): Promise<DatasetResponse>;
@@ -10,6 +10,8 @@ export interface DatasetApiClient {
   loadAnalyticsContext?(signal?: AbortSignal): Promise<DatasetAnalyticsContextResponse | DatasetDisabledResponse>;
   /** Optional DATA-03B.2B server analysis; absent clients (Demo, tests) analyse the local dataset. */
   loadAnalysis?(query: AnalysisQuery, signal?: AbortSignal): Promise<DatasetAnalysisResponse | DatasetDisabledResponse>;
+  /** Optional TASK-DATA-FASTSYNC-01 refresh-if-stale; absent clients (Demo, tests) never call it. */
+  refreshRecent?(playerId: string): Promise<RecentRefreshResponse>;
 }
 
 export class ServerDatasetApiClient implements DatasetApiClient {
@@ -23,6 +25,10 @@ export class ServerDatasetApiClient implements DatasetApiClient {
 
   loadAnalyticsContext(signal?: AbortSignal): Promise<DatasetAnalyticsContextResponse | DatasetDisabledResponse> {
     return valorantBackendClient.datasetAnalyticsContext(signal);
+  }
+
+  refreshRecent(playerId: string): Promise<RecentRefreshResponse> {
+    return valorantBackendClient.refreshRecent(playerId);
   }
 
   loadHistory(query: DatasetHistoryQuery, signal?: AbortSignal): Promise<DatasetHistoryResponse | DatasetDisabledResponse> {

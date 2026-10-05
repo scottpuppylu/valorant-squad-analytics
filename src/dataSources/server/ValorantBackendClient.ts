@@ -8,6 +8,7 @@ import type {
   ProviderStatusResponse,
   SyncKind,
   SyncResponse,
+  RecentRefreshResponse,
   RevocationResponse,
   DeletionResponse,
   DatasetResponse,
@@ -96,6 +97,11 @@ export class ValorantBackendClient {
 
   startSync(playerId: string, kind: SyncKind): Promise<SyncResponse> {
     return requestJson('/api/valorant/sync/start', post({ playerId, kind }));
+  }
+
+  /** TASK-DATA-FASTSYNC-01: the server alone decides whether the player is stale (no cooldown is sent). */
+  refreshRecent(playerId: string): Promise<RecentRefreshResponse> {
+    return requestJson('/api/valorant/sync/start', post({ playerId, kind: 'incremental', intent: 'refresh_if_stale' }));
   }
 
   continueSync(runId: string): Promise<SyncResponse> {

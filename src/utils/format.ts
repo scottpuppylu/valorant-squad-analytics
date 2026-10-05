@@ -52,6 +52,22 @@ export function formatDateTime(value?: string): string {
   return new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
+/** Relative "X 分鐘前" for sync freshness; display-only. */
+export function formatMinutesAgo(value: string | undefined, now: number = Date.now()): string {
+  if (!value || Number.isNaN(Date.parse(value))) return unavailable;
+  const minutes = Math.max(0, Math.floor((now - Date.parse(value)) / 60_000));
+  if (minutes < 1) return '剛剛';
+  if (minutes < 60) return `${minutes} 分鐘前`;
+  if (minutes < 48 * 60) return `${Math.floor(minutes / 60)} 小時前`;
+  return `${Math.floor(minutes / 1440)} 天前`;
+}
+
+/** Minutes until an ISO time, rounded up, never negative; display-only. */
+export function formatMinutesUntil(value: string | undefined, now: number = Date.now()): string | undefined {
+  if (!value || Number.isNaN(Date.parse(value))) return undefined;
+  return `${Math.max(1, Math.ceil((Date.parse(value) - now) / 60_000))}`;
+}
+
 /** Signed display for the Progress Index (−100..+100); rounding is display-only. */
 export function formatSigned(value: number, decimals = 0): string {
   if (!Number.isFinite(value)) return unavailable;

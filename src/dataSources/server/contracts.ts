@@ -145,6 +145,24 @@ export interface SyncResponse {
   sync: PublicSyncProgress;
 }
 
+/** TASK-DATA-FASTSYNC-01 recent-refresh-v1 outcome (server-authoritative; no identifiers). */
+export interface RecentRefreshOutcome {
+  policyVersion: 'recent-refresh-v1';
+  status: 'refreshed' | 'fresh' | 'busy' | 'backoff' | 'unavailable';
+  providerRequested: boolean;
+  lastSuccessAt?: string;
+  nextEligibleAt?: string;
+  newMatches?: number;
+  morePending?: boolean;
+  errorCategory?: string;
+}
+
+export interface RecentRefreshResponse {
+  ok: true;
+  refresh: RecentRefreshOutcome;
+  sync?: PublicSyncProgress;
+}
+
 export interface ErrorResponse {
   ok: false;
   error: { code: ProviderPublicErrorCode; message: string };

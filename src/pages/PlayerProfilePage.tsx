@@ -18,6 +18,7 @@ import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
 import { ScopeExplanation } from '../components/ScopeExplanation';
 import { ProgressIndexCard } from '../components/ProgressIndexCard';
+import { RecentRefreshPanel } from '../components/RecentRefreshPanel';
 import { AnalysisStatusNotice } from '../components/AnalysisStatusNotice';
 import { useProgressIndex, useScopedAnalysis } from '../hooks/useScopedAnalysis';
 import { describeWindow, scopeReasonLabels } from '../analytics/presentation';
@@ -80,6 +81,7 @@ export function PlayerProfilePage() {
     </section>
 
     <EmojiAvatarPicker key={player.id} player={player} />
+    <RecentRefreshPanel playerId={player.id} />
     <AnalysisFilterBar filters={filters} onChange={update} onReset={reset} players={activeDataset.players} maps={availableMaps} agents={availableAgents} gameModes={availableGameModes} includePlayer={false} seasonKeys={population.seasonKeys} />
     <AnalysisStatusNotice analysis={analysis} />
     <ScopeExplanation scope={selection.scope} players={activeDataset.players} source={analysis.source} trackedMatchCount={analysis.trackedMatchCount} />

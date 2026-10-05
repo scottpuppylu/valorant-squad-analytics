@@ -84,3 +84,16 @@ export function describeWindow(sample: WindowSample): string {
 
 export const progressDirectionLabels = { improving: '進步中', stable: '持平（未顯示明確變化）', declining: '下滑中' } as const;
 export const actPolicyLabels = { same_act: '同 Act 比較', previous_act_fallback: '同 Act 基準不足，改用前一個 Act', act_unknown: 'Act 證據不完整' } as const;
+
+/** TASK-DATA-FASTSYNC-01 recent-refresh copy. Never claims complete Riot or lifetime history. */
+export const recentRefreshLabels = {
+  checking: '正在檢查最新戰績',
+  fresh: '資料已是最新狀態',
+  refreshedNew: '已更新最新戰績',
+  refreshedNone: '資料已是最新狀態（資料來源沒有新的對戰）',
+  morePending: '最新一批已更新，仍有近期資料待補',
+  busy: '正在由其他請求更新，稍後可再更新',
+  backoff: '更新暫時受到限制',
+  unavailable: '目前無法更新此玩家戰績',
+  retryLater: '稍後可再更新',
+} as const;

@@ -9,7 +9,8 @@ import type { DatasetContextValue, DatasetRuntimeSource, DatasetRuntimeStatus } 
 import { DatasetContext } from './DatasetContext';
 import { isDatasetAnalyticsContextResponse, isDatasetResponse } from '../dataSources/server/datasetContract';
 import { analysisQueryFor, type AnalysisQuery, type DatasetAnalysisResponse } from '../dataSources/server/analysisResult';
-import type { DatasetDisabledResponse } from '../dataSources/server/contracts';
+import type { DatasetDisabledResponse, RecentRefreshOutcome } from '../dataSources/server/contracts';
+import { BackendApiError } from '../dataSources/server/ValorantBackendClient';
 import { defaultAnalysisFilters } from '../analytics/filters';
 
 /** The Dashboard and default Leaderboard share this request (same JSON key). */
@@ -104,6 +105,32 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
     void load(false);
   }, [load]);
 
+  // TASK-DATA-FASTSYNC-01 per-tab, in-memory dedupe of the automatic attempt (UX only; the
+  // server freshness gate is authoritative). Never persisted.
+  const [automatic] = useState(() => new Map<string, Promise<RecentRefreshOutcome>>());
+  const recentRefresh = useCallback(async (playerId: string, mode: 'auto' | 'manual'): Promise<RecentRefreshOutcome> => {
+    const request = async (): Promise<RecentRefreshOutcome> => {
+      try {
+        if (!client.refreshRecent) throw new Error('Recent refresh is unavailable.');
+        const { refresh } = await client.refreshRecent(playerId);
+        // Only durable new matches justify a reload (snapshot + analysis cache). No optimistic data.
+        if (refresh.status === 'refreshed' && (refresh.newMatches ?? 0) > 0) await load(true);
+        return refresh;
+      } catch (error) {
+        const limited = error instanceof BackendApiError && error.code === 'RATE_LIMITED';
+        return { policyVersion: 'recent-refresh-v1', status: limited ? 'backoff' : 'unavailable', providerRequested: false };
+      }
+    };
+    if (mode === 'manual') return request();
+    let pending = automatic.get(playerId);
+    if (!pending) {
+      pending = request();
+      automatic.set(playerId, pending);
+    }
+    return pending;
+  }, [automatic, client, load]);
+  const canRefreshRecent = typeof client.refreshRecent === 'function';
+
   const snapshotVersion = state.source === 'REAL_SERVER' ? state.response?.snapshot.version : undefined;
   useEffect(() => {
     if (!snapshotVersion || !client.loadAnalyticsContext) return undefined;
@@ -134,8 +161,9 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
     ...(state.source === 'REAL_SERVER' && historyLoader ? { loadHistory: historyLoader } : {}),
     ...(state.source === 'REAL_SERVER' && activeContext ? { analyticsContext: activeContext } : {}),
     ...(state.source === 'REAL_SERVER' && analysisLoader ? { loadAnalysis: analysisLoader } : {}),
+    ...(state.source === 'REAL_SERVER' && canRefreshRecent ? { refreshRecent: recentRefresh } : {}),
     refresh: () => load(true),
-  }), [activeContext, analysisLoader, analytics, historyLoader, load, state]);
+  }), [activeContext, analysisLoader, analytics, historyLoader, canRefreshRecent, load, recentRefresh, state]);
 
   return <DatasetContext.Provider value={value}>{children}</DatasetContext.Provider>;
 }
