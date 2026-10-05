@@ -1,12 +1,28 @@
 # Durable dataset runtime
 
-Status: **TASK-DATA-02 COMPLETE — SDD STRICT**
+Status: **TASK-DATA-02 COMPLETE — SDD STRICT**; TASK-DATA-03B.1 history pages added 2026-10-05.
+
+## Full-history pages (TASK-DATA-03B.1)
+
+`GET /api/valorant/dataset` without `view` is the unchanged schema 4 newest-300
+snapshot described below and remains the only analytics input.
+`GET /api/valorant/dataset?view=history[&limit=1..100][&cursor=…|&before=<public match id>]`
+returns `dataset-history-v1` pages over **all** eligible durable matches, newest to
+oldest by `(started_at, public_id)`, with a signed position-only cursor, explicit
+`hasMore`, page `from/to`, `traversedMatchCount`/`withheldMatchCount` and
+`tracked.trackedMatchCount` (eligible durable matches, never Riot lifetime;
+`lifetimeComplete: false`). At most six statements per page in two round trips;
+current consent is re-evaluated on every page; same `REAL_DATASET_READ_MODE=public`
+gate, rate limit (separate bucket, 30/min) and `no-store`. Pages are browse-only on
+the Matches page and are never merged into `buildAnalytics()`. Contract, cursor,
+mutation semantics and measurements: [TASK_DATA_03B_PLAN.md](TASK_DATA_03B_PLAN.md).
 
 ## Boundary
 
 ```text
 Neon durable evidence
-  -> PostgresDatasetReadRepository (six set-based queries, newest 300 matches)
+  -> PostgresDatasetReadRepository (six set-based queries, newest 300 matches;
+     history mode: keyset pages, ≤6 statements each)
   -> EventMetricEngine (`event-metrics-v1`)
   -> DatasetProjectionService (`evidence-decoupled-projection-v1`)
   -> GET /api/valorant/dataset (schema version 4)

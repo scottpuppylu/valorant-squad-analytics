@@ -1,11 +1,18 @@
 # V1 release preflight
 
+## Current release gate — DATA-03B (2026-10-05)
+
+DATA-03B.1 (paginated history runtime + browse consumption) is implemented;
+DATA-03B.2 (all-history analytics) NOT STARTED. Analytics remain newest-300.
+DATA-05A PRODUCTION ACTIVATED / ACCEPTED. RELEASE-01 remains PAUSED; V1 NOT YET
+RELEASED. No release level or tag. See TASK_DATA_03B_PLAN.md.
+
 ## Current release gate — DATA-05A (2026-10-05)
 
 Explicit human decision supersedes the Riot-response freeze below. Tracker-style
 persistent Henrik history replaces lifetime-proof as current operational target.
 Riot ticket #139243830 remains OPEN / informational / non-blocking; DATA-04B deferred.
-RELEASE-01 PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED. DATA-03B NOT STARTED.
+RELEASE-01 PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED. DATA-03B NOT STARTED at that checkpoint.
 CLI authentication and production-only CRON_SECRET setup are complete; cron
 registration and both secured canaries passed: DATA-05A PRODUCTION ACTIVATED /
 ACCEPTED. Daily recent/history remain enabled (UTC 18:05/18:35).

@@ -12,8 +12,13 @@ remain authoritative. Raw DTOs and identifiers remain server-only/in-memory.
 `lifetimeComplete=false` always. Source exhaustion is not lifetime proof.
 Public schema 4/newest-300 and scoring/Synergy/reconstruction are unchanged.
 
+DATA-03B.1 (2026-10-05) makes all accumulated eligible history browsable through
+bounded keyset pages (`/api/valorant/dataset?view=history`) without pausing cron.
+Pages tolerate concurrent cron inserts without duplicates or loops (see
+TASK_DATA_03B_PLAN.md). Analytics still use newest-300; DATA-03B.2 NOT STARTED.
+
 Riot ticket #139243830 remains OPEN — WAITING FOR RIOT RESPONSE, informational
-and non-blocking. DATA-04B deferred; DATA-03B not started. RELEASE-01 is paused
+and non-blocking. DATA-04B deferred; DATA-03B.1 implemented, DATA-03B.2 not started. RELEASE-01 is paused
 for DATA-05A / DATA-03B; V1 not released. Prior freeze is superseded by explicit
 human decision, not by deployment success.
 

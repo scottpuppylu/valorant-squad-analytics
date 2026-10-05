@@ -1,5 +1,14 @@
 # Code map
 
+## DATA-03B.1 full-history pages
+
+- api/valorant/dataset.ts: absent `view` → unchanged snapshot; `view=history` → keyset page (same function).
+- server/dataset/historyCursor.ts: query parsing, signed position-only cursor (`dataset-history-cursor:v1`).
+- server/dataset/postgresDatasetReadRepository.ts `readHistoryPage`: phase-1 keys+summary, phase-2 range reads.
+- server/dataset/datasetProjectionService.ts `readHistory`: shared per-match `project()` with the snapshot.
+- src/dataSources/server/historyMerge.ts, src/hooks/useTrackedHistory.ts, src/pages/MatchesPage.tsx: browse-only consumer.
+- tests/datasetHistory.test.ts, tests/historyBrowse.test.tsx. Design: docs/TASK_DATA_03B_PLAN.md.
+
 ## DATA-05A persistent orchestration
 
 - api/valorant/cron/[job].ts -> server/sync/cronHandler.ts: one function serves recent/history with fail-closed server-only bearer auth (12-function Hobby limit).
@@ -30,7 +39,7 @@ React routes/components
   -> HenrikDev v4
   -> normalized durable evidence in Neon
 
-GET /api/valorant/dataset
+GET /api/valorant/dataset[?view=history]
   -> exact REAL_DATASET_READ_MODE=public fail-closed gate
   -> PostgresDatasetReadRepository (six set-based reads)
   -> EventMetricEngine (event-metrics-v1)

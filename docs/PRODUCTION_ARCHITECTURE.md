@@ -3,13 +3,15 @@
 ## Current acquisition direction — DATA-05A
 
 Tracker-style persistent Henrik accumulation is primary; Riot ticket is informational,
-DATA-04B deferred, DATA-03B not started. Server-only authenticated recent/history
+DATA-04B deferred. DATA-03B.1 (history pages via `/api/valorant/dataset?view=history`,
+same function to respect the 12-function Hobby limit) is implemented; DATA-03B.2
+all-history analytics not started. Server-only authenticated recent/history
 cron routes reuse existing consent, leases and evidence storage. See PERSISTENT_SYNC.md.
 Production-only sensitive CRON_SECRET is configured; both daily schedules are
 registered and both secured canaries passed (DATA-05A PRODUCTION ACTIVATED /
 ACCEPTED). UTC 18:05 recent / 18:35 history; recurring operation remains enabled.
 No browser visitor is required once cron activation passes both canaries; public
-schema 4/newest-300 remains unchanged. No migration, scoring or Synergy change.
+schema 4/newest-300 snapshot remains unchanged and remains the analytics input. No migration, scoring or Synergy change.
 
 Decision date: 2026-09-29
 

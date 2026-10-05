@@ -38,6 +38,17 @@
 
 ## Current stage
 
+- TASK-DATA-03B.1 (2026-10-05, SDD STRICT): bounded keyset history runtime is
+  implemented as `GET /api/valorant/dataset?view=history` (`dataset-history-v1`,
+  same function — 12-function Hobby limit). Default schema 4 newest-300 snapshot is
+  unchanged. Signed position-only cursor; every page re-evaluates current consent;
+  `trackedMatchCount` = eligible durable matches, never Riot lifetime;
+  lifetimeComplete=false. History is BROWSE-ONLY on the Matches page: rankings,
+  scores, profiles and Synergy still use the newest-300 snapshot. DATA-03B.2
+  (all-history server-side aggregation) is NOT STARTED and needs explicit
+  authorization. No migration. Read docs/TASK_DATA_03B_PLAN.md before changing
+  history pagination. DATA-05A remains PRODUCTION ACTIVATED / ACCEPTED.
+
 - DATA-05A activation continuation: existing Vercel CLI/project authentication
   verified; production-only sensitive CRON_SECRET configured. Nine public players
   are maintainer-confirmed expected activity. Daily cron registration/canaries

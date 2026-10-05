@@ -1,5 +1,18 @@
 # Development tasks
 
+## Current decision — TASK-DATA-03B (2026-10-05)
+
+Split under SDD STRICT; see [TASK_DATA_03B_PLAN.md](TASK_DATA_03B_PLAN.md).
+
+- **DATA-03B.1 — full-history paginated runtime + browse consumption: IMPLEMENTED.**
+  `GET /api/valorant/dataset?view=history` keyset pages over all eligible durable
+  matches; Matches page loads older tracked matches on demand. Browse-only.
+- **DATA-03B.2 — all-history analytical aggregation: NOT STARTED.** Analytics
+  decision is STAGED: scores/benchmarks/profiles/Synergy keep the newest-300
+  snapshot until a server-aggregated design is explicitly authorized.
+- DATA-05A: PRODUCTION ACTIVATED / ACCEPTED, cron unchanged.
+- DATA-04B: DEFERRED. RELEASE-01: PAUSED; V1 NOT YET RELEASED.
+
 ## Current decision — TASK-DATA-05A (2026-10-05)
 
 Status: **ACTIVE — Tracker-style persistent scheduled sync**. Explicit human
@@ -14,7 +27,7 @@ Sources 50→56; provider counters 83→85; existing 50 sources preserved.
 Nine public players are maintainer-confirmed expected activity, not a drift
 investigation. Recurring eligible consenting-player acquisition is authorized.
 Pagination-repeat recovery was not encountered by these canaries; live branch
-verification remains NOT VERIFIED. DATA-03B remains NOT STARTED.
+verification remains NOT VERIFIED. DATA-03B was NOT STARTED at this checkpoint (superseded above).
 
 - DATA-04A: WAITING ON RIOT — informational / non-blocking, ticket #139243830 OPEN.
 - DATA-04B: DEFERRED / NOT REQUIRED FOR CURRENT PRODUCT PATH.
@@ -438,8 +451,9 @@ the subsequent hard stop does not authorize a new crawl or repair. No lifetime g
 
 ## TASK-DATA-03B — Full-history runtime consumption
 
-Status: **NOT STARTED**. Future bounded pagination/consumption; do not enlarge
-public dataset reads implicitly. RELEASE-01/01A PAUSED FOR DATA-03; no v1.0.0.
+Status: **SPLIT** (2026-10-05). DATA-03B.1 paginated runtime + browse consumption
+IMPLEMENTED; DATA-03B.2 all-history analytics NOT STARTED. The newest-300 snapshot
+was not enlarged. See [TASK_DATA_03B_PLAN.md](TASK_DATA_03B_PLAN.md). No v1.0.0.
 
 ## TASK-SECURITY-01 — braces advisory follow-up
 
