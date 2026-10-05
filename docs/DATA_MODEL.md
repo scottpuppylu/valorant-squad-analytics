@@ -142,6 +142,7 @@ Migration `0001_durable_evidence_foundation.sql` implements UUID primary keys, U
 | `kill_events` | match/round/sequence, time, killer/victim internal player keys, weapon and location |
 | `kill_assistants` | kill event and assistant player key |
 | `event_player_locations` | kill event, observed player key and coordinates; optional high-volume retention |
+| `source_matches.season_id` / `season_short` | TASK-DATA-SEASON-01: validated provider season UUID (server-only) and short code; COALESCE upsert, never erased by omission; public `seasonKey` derived only from recognized short codes |
 | `rank_observations` | player, observed timestamp, season, tier/RR/Elo, match fingerprint when present |
 | `deletion_jobs` | public job ID, credential HMAC, stage/cursor, lease, attempts, safe error and aggregate removal/anonymization counts |
 

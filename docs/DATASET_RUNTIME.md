@@ -2,6 +2,13 @@
 
 Status: **TASK-DATA-02 COMPLETE — SDD STRICT**; TASK-DATA-03B.1 history pages added 2026-10-05.
 
+## Season evidence (TASK-DATA-SEASON-01)
+
+Snapshot and history matches carry `seasonKey` only when durable `season_short` normalizes to
+a recognized public Act key. `view=analytics` adds `matchesWithSeasonId`,
+`matchesWithSeasonShort` and `latestRecordedAct`. Season UUIDs never leave the server.
+Statement counts are unchanged; see SEASON_EVIDENCE.md.
+
 ## Analytics scope facts (TASK-DATA-03B.2A)
 
 `GET /api/valorant/dataset?view=analytics` returns aggregate `analytics-context-v1` facts:

@@ -37,4 +37,6 @@ Source matches are unique by provider and keyed match HMAC. Participants, active
 - Active bounded match synchronization: `sync_runs`, `sync_cursors`; future rank observation synchronization: `rank_observations`
 - Future revocation execution: `deletion_jobs`
 
+TASK-DATA-SEASON-01 writes the existing `source_matches.season_id/season_short` columns (no migration).
+
 No scoring table is introduced. `event-metrics-v1` derives versioned evidence at read time and stores no score. Rank/MMR evidence remains separate and is never fed into the community score.

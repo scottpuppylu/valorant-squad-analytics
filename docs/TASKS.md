@@ -1,6 +1,13 @@
 # Development tasks
 
-## Current decision — TASK-DATA-03B.2 redefined (2026-10-05)
+## Current decision — TASK-DATA-SEASON-01 (2026-10-05)
+
+Persist and reconcile match Act/season evidence; see [SEASON_EVIDENCE.md](SEASON_EVIDENCE.md).
+No migration; Act scopes activate automatically from durable evidence. Production backfill
+uses supported deep sync endpoints only. TASK-DATA-RANK-01 NOT STARTED; TASK-PROGRESS-01
+DESIGN ONLY; DATA-03B.2B NOT STARTED; DATA-05A, DATA-03B.1 and DATA-03B.2A accepted.
+
+## Earlier decision — TASK-DATA-03B.2 redefined (2026-10-05)
 
 Superseding human decision: DATA-03B.2 is the **Context-Aware Analytics Scope Engine**,
 not "all-history analytics". Different features use different windows; 300 is transport only.
@@ -11,8 +18,8 @@ See [ANALYTICS_SCOPES.md](ANALYTICS_SCOPES.md).
   Act/rank-optional evidence, `view=analytics` facts, score pages on 目前實力.
 - **DATA-03B.2B — server aggregate consumption: NOT STARTED** (not needed while tracked history
   fits the snapshot; limits are reported as `transport_window_truncated`).
-- **TASK-DATA-SEASON-01** (persist season metadata) and **TASK-DATA-RANK-01** (rank ingestion):
-  NOT STARTED, separately gated.
+- **TASK-DATA-SEASON-01** (persist season metadata): started 2026-10-05, see above.
+  **TASK-DATA-RANK-01** (rank ingestion): NOT STARTED, separately gated.
 - **TASK-PROGRESS-01 — Adaptive Improvement Index**: RECOMMENDED, design only
   ([PROGRESS_INDEX.md](PROGRESS_INDEX.md)); depends on DATA-03B.2A.
 - DATA-05A PRODUCTION ACTIVATED / ACCEPTED; DATA-04B DEFERRED; RELEASE-01 PAUSED; V1 NOT RELEASED.

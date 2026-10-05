@@ -104,7 +104,9 @@ Production values: read-only `view=analytics`, 2026-10-05, aggregate counts only
 dynamic under DATA-05A cron. Usable public performances exist for 4 of 9 public players, with
 12 / 16 / 16 / 3 Competitive matches.
 
-Act grouping is therefore **UNAVAILABLE** today. The engine and projection are ready: a
+**Update (TASK-DATA-SEASON-01):** season is now normalized and persisted from provider
+evidence; see [SEASON_EVIDENCE.md](SEASON_EVIDENCE.md) for live coverage. The table above is the
+pre-task audit. At the time of this audit Act grouping was **UNAVAILABLE**. The engine and projection are ready: a
 durable `season_short` normalizes to a public key (`e9a3` → `E9:A3`, `v26a1` → `V26:A1`),
 `season_id` UUIDs are never exposed, and unrecognized codes stay 未分類. There is no
 hardcoded Riot season calendar, and the "current official Act" is never claimed

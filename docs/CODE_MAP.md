@@ -1,5 +1,12 @@
 # Code map
 
+## TASK-DATA-SEASON-01 season evidence
+
+- server/evidence/seasonEvidence.ts: independent id/short validation; normalizeHenrikEvidence spreads it into DurableMatchEvidence.
+- server/repositories/postgres.ts: source_matches upsert COALESCEs season_id/season_short.
+- server/sync/postgresSyncStore.ts `fillKnownMatchSeasons` + deepHistoryChunk stored phase: season-only fill for known matches.
+- server/dataset/analyticsContext.ts: season column counts and latestRecordedAct; tests/seasonEvidence.test.ts.
+
 ## DATA-03B.2A analytics scope engine
 
 - src/analytics/scope/: versions, types, policies (feature-scope-policy-v1 registry), season (public Act keys),

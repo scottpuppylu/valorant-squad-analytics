@@ -38,6 +38,14 @@
 
 ## Current stage
 
+- TASK-DATA-SEASON-01 (2026-10-05, SDD STRICT): match season evidence from Henrik v4
+  `metadata.season` / Stored `meta.season` is normalized and persisted to existing
+  `source_matches.season_id/season_short` (no migration). Missing/invalid never erases; a valid
+  later value corrects. `season_id` is server-only; the browser gets only a recognized public
+  `seasonKey`. Stored rows may fill season ONLY for already durable, participant, consented
+  matches. Never claim the current official Act. Read docs/SEASON_EVIDENCE.md before changing
+  season handling. TASK-DATA-RANK-01, TASK-PROGRESS-01 and DATA-03B.2B remain NOT STARTED.
+
 - TASK-DATA-03B.2 (2026-10-05, SDD STRICT) is redefined as the **Context-Aware
   Analytics Scope Engine**; the earlier "all-history analytics" definition is
   superseded. DATA-03B.2A is COMPLETE: `analysis-scope-v1`, `feature-scope-policy-v1`
