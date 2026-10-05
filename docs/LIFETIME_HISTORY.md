@@ -1,5 +1,15 @@
 # Authoritative lifetime history feasibility
 
+## Superseding product decision — DATA-05A, 2026-10-05
+
+The human explicitly selected Tracker-style persistent Henrik accumulation instead
+of waiting for authoritative lifetime proof. The research below is preserved,
+but its acquisition/release blocker is superseded. Ticket #139243830 remains OPEN —
+WAITING FOR RIOT RESPONSE, informational/non-blocking (no fresh ticket query).
+DATA-04B deferred/not required for current product path. lifetimeComplete=false.
+See PERSISTENT_SYNC.md; DATA-03B not started, RELEASE-01 paused for DATA-05A / DATA-03B,
+V1 not released. No Riot/RSO/application or destructive authorization.
+
 TASK-DATA-04A — SDD STRICT. Research date: 2026-10-04.
 Status: **WAITING ON RIOT — ticket #139243830**. Docs-only research is complete; official clarification remains pending.
 Starting repository HEAD: `8ffe12e15544fd03eb53879341a867a6c6d9febe` (clean `main`, equal to `origin/main`).

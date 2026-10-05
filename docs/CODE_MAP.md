@@ -1,5 +1,14 @@
 # Code map
 
+## DATA-05A persistent orchestration
+
+- api/valorant/cron/{recent,history}.ts -> server/sync/cronHandler.ts: fail-closed server-only bearer auth.
+- server/sync/scheduledSyncService.ts: serial eligibility/work budget/aggregate response.
+- server/sync/scheduledRuntime.ts and postgresSyncStore.ts: shared advisory lock, due policy, terminal cooldown/reset and scheduled audit.
+- deepHistoryChunk.ts / historicalSyncService.ts: repeated-page pause/backoff, stored fallback and partial terminal sweeps.
+- tests/scheduledSync.test.ts and historicalSync.test.ts: mocks/disposable Postgres only.
+- docs/PERSISTENT_SYNC.md: activation gate and pending UTC schedule (not registered yet).
+
 This map records the completed DATA-02 PUBLIC REAL runtime, durable evidence/sync/deletion foundations and TASK-METRICS-01 reconstruction boundary.
 
 ## Current runtime

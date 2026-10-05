@@ -1,5 +1,15 @@
 # V1 release preflight
 
+## Current release gate — DATA-05A (2026-10-05)
+
+Explicit human decision supersedes the Riot-response freeze below. Tracker-style
+persistent Henrik history replaces lifetime-proof as current operational target.
+Riot ticket #139243830 remains OPEN / informational / non-blocking; DATA-04B deferred.
+RELEASE-01 PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED. DATA-03B NOT STARTED.
+Cron production activation/canaries await secure CRON_SECRET; see PERSISTENT_SYNC.md.
+No release level/tag, Riot/RSO, scoring/Synergy change or destructive operation.
+The following freeze and fixture descriptions remain historical evidence only.
+
 ## Current release gate — TASK-DATA-04A, 2026-10-04
 
 TASK-DATA-04A is **WAITING ON RIOT — ticket #139243830**, **OPEN — WAITING FOR RIOT RESPONSE**. TASK-DATA-04B is **BLOCKED ON DATA-04A**. TASK-RELEASE-01 remains **PAUSED**; V1 is **NOT YET RELEASED**. No Riot provider/RSO implementation or another Production/RSO application before clarification; no API calls, production changes, DATA-03A.2 or DATA-03B execution.

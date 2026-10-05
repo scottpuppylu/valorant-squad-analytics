@@ -38,6 +38,10 @@
 
 ## Current stage
 
+- Superseding human decision (2026-10-05): TASK-DATA-05A is ACTIVE — Tracker-style persistent scheduled sync. Maximize and retain observable Henrik history subject to consent/deletion; lifetimeComplete remains false. The Riot-response acquisition freeze below is historical and superseded. Ticket #139243830 remains OPEN / informational / non-blocking; DATA-04B is DEFERRED / NOT REQUIRED FOR CURRENT PRODUCT PATH. DATA-03A resumes as acquisition infrastructure; DATA-03B NOT STARTED. RELEASE-01 PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED. See docs/PERSISTENT_SYNC.md and docs/TASK_DATA_05A_PLAN.md. Secure production CRON_SECRET plus one recent and one historical passing canary gate recurring operation; if safe secret setting is unavailable, stop before cron activation. No Riot/RSO/application, player recreation, deletion, scoring/Synergy change or release authorization.
+
+### Superseded governance checkpoint
+
 - Current governance decision (2026-10-04): TASK-DATA-04A is **WAITING ON RIOT — ticket #139243830**, status **OPEN — WAITING FOR RIOT RESPONSE**. TASK-DATA-04B is **BLOCKED ON DATA-04A**. TASK-RELEASE-01 is **PAUSED**; V1 is **NOT YET RELEASED**. Preserve the full lifetime-history requirement and existing evidence; research completion is not official clarification or access approval. See `docs/LIFETIME_HISTORY.md` and `docs/TASKS.md`.
 - Until the Riot clarification and a new explicit human gate: do not resume Henrik deep crawl, implement DATA-03A.2, start DATA-03B, implement DATA-04B/Riot provider/RSO, submit another Production/RSO application, call Riot or Henrik APIs, or change production data. The support inquiry is not a Production/RSO application. This current freeze supersedes continuation permissions in historical checkpoints below.
 

@@ -1,5 +1,14 @@
 # Durable historical synchronization
 
+## Current extension — DATA-05A
+
+Tracker-style scheduled recent/history coordination now extends the historical
+manual contracts below. See PERSISTENT_SYNC.md for eligibility, fairness, shared
+advisory lock, 40-second work envelope, scheduled trigger and 7/30-day re-sweeps.
+Daily registration awaits secure production CRON_SECRET; not yet enabled.
+Repeated deep pages use persisted 5/30-minute pauses and stored fallback rather
+than immediate failure. No old evidence is deleted when upstream windows shrink.
+
 ## Current acquisition extension — DATA-03A
 
 The legacy contract/evidence below is preserved. `deep_backfill` is an independent

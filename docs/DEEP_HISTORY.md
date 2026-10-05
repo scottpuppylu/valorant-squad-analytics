@@ -1,5 +1,15 @@
 # Deep historical acquisition
 
+## Current acquisition decision — DATA-05A (2026-10-05)
+
+Explicit human decision supersedes the following Riot-response freeze. DATA-03A
+resumes as Tracker-style persistent acquisition infrastructure: daily recent sync,
+bounded historical continuation and 7/30-day reconciliation. Repeated pages pause
+with durable backoff, third live repeat falls back to stored discovery; partial
+sweeps are terminal but never lifetime-complete. See PERSISTENT_SYNC.md. Registration
+and production canaries await safe CRON_SECRET configuration; NOT VERIFIED.
+Historical P1/P2 and 30-source evidence below remains unchanged, not a fresh query.
+
 ## Superseding acquisition freeze — TASK-DATA-04A, 2026-10-04
 
 TASK-DATA-04A is **WAITING ON RIOT — ticket #139243830**, **OPEN — WAITING FOR RIOT RESPONSE**. TASK-DATA-04B is **BLOCKED ON DATA-04A**; no Riot provider/RSO implementation or another Production/RSO application before clarification. Support inquiry submission does not authorize API calls, production changes or resumed acquisition.

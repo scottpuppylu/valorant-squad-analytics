@@ -1,5 +1,23 @@
 # Development tasks
 
+## Current decision — TASK-DATA-05A (2026-10-05)
+
+Status: **ACTIVE — Tracker-style persistent scheduled sync**. Explicit human
+decision supersedes the prior Riot-response freeze. Primary strategy: permanently
+accumulate observable Henrik history, daily incremental and historical reconciliation,
+existing consent/deletion boundaries; lifetimeComplete=false. Implementation and
+environment acceptance tracked in [PERSISTENT_SYNC.md](PERSISTENT_SYNC.md).
+CRON_SECRET authentication/registration/canary gate remains unsatisfied.
+
+- DATA-04A: WAITING ON RIOT — informational / non-blocking, ticket #139243830 OPEN.
+- DATA-04B: DEFERRED / NOT REQUIRED FOR CURRENT PRODUCT PATH.
+- DATA-03A: resumed as acquisition infrastructure; preserve existing P1/P2 runs/data.
+- DATA-03B: NOT STARTED; public schema 4/newest-300 unchanged.
+- RELEASE-01: PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED.
+- No Riot/RSO, another application, destructive data operation or scoring/Synergy change.
+
+The following DATA-04A decision is superseded historical evidence, not current freeze.
+
 ## Current decision — TASK-DATA-04A (2026-10-04)
 
 The hard requirement is **FULL LIFETIME MATCH HISTORY**, earliest actual VALORANT match through latest, with no known missing matches. Do not substitute a provider window, source exhaustion or newest-300 projection.

@@ -1,5 +1,14 @@
 # Production data connection architecture
 
+## Current acquisition direction — DATA-05A
+
+Tracker-style persistent Henrik accumulation is primary; Riot ticket is informational,
+DATA-04B deferred, DATA-03B not started. Server-only authenticated recent/history
+cron routes reuse existing consent, leases and evidence storage. See PERSISTENT_SYNC.md.
+Production schedules are not registered while secure CRON_SECRET setting is unavailable.
+No browser visitor is required once cron activation passes both canaries; public
+schema 4/newest-300 remains unchanged. No migration, scoring or Synergy change.
+
 Decision date: 2026-09-29
 
 ## Deployment status

@@ -291,7 +291,8 @@ export function ConnectPage() {
       {datasetSource === 'REAL_SERVER' && activeDataset.mode === 'REAL' && !revoked && !deletionSessionActive ? (
         <section className="surface-card connect-panel">
           <p className="metric-label">目前資料來源</p>
-          <h2>公開真實戰績{datasetStatus === 'empty' ? '目前為空' : '已啟用'}</h2>
+          <h2>已追蹤戰績{datasetStatus === 'empty' ? '目前為空' : ''}</h2>
+          <p>歷史資料持續補齊中；已保存的戰績不會因資料來源視窗縮小而移除。自動排程尚未啟用，目前可手動同步。</p>
           <p>目前有 {activeDataset.players.length} 位有效同意玩家、{activeDataset.matches.length} 場可用戰績；完整資料集不會保存於瀏覽器，也不會與虛構示範資料混合。</p>
           <div className="connect-actions"><button className="button-primary" type="button" onClick={openImportedDataset}>查看戰績</button><button className="button-secondary" type="button" onClick={() => void refresh()}>重新整理資料</button></div>
         </section>
@@ -362,10 +363,12 @@ export function ConnectPage() {
           <h2>{syncProgress.history?.sourceExhausted ? '已達目前資料來源最舊可取得紀錄' : automaticSync ? '歷史同步中' : '歷史同步進度已保存'}</h2>
           <p>階段：{syncProgress.history?.historyPhase === 'live_v4' ? '最新歷史' : syncProgress.history?.historyPhase === 'stored_index' ? '較舊已保存歷史' : '資料來源已掃描'}</p>
           <p>已發現 {syncProgress.progress.matchesSeen} · 已保存 {syncProgress.progress.matchesPersisted} · 重疊 {syncProgress.progress.overlapsUpdated} · 詳細資料無法取得 {syncProgress.progress.detailUnavailableCount ?? 0} · 資料來源請求 {syncProgress.performance.providerRequests}</p>
-          <p>最早已保存日期：{syncProgress.coverage.from ?? '—'} · 最新已保存日期：{syncProgress.coverage.to ?? '—'}</p>
+          <p>最早已保存紀錄：{syncProgress.coverage.from ?? '—'} · 最新已保存日期：{syncProgress.coverage.to ?? '—'}</p>
+          <p>最近同步時間：{syncProgress.coverage.lastSyncedAt ?? '—'}</p>
           <p>進度持久保存；關閉頁面後停止自動續跑，重新開啟可恢復。不保證完整生涯；分析仍顯示最近有界範圍。</p>
           {syncProgress.nextAttemptAt ? <p>可重試時間：{syncProgress.nextAttemptAt}</p> : null}
-          {syncProgress.terminationReason === 'provider_repeated_page' ? <p>資料來源重複回傳相同頁面，已停止；尚未證明來源耗盡。</p> : null}
+          {syncProgress.lastErrorCategory === 'PROVIDER_PAGINATION_UNSTABLE' ? <p>資料來源分頁暫時不穩定，已保存進度並等待重試。</p> : null}
+          {syncProgress.coverage.incompleteReason === 'partial_source_coverage' ? <p>這次掃描僅涵蓋部分資料來源，較舊紀錄可於後續重新掃描補齊。</p> : null}
           {automaticSync ? <button className="button-secondary" type="button" onClick={() => setAutomaticSync(false)}>暫停自動續跑</button>
             : syncProgress.status !== 'complete' && syncProgress.status !== 'cancelled' ? <button className="button-secondary" type="button" disabled={busy || provider !== 'configured'} onClick={beginDeepSync}>恢復歷史同步</button> : null}
         </section>

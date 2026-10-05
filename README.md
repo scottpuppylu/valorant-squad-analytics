@@ -4,6 +4,13 @@
 
 ## 目前狀態
 
+2026-10-05 決策：TASK-DATA-05A ACTIVE，採 Tracker-style 持續保存可取得戰績，
+不再等待 Riot ticket #139243830（OPEN，僅補充研究、非阻擋）。DATA-04B 延後；
+DATA-03A 作為同步基礎，DATA-03B 尚未開始；V1 未發佈，RELEASE-01 暫停等待
+DATA-05A／DATA-03B。新排程 route 已準備，但尚未安全設定正式 CRON_SECRET，
+因此 cron **尚未啟用**、正式 canary **NOT VERIFIED**。見
+[持續同步契約](docs/PERSISTENT_SYNC.md)。下方任務 checkpoint 是歷史紀錄。
+
 目前優先工作為 TASK-DATA-03A（SDD STRICT）：獨立 `deep_backfill`／`deep-history-v1` 先讀 v4 歷史，再以 Stored Matches 索引恢復較舊詳細資料。實作／部署及 migration 0007 已授權；正式抓取 **NOT STARTED**，需另行人工批准。發佈驗收 **PAUSED FOR DATA-03**；DATA-03B 尚未開始，分析仍維持 schema 4／最近最多 300 場，不宣稱完整生涯。見 [docs/DEEP_HISTORY.md](docs/DEEP_HISTORY.md)。下方舊任務數量是歷史 checkpoint，不代表固定正式資料數量。
 
 TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。TASK-METRICS-01 已完成，production migration、CI 與部署驗證均通過。Vercel 是 [PUBLIC REAL canonical runtime](https://valorant-squad-analytics.vercel.app/)：任何訪客都能在無登入、無存取碼的情況下讀取已同意玩家的去敏感化分析。GitHub Pages 固定為 Demo-only rollback，不呼叫 production dataset API。公開投影最多包含最近 300 場符合資格的持久化對戰；2026-10-03 的唯讀檢查為 1 位公開玩家、0 場對戰，REAL 保持 empty，非空 production 指標與搭檔路徑仍是 **NOT YET EXERCISED**。本任務沒有新增、重新連結或同步 production 玩家。
