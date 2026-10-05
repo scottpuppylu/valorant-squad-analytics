@@ -1,5 +1,10 @@
 # Durable dataset runtime
 
+> **TASK-DATA-FASTSYNC-01:** `DatasetContext.refreshRecent` exists only for PUBLIC REAL. A refresh
+> that durably committed new matches calls the normal snapshot reload, which clears the per-tab
+> `view=analysis` cache; the new snapshot version re-keys every analysis hook. Fresh, zero-new and
+> error outcomes reload nothing. See [FAST_RECENT_SYNC.md](FAST_RECENT_SYNC.md).
+
 Status: **TASK-DATA-02 COMPLETE — SDD STRICT**; TASK-DATA-03B.1 history pages added 2026-10-05.
 
 ## Server analysis (TASK-DATA-03B.2B)

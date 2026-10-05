@@ -1,5 +1,9 @@
 # Server-side context-aware analytics
 
+> **TASK-DATA-FASTSYNC-01:** after a durable new match arrives from a Profile refresh, the browser
+> reloads the snapshot and clears this per-tab analysis cache. `view=analysis` itself is unchanged.
+> See [FAST_RECENT_SYNC.md](FAST_RECENT_SYNC.md).
+
 TASK-DATA-03B.2B — SDD STRICT, 2026-10-05. Starting HEAD
 `e1988ee3bab28788f0627923910af4e0cf489110`; checkpoint
 `checkpoint-before-data-03b2b-server-analytics`. Version `server-analysis-v1`.

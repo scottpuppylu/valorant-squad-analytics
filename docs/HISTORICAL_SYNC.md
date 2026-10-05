@@ -1,5 +1,12 @@
 # Durable historical synchronization
 
+## Current extension — TASK-DATA-FASTSYNC-01
+
+`HistoricalSyncService.refreshIfStale` reuses `executeChunk`, the cursor lease, the consent checks,
+the backoff, HMAC dedupe and known-boundary termination for incremental runs. It adds an optional
+`expectedVersion` guard to `acquireCursorLease`, which re-checks the cursor's `updated_at` under a
+row lock. Page size stays 3. See [FAST_RECENT_SYNC.md](FAST_RECENT_SYNC.md).
+
 ## Current extension — DATA-05A
 
 Tracker-style scheduled recent/history coordination now extends the historical

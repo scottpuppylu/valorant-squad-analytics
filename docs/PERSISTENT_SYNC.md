@@ -1,5 +1,9 @@
 # Tracker-style persistent scheduled sync
 
+> **TASK-DATA-FASTSYNC-01 (2026-10-06):** the daily `recent`/`history` crons are unchanged and
+> remain the unattended safety net. Profile opens can additionally run one bounded incremental
+> chunk when the server-only 30-minute freshness gate says stale. See [FAST_RECENT_SYNC.md](FAST_RECENT_SYNC.md).
+
 TASK-DATA-05A — SDD STRICT, 2026-10-05. Status: implementation/local gates complete;
 **PRODUCTION ACTIVATED / ACCEPTED**; both secured production canaries passed.
 

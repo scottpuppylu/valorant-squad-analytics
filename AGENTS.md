@@ -49,6 +49,8 @@
 | DATA-03B.2C scalable LIFETIME/ACT/PAIR aggregation (>2000 phase-2 bound) | DEFERRED — required before a true LIFETIME/ACT/PAIR population can exceed the 2000-match analytical bound without becoming partial |
 | TASK-DATA-SEASON-01 season evidence | COMPLETE / ACCEPTED (Act data available; coverage partial and dynamic) |
 | TASK-PROGRESS-01 Adaptive Improvement Index | COMPLETE / ACCEPTED (2026-10-06; improvement-index-v1) — see docs/PROGRESS_INDEX.md |
+| TASK-DATA-FASTSYNC-01 opportunistic recent refresh | COMPLETE / ACCEPTED (2026-10-06; recent-refresh-v1) — see docs/FAST_RECENT_SYNC.md |
+| TASK-DATA-FASTSYNC-02 sub-daily scheduled recent sync | NOT STARTED / OPTIONAL FUTURE |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
 | Riot ticket #139243830 | OPEN — informational / non-blocking |
@@ -58,6 +60,17 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-DATA-FASTSYNC-01 COMPLETE / ACCEPTED (2026-10-06, SDD STRICT): `recent-refresh-v1`.
+  `POST /api/valorant/sync/start` with `intent: refresh_if_stale` (incremental only; no new
+  function). Freshness is the incremental cursor's `last_success_at`; the server-only 30-minute
+  threshold is never client-supplied. Leases, backoff and consent stay authoritative, and the
+  cursor version is re-checked under the lease row lock (race-safe). At most one chunk per action,
+  page size 3; paused runs continue without the cooldown. The Profile auto-refreshes once per
+  player per tab plus a manual 更新戰績 button; only Profile triggers it, never Dashboard,
+  Leaderboard or Matches. Demo has no control and no API calls. Cron schedules are unchanged
+  (daily). No migration; `trigger_kind` stays `manual`. Read docs/FAST_RECENT_SYNC.md before
+  changing it.
 
 - TASK-PROGRESS-01 COMPLETE / ACCEPTED (2026-10-06, SDD STRICT): `improvement-index-v1` /
   `improvement-benchmarks-v1` / `feature-scope-policy-v2`. Profile-only signed −100..+100

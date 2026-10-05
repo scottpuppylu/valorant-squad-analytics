@@ -1,5 +1,14 @@
 # Code map
 
+## TASK-DATA-FASTSYNC-01 recent refresh
+
+- server/sync/recentRefresh.ts (recent-refresh-v1 pure decision and outcome type).
+- server/sync/historicalSyncService.ts `refreshIfStale`; server/sync/postgresSyncStore.ts `recentRefreshState`,
+  `acquireCursorLease(..., expectedVersion)`; server/validation.ts `intent`; api/valorant/sync/start.ts.
+- src/contexts/DatasetProvider.tsx `refreshRecent` (per-tab auto dedupe, reload on new matches);
+  src/components/RecentRefreshPanel.tsx (Profile); copy in src/analytics/presentation.ts, time in src/utils/format.ts.
+- tests/fastSync.test.ts, tests/fastSyncUi.test.tsx.
+
 ## TASK-PROGRESS-01 improvement index
 
 - src/analytics/progress/benchmarks.ts (improvement-benchmarks-v1), windows.ts (same-Act-first resolution, server-safe),

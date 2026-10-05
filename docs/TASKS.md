@@ -4,7 +4,16 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-PROGRESS-01 (2026-10-05)
+## Current decision — TASK-DATA-FASTSYNC-01 (2026-10-06)
+
+**COMPLETE / ACCEPTED.** Opportunistic recent match refresh `recent-refresh-v1`
+([FAST_RECENT_SYNC.md](FAST_RECENT_SYNC.md)): server-authoritative 30-minute freshness gate,
+race-safe lease re-check, one bounded chunk per action, Profile auto refresh plus manual 更新戰績.
+Cron schedules are unchanged. TASK-DATA-FASTSYNC-02 (sub-daily scheduled recent sync): NOT STARTED /
+OPTIONAL FUTURE. TASK-DATA-RANK-01 NOT STARTED; DATA-03B.2C DEFERRED; RELEASE-01 PAUSED; V1 NOT
+YET RELEASED.
+
+## Earlier decision — TASK-PROGRESS-01 (2026-10-05)
 
 **COMPLETE / ACCEPTED (2026-10-06).** Adaptive Improvement Index authorized and implemented: `improvement-index-v1`,
 `improvement-benchmarks-v1`, `feature-scope-policy-v2`. See [PROGRESS_INDEX.md](PROGRESS_INDEX.md).
