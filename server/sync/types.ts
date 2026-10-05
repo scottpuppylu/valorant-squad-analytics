@@ -71,6 +71,8 @@ export interface SyncChunkMetrics {
   storedMatchesSeen?: number;
   detailRequests?: number;
   detailUnavailableCount?: number;
+  /** TASK-DATA-SEASON-01 chunk-local count of known matches whose season was filled from a stored row. */
+  storedSeasonUpdates?: number;
   providerFetchMs: number;
   normalizationMs: number;
   databaseMs: number;

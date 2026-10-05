@@ -1,5 +1,6 @@
 import type { MatchImportInput } from '../contracts.js';
 import { eventHmac, participantHmac, providerIdentityHmac, sourceMatchHmac } from '../identityProtection.js';
+import { normalizeSeasonEvidence } from './seasonEvidence.js';
 import { DURABLE_NORMALIZATION_VERSION, type DurableMatchEvidence, type EvidenceParticipant, type EvidenceRound, type EvidenceRoundParticipant, type EvidenceStatus } from './types.js';
 
 type Json = Record<string, unknown>;
@@ -178,6 +179,7 @@ export function normalizeHenrikEvidence(payload: unknown, input: MatchImportInpu
       providerSchemaVersion: 'v4' as const, normalizationVersion: DURABLE_NORMALIZATION_VERSION, affinity: input.affinity,
       mapId: asText(map?.id), mapName: asText(map?.name), queueId: asText(queue?.id), queueName: asText(queue?.name),
       startedAt: asText(metadata.started_at), gameLengthMs: asNumber(metadata.game_length_in_ms),
+      ...normalizeSeasonEvidence(metadata.season),
       roundsStatus: roundEvidence.status, killsStatus: killEvidence.status, participants,
       teams: asRecords(match.teams).map((team) => ({ teamKey: asText(team.team_id) ?? 'unknown', won: typeof team.won === 'boolean' ? team.won : undefined, roundsWon: asNumber(isRecord(team.rounds) ? team.rounds.won : undefined), roundsLost: asNumber(isRecord(team.rounds) ? team.rounds.lost : undefined) })),
       rounds,

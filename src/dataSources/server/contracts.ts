@@ -246,8 +246,9 @@ export interface DatasetAnalyticsContextResponse {
   adaptiveWindowVersion: 'adaptive-window-v1';
   population: { trackedMatchCount: number; snapshotWindow: number; snapshotCoversTrackedHistory: boolean; lifetimeComplete: false };
   evidence: {
-    season: { status: ScopeEvidenceStatus; matchesWithAct: number; matchesWithoutAct: number; seasonIdWithoutPublicAct: number;
-      unrecognizedSeasonCodes: number; currentActKnown: false; acts: { key: string; label: string; matches: number }[] };
+    season: { status: ScopeEvidenceStatus; matchesWithSeasonId: number; matchesWithSeasonShort: number; matchesWithAct: number; matchesWithoutAct: number;
+      seasonIdWithoutPublicAct: number; unrecognizedSeasonCodes: number; currentActKnown: false; latestRecordedAct?: string;
+      acts: { key: string; label: string; matches: number }[] };
     duration: { status: ScopeEvidenceStatus; matchesWithDuration: number; matchesWithoutDuration: number };
     queues: { gameMode: string; matches: number }[];
     rank: { status: ScopeEvidenceStatus; observations: number; reason: 'not_ingested' | 'not_tied_to_matches' };

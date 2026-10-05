@@ -87,6 +87,10 @@ export interface DurableMatchEvidence {
   queueName?: string;
   startedAt?: string;
   gameLengthMs?: number;
+  /** TASK-DATA-SEASON-01: validated provider season UUID; server-only. */
+  seasonId?: string;
+  /** TASK-DATA-SEASON-01: validated provider season short code; public key derived only when recognized. */
+  seasonShort?: string;
   roundsStatus: EvidenceStatus;
   killsStatus: EvidenceStatus;
   participants: EvidenceParticipant[];

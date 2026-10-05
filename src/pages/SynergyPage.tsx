@@ -8,7 +8,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { useDataset } from '../hooks/useDataset';
 import { buildSynergy, canonicalPair, defaultSynergyFilters } from '../synergy/analytics';
 import { formatPercent, formatScore } from '../utils/format';
-import { seasonLabel } from '../analytics/scope/season';
+import { actOptionLabel, compareSeasonKeysDesc } from '../analytics/scope/season';
 
 const dateValue = (value: string | null) => value && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) ? value : '';
 
@@ -50,7 +50,7 @@ export function SynergyPage() {
       <section className="surface-card grid min-w-0 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4" aria-label="搭檔篩選">
         <label>玩家 A<select aria-label="玩家 A" className={inputClass} value={a} onChange={(e) => update({a:e.target.value,b:e.target.value === b ? dataset.players.find((p) => p.id !== e.target.value)!.id : b!})}>{dataset.players.map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
         <label>玩家 B<select aria-label="玩家 B" className={inputClass} value={b} onChange={(e) => update({b:e.target.value})}>{dataset.players.filter((p) => p.id !== a).map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
-        <label>資料範圍<select aria-label="資料範圍" className={inputClass} value={act} onChange={(e) => update({act:e.target.value})}><option value="">全部已追蹤</option>{population.seasonKeys.length === 0 ? <option value="" disabled>指定 Act（目前沒有 Act 資料）</option> : population.seasonKeys.map((key) => <option key={key} value={key}>{seasonLabel(key)}</option>)}</select></label>
+        <label>資料範圍<select aria-label="資料範圍" className={inputClass} value={act} onChange={(e) => update({act:e.target.value})}><option value="">全部已追蹤</option>{population.seasonKeys.length === 0 ? <option value="" disabled>指定 Act（目前沒有 Act 資料）</option> : [...population.seasonKeys].sort(compareSeasonKeysDesc).map((key, index) => <option key={key} value={key}>指定 Act：{actOptionLabel(key, index)}</option>)}</select></label>
         <label>地圖<select aria-label="地圖" className={inputClass} value={map} onChange={(e) => update({map:e.target.value})}><option value="all">全部地圖</option>{maps.map((m) => <option key={m}>{m}</option>)}</select></label>
         <label>模式<select aria-label="模式" className={inputClass} value={gameMode} onChange={(e) => update({mode:e.target.value})}><option value="all">全部模式</option>{modes.map((m) => <option key={m}>{m}</option>)}</select></label>
         <label>開始日期<input aria-label="開始日期" className={inputClass} type="date" value={from} onChange={(e) => update({from:e.target.value})} /></label>

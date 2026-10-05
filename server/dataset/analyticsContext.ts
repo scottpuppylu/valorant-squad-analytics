@@ -67,6 +67,8 @@ export function buildAnalyticsContext(rows: AnalyticsContextRows) {
   let seasonIdOnly = 0;
   let unrecognizedSeason = 0;
   let withDuration = 0;
+  let withSeasonIdColumn = 0;
+  let withSeasonShortColumn = 0;
   const acts = new Map<string, number>();
   const queues = new Map<string, number>();
   for (const group of rows.groups) {
@@ -74,6 +76,8 @@ export function buildAnalyticsContext(rows: AnalyticsContextRows) {
     eligibleMatches += matches;
     if (!group.has_start) continue;
     trackedMatchCount += matches;
+    if (group.has_season_id) withSeasonIdColumn += matches;
+    if (group.season_short) withSeasonShortColumn += matches;
     const key = normalizeSeasonKey(group.season_short);
     if (key) { withSeason += matches; acts.set(key, (acts.get(key) ?? 0) + matches); }
     else if (group.season_short) unrecognizedSeason += matches;
@@ -101,11 +105,16 @@ export function buildAnalyticsContext(rows: AnalyticsContextRows) {
     evidence: {
       season: {
         status: ratioStatus(withSeason, trackedMatchCount),
+        /** Durable column coverage (TASK-DATA-SEASON-01); the UUID values themselves never leave the server. */
+        matchesWithSeasonId: withSeasonIdColumn,
+        matchesWithSeasonShort: withSeasonShortColumn,
         matchesWithAct: withSeason,
         matchesWithoutAct: trackedMatchCount - withSeason,
         seasonIdWithoutPublicAct: seasonIdOnly,
         unrecognizedSeasonCodes: unrecognizedSeason,
         currentActKnown: false as const,
+        /** Highest observed Act key (最新有紀錄 Act); NOT a claim about Riot's current official Act. */
+        ...(acts.size ? { latestRecordedAct: [...acts.keys()].sort(compareSeasonKeysDesc)[0] } : {}),
         acts: [...acts].sort((a, b) => compareSeasonKeysDesc(a[0], b[0])).map(([key, matches]) => ({ key, label: seasonLabel(key), matches })),
       },
       duration: { status: ratioStatus(withDuration, trackedMatchCount), matchesWithDuration: withDuration, matchesWithoutDuration: trackedMatchCount - withDuration },

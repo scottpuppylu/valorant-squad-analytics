@@ -374,6 +374,30 @@ export class PostgresSyncStore {
     return new Set(result.rows.map((row) => row.provider_match_lookup_hmac));
   }
 
+  /**
+   * TASK-DATA-SEASON-01: fill season metadata for ALREADY DURABLE matches seen in a Stored Matches
+   * index page, keyed only by the existing HMAC. Never creates a source match or any evidence row,
+   * only touches matches this player participated in, requires active consent in the same statement,
+   * and keeps the upsert semantics: a valid value corrects, a missing value never erases.
+   */
+  async fillKnownMatchSeasons(playerId: string, rows: { hmac: string; seasonId?: string; seasonShort?: string }[]): Promise<number> {
+    const usable = rows.filter((row) => row.seasonId !== undefined || row.seasonShort !== undefined);
+    if (usable.length === 0) return 0;
+    const result = await this.database.query(
+      `UPDATE source_matches sm SET
+         season_id=COALESCE(v.season_id, sm.season_id),
+         season_short=COALESCE(v.season_short, sm.season_short)
+       FROM unnest($2::text[], $3::text[], $4::text[]) AS v(hmac, season_id, season_short)
+       WHERE sm.provider='HenrikDev' AND sm.provider_match_lookup_hmac=v.hmac
+         AND (sm.season_id IS DISTINCT FROM COALESCE(v.season_id, sm.season_id)
+           OR sm.season_short IS DISTINCT FROM COALESCE(v.season_short, sm.season_short))
+         AND EXISTS (SELECT 1 FROM match_participants mp WHERE mp.source_match_id=sm.id AND mp.player_id=$1)
+         AND EXISTS (SELECT 1 FROM consents c WHERE c.player_id=$1 AND c.status='active')`,
+      [playerId, usable.map((row) => row.hmac), usable.map((row) => row.seasonId ?? null), usable.map((row) => row.seasonShort ?? null)],
+    );
+    return result.rowCount;
+  }
+
   async recordSuccess(input: {
     cursorId: string;
     leaseToken: string;

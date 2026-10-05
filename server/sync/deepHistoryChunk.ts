@@ -4,6 +4,7 @@ import { lookupHmac, sourceMatchHmac } from '../identityProtection.js';
 import type { DurableEvidenceService } from '../persistence/durableEvidenceService.js';
 import type { HistoricalDiscoveryProvider } from './historicalDiscoveryProvider.js';
 import type { PostgresSyncStore } from './postgresSyncStore.js';
+import { normalizeSeasonEvidence } from '../evidence/seasonEvidence.js';
 import type { DeepCursorState, SyncChunkMetrics, SyncCursorRecord, SyncRunRecord, SyncTerminationReason } from './types.js';
 
 type RecordValue = Record<string, unknown>;
@@ -161,6 +162,17 @@ export async function executeDeepHistoryChunk(options: {
   deep.discoveryPage = deep.storedPage;
   const existing = await store.existingMatchHmacs(hmacs);
   metrics.sqlQueryCount += 1;
+  // TASK-DATA-SEASON-01: stored rows carry required meta.season; fill it for already durable matches only.
+  const storedRows = record(payload) && Array.isArray(payload.data) ? payload.data : [];
+  const seasonFills = hmacs.flatMap((hmac, index) => {
+    const meta = record(storedRows[index]) ? (storedRows[index] as RecordValue).meta : undefined;
+    return existing.has(hmac) && record(meta) ? [{ hmac, ...normalizeSeasonEvidence(meta.season) }] : [];
+  });
+  if (seasonFills.length) {
+    try { metrics.storedSeasonUpdates = (metrics.storedSeasonUpdates ?? 0) + await store.fillKnownMatchSeasons(run.subject.playerId, seasonFills); }
+    catch { throw new PublicApiError(503, 'DATABASE_ERROR', '歷史資料尚未完整提交，保留原進度。'); }
+    metrics.sqlQueryCount += 1;
+  }
   let detailUsed = false;
   for (let index = deep.storedItemIndex; index < rawIds.length; index += 1) {
     if (monotonicNow() - options.invocationStarted >= options.budgetMs) break;

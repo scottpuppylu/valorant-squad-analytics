@@ -2,7 +2,7 @@ import type { AgentName, GameMode, MapName, Player, PlayerRole } from '../types/
 import type { AnalysisFilters } from '../analytics/types';
 import { activeFilterSummary, gameModeLabels, periodLabels } from '../analytics/presentation';
 import { zhTW } from '../i18n/zhTW';
-import { seasonLabel } from '../analytics/scope/season';
+import { actOptionLabel, compareSeasonKeysDesc } from '../analytics/scope/season';
 
 const allPeriods: AnalysisFilters['period'][] = ['current', 'all', 'act', 'recent10', 'recent30', 'custom'];
 
@@ -30,7 +30,7 @@ export function AnalysisFilterBar({ filters, onChange, onReset, players, maps, a
       <div className="analysis-filter-grid">
         {includePlayer ? <label><span>玩家</span><select value={filters.playerId} onChange={(event) => onChange({ playerId: event.target.value })}><option value="all">全部玩家</option>{players.map((player) => <option value={player.id} key={player.id}>{player.handle}</option>)}</select></label> : null}
         <label><span>資料範圍</span><select value={filters.period} onChange={(event) => onChange({ period: event.target.value as AnalysisFilters['period'] })}>{periods.map((value) => <option value={value} key={value} disabled={value === 'act' && seasonKeys.length === 0 && filters.period !== 'act'}>{value === 'act' && seasonKeys.length === 0 ? '指定 Act（目前沒有 Act 資料）' : periodLabels[value]}</option>)}</select></label>
-        {filters.period === 'act' ? <label><span>Act</span><select value={filters.act ?? ''} onChange={(event) => onChange({ act: event.target.value || undefined })}><option value="">請選擇 Act</option>{seasonKeys.map((key) => <option value={key} key={key}>{seasonLabel(key)}</option>)}</select></label> : null}
+        {filters.period === 'act' ? <label><span>Act</span><select value={filters.act ?? ''} onChange={(event) => onChange({ act: event.target.value || undefined })}><option value="">請選擇 Act</option>{[...seasonKeys].sort(compareSeasonKeysDesc).map((key, index) => <option value={key} key={key}>{actOptionLabel(key, index)}</option>)}</select></label> : null}
         <label><span>地圖</span><select value={filters.map} onChange={(event) => onChange({ map: event.target.value as AnalysisFilters['map'] })}><option value="all">全部地圖</option>{maps.map((map) => <option key={map}>{map}</option>)}</select></label>
         <label><span>特務</span><select value={filters.agent} onChange={(event) => onChange({ agent: event.target.value as AnalysisFilters['agent'] })}><option value="all">全部特務</option>{agents.map((agent) => <option key={agent}>{agent}</option>)}</select></label>
         <label><span>角色</span><select value={filters.role} onChange={(event) => onChange({ role: event.target.value as AnalysisFilters['role'] })}><option value="all">全部角色</option>{roles.map((role) => <option value={role} key={role}>{zhTW.roles[role]}</option>)}</select></label>

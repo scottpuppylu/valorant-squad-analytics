@@ -16,6 +16,11 @@ export function seasonLabel(key: string | undefined): string {
   return match ? `${match[1]!.toUpperCase()}${match[2]}:A${match[3]}` : '未知 Act／未分類';
 }
 
+/** Option label; the highest observed key is 最新有紀錄 (never "current official Act"). */
+export function actOptionLabel(key: string, index: number): string {
+  return index === 0 ? `${seasonLabel(key)}（最新有紀錄）` : seasonLabel(key);
+}
+
 /** Deterministic newest-first ordering of public keys by episode then act number. */
 export function compareSeasonKeysDesc(a: string, b: string): number {
   const pa = seasonPattern.exec(a);

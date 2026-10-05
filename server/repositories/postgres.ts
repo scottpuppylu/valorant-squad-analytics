@@ -109,16 +109,20 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
       `INSERT INTO source_matches (
         id, squad_id, provider, provider_match_lookup_hmac, provider_schema_version, normalization_version,
         affinity, map_id, map_name, queue_id, queue_name, started_at, game_length_ms, first_observed_at, last_observed_at
-        , rounds_evidence_status, kills_evidence_status
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14,$15,$16)
+        , rounds_evidence_status, kills_evidence_status, season_id, season_short
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14,$15,$16,$17,$18)
       ON CONFLICT (provider, provider_match_lookup_hmac) DO UPDATE SET
         map_id=EXCLUDED.map_id, map_name=EXCLUDED.map_name, queue_id=EXCLUDED.queue_id, queue_name=EXCLUDED.queue_name,
         started_at=EXCLUDED.started_at, game_length_ms=EXCLUDED.game_length_ms, normalization_version=EXCLUDED.normalization_version,
+        -- TASK-DATA-SEASON-01: a later valid value corrects; a missing/invalid value never erases.
+        season_id=COALESCE(EXCLUDED.season_id, source_matches.season_id),
+        season_short=COALESCE(EXCLUDED.season_short, source_matches.season_short),
         rounds_evidence_status=EXCLUDED.rounds_evidence_status, kills_evidence_status=EXCLUDED.kills_evidence_status,
         last_observed_at=EXCLUDED.last_observed_at RETURNING id`,
       [randomUUID(), squadId, evidence.provider, evidence.matchLookupHmac, evidence.providerSchemaVersion, evidence.normalizationVersion,
         evidence.affinity, evidence.mapId ?? null, evidence.mapName ?? null, evidence.queueId ?? null, evidence.queueName ?? null,
-        evidence.startedAt ?? null, evidence.gameLengthMs ?? null, observedAt, evidence.roundsStatus, evidence.killsStatus],
+        evidence.startedAt ?? null, evidence.gameLengthMs ?? null, observedAt, evidence.roundsStatus, evidence.killsStatus,
+        evidence.seasonId ?? null, evidence.seasonShort ?? null],
     );
 
     const teamRows = evidence.teams.map((team) => [
