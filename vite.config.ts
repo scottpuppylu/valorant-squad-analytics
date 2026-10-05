@@ -7,5 +7,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.{ts,tsx}'],
+    // Disposable PGlite databases apply every migration; under full parallel load this exceeds 5s.
+    testTimeout: 30_000,
   },
 });

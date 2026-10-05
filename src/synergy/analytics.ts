@@ -7,6 +7,7 @@ import { calculateSynergyIndex } from './index';
 import { SYNERGY_BENCHMARK_VERSION, SYNERGY_RULE_VERSION, synergyCoverageGate, synergyPriorStrength } from './benchmarks';
 import type { DuoSynergyResult, PairMember, PairWindow, SynergyFilters } from './types';
 import { pairTradeEvidence } from './tradeEvidence';
+import { matchesInPairContext } from '../analytics/scope/resolveScope';
 
 export const defaultSynergyFilters: SynergyFilters = { from: '', to: '', map: 'all', gameMode: 'all', minimumShared: 0 };
 export const canonicalPair = (a: string, b: string) => {
@@ -22,15 +23,9 @@ function usable(p: MatchPerformance): boolean {
 const roundsFor = (p: MatchPerformance, m: MatchRecord) => p.teamRoundsWon !== undefined && p.teamRoundsLost !== undefined
   ? p.teamRoundsWon + p.teamRoundsLost : m.scoreFor + m.scoreAgainst;
 
+/** PAIR horizon through the central analysis-scope-v1 selector; paired and baseline windows share it. */
 export function selectSynergyMatches(dataset: NormalizedAnalyticsDataset, filters: SynergyFilters): MatchRecord[] {
-  const seen = new Set<string>();
-  return dataset.matches.filter((m) => {
-    if (seen.has(m.id)) return false;
-    seen.add(m.id);
-    const date = m.playedAt.slice(0, 10);
-    return (!filters.from || date >= filters.from) && (!filters.to || date <= filters.to)
-      && (filters.map === 'all' || m.map === filters.map) && (filters.gameMode === 'all' || m.gameMode === filters.gameMode);
-  });
+  return matchesInPairContext(dataset.matches, filters);
 }
 
 function windowFor(player: Player, entries: Appearance[]): PairWindow {

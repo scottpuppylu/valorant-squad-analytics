@@ -2,6 +2,15 @@ import { agentRoles } from '../utils/agentRoles';
 import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 import type { MatchRecord } from '../types/valorant';
 import type { AnalysisFilters, PerformanceEntry, SelectionResult } from './types';
+import { populationFromMatches, resolveScopeSelection } from './scope/resolveScope';
+import type { FeatureId, ScopePopulation } from './scope/types';
+
+export interface SelectionOptions {
+  /** Analytics population facts; derived from the entries when omitted (coverage unverified). */
+  population?: ScopePopulation;
+  /** LIFETIME feature this page represents. */
+  lifetimeFeature?: FeatureId;
+}
 
 export const defaultAnalysisFilters: AnalysisFilters = {
   playerId: 'all',
@@ -28,45 +37,28 @@ export function createPerformanceEntries(dataset: NormalizedAnalyticsDataset): P
   }));
 }
 
-function withinCustomRange(entry: PerformanceEntry, filters: AnalysisFilters): boolean {
-  const day = entry.match.playedAt.slice(0, 10);
-  if (filters.dateFrom && day < filters.dateFrom) return false;
-  if (filters.dateTo && day > filters.dateTo) return false;
-  return true;
-}
-
-export function selectPerformances(entries: PerformanceEntry[], filters: AnalysisFilters): SelectionResult {
+/**
+ * Context filters first (player/map/agent/role/queue), then the analysis-scope-v1 horizon
+ * (全部已追蹤 / 目前實力 / 指定 Act / 最近 N 場 / 自訂日期). Pages never select windows themselves.
+ */
+export function selectPerformances(entries: PerformanceEntry[], filters: AnalysisFilters, options: SelectionOptions = {}): SelectionResult {
   const contextual = entries.filter((entry) => (
     (filters.playerId === 'all' || entry.playerId === filters.playerId)
     && (filters.map === 'all' || entry.match.map === filters.map)
     && (filters.agent === 'all' || entry.performance.agent === filters.agent)
     && (filters.role === 'all' || agentRoles[entry.performance.agent] === filters.role)
     && (filters.gameMode === 'all' || entry.match.gameMode === filters.gameMode)
-    && (filters.period !== 'custom' || withinCustomRange(entry, filters))
   ));
-
-  const grouped = new Map<string, PerformanceEntry[]>();
-  for (const entry of contextual) {
-    const group = grouped.get(entry.playerId) ?? [];
-    group.push(entry);
-    grouped.set(entry.playerId, group);
-  }
-
-  const recentLimit = filters.period === 'recent10' ? 10 : filters.period === 'recent30' ? 30 : undefined;
-  const byPlayer = new Map<string, PerformanceEntry[]>();
-  const selected: PerformanceEntry[] = [];
-  for (const [playerId, playerEntries] of grouped) {
-    const ordered = [...playerEntries].sort((a, b) => (
-      b.match.playedAt.localeCompare(a.match.playedAt) || a.match.id.localeCompare(b.match.id)
-    ));
-    const eligible = recentLimit === undefined ? ordered : ordered.slice(0, recentLimit);
-    byPlayer.set(playerId, eligible);
-    selected.push(...eligible);
-  }
-
+  const population = options.population ?? populationFromMatches([...new Set(entries.map((entry) => entry.match))], 'unverified');
+  const { byPlayer, summary } = resolveScopeSelection(contextual, {
+    choice: filters.period, act: filters.act, dateFrom: filters.dateFrom, dateTo: filters.dateTo,
+    gameMode: filters.gameMode, lifetimeFeature: options.lifetimeFeature,
+  }, population);
+  const selected = [...byPlayer.values()].flat();
   return {
     entries: selected.sort((a, b) => b.match.playedAt.localeCompare(a.match.playedAt) || a.playerId.localeCompare(b.playerId)),
     byPlayer,
+    scope: summary,
   };
 }
 

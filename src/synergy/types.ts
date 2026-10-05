@@ -2,7 +2,8 @@ import type { ScoreResult } from '../scoring/types';
 export type ScoreStatus = ScoreResult['status'];
 import type { Player, PlayerRole } from '../types/valorant';
 
-export interface SynergyFilters { from: string; to: string; map: string; gameMode: string; minimumShared: number }
+/** PAIR context (feature-scope-policy-v1 `synergy`): optional public Act key plus date/map/mode. */
+export interface SynergyFilters { from: string; to: string; map: string; gameMode: string; minimumShared: number; act?: string }
 export interface PairWindow {
   matches: number; rounds: number; overall: ScoreResult;
   kast?: number; kastStatus: ScoreStatus; winRate?: number; winRateStatus: ScoreStatus;

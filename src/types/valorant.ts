@@ -58,6 +58,8 @@ export interface MatchRecord {
   scoreAgainst: number;
   won: boolean;
   durationMinutes: number;
+  /** Optional public Act key (e.g. "e9a3") only when durable season evidence exists. */
+  seasonKey?: string;
   performances: MatchPerformance[];
   synergyEvidence?: MatchPairTradeEvidence;
 }

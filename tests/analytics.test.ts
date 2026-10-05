@@ -121,12 +121,20 @@ describe('recent form, profile summaries and badges', () => {
   const player = activeDataset.players[0]!;
   const entries = selection.byPlayer.get(player.id)!;
 
-  it('compares the latest five matches with the preceding eligible baseline', () => {
+  it('compares non-overlapping adaptive current and baseline windows (feature-scope-policy-v1 recentForm)', () => {
     const form = calculateRecentForm(player, entries);
-    expect(form.recentMatches).toBe(5);
-    expect(form.baselineMatches).toBe(15);
+    const window = form.window!;
+    expect(window).toMatchObject({ ruleVersion: 'adaptive-window-v1', purpose: 'recentForm' });
     expect(form.status).not.toBe('insufficient');
     expect(Number.isFinite(form.delta)).toBe(true);
+    expect(form.recentMatches).toBe(window.currentEntries.length);
+    expect(form.baselineMatches).toBe(window.baselineEntries.length);
+    const currentIds = new Set(window.currentEntries.map((entry) => entry.match.id));
+    expect(window.baselineEntries.some((entry) => currentIds.has(entry.match.id))).toBe(false);
+    const oldestCurrent = window.currentEntries.at(-1)!.match.playedAt;
+    expect(window.baselineEntries.every((entry) => entry.match.playedAt <= oldestCurrent)).toBe(true);
+    expect([...window.currentEntries, ...window.baselineEntries].every((entry) => entry.match.gameMode === 'Competitive')).toBe(true);
+    expect(window.baseline!.rounds).toBeGreaterThanOrEqual(Math.ceil(0.75 * window.current.rounds));
   });
 
   it('returns insufficient rather than fabricating a trend for tiny samples', () => {
