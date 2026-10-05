@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApiRequest, ApiResponse } from '../server/contracts';
-import { createCronHandler } from '../server/sync/cronHandler';
+import { createCronHandler, createCronRouter } from '../server/sync/cronHandler';
 import { ScheduledSyncService } from '../server/sync/scheduledSyncService';
 import type { PublicSyncStatus } from '../server/sync/types';
 
@@ -19,6 +19,27 @@ function fixture(count=2) {
   return {service,runner,store,order,advance:(ms:number)=>{elapsed+=ms;}};
 }
 describe('bounded scheduled orchestration',()=>{
+  it('dynamic cron route dispatches only the two supported jobs',async()=>{
+    const f=fixture(0); const factory=vi.fn(()=>f.service);
+    const run=vi.spyOn(f.service,'run');
+    const handler=createCronRouter(factory);
+    let status=0;
+    const response={setHeader:vi.fn(),status:(n:number)=>{status=n;return response;},json:vi.fn()} as ApiResponse;
+    vi.stubEnv('CRON_SECRET','fictional-test-secret');
+    const request={method:'GET',headers:{authorization:'Bearer fictional-test-secret'},query:{}} as ApiRequest;
+    for (const job of [undefined,'other',['recent','history']]) {
+      request.query={job}; await handler(request,response); expect(status).toBe(404);
+    }
+    expect(factory).not.toHaveBeenCalled();
+    for (const job of ['recent','history'] as const) {
+      request.query={job}; await handler(request,response);
+      expect(status).toBe(200); expect(run).toHaveBeenLastCalledWith(job);
+    }
+    request.headers.authorization=undefined;
+    await handler(request,response); expect(status).toBe(401); expect(factory).toHaveBeenCalledTimes(2);
+    vi.stubEnv('CRON_SECRET','');
+    await handler(request,response); expect(status).toBe(503); expect(factory).toHaveBeenCalledTimes(2);
+  });
   it('processes two due players serially with scheduled trigger and spacing',async()=>{
     const f=fixture();
     expect(await f.service.run('recent')).toMatchObject({processed:2,partial:false});

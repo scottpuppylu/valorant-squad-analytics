@@ -4,6 +4,23 @@ import { PublicApiError } from '../errors.js';
 import { requireMethod, secureJson, sendError } from '../http.js';
 import type { ScheduledJob, ScheduledSyncService } from './scheduledSyncService.js';
 
+/** One deployed function retains both job URLs within the Hobby function limit. */
+export function createCronRouter(factory: () => ScheduledSyncService) {
+  const handlers = {
+    recent: createCronHandler('recent', factory),
+    history: createCronHandler('history', factory),
+  };
+  return async (request: ApiRequest, response: ApiResponse) => {
+    const job = request.query?.job;
+    if (job !== 'recent' && job !== 'history') {
+      secureJson(response);
+      sendError(response, new PublicApiError(404, 'BAD_REQUEST', '找不到此同步工作。'));
+      return;
+    }
+    await handlers[job](request, response);
+  };
+}
+
 export function createCronHandler(job: ScheduledJob, factory: () => ScheduledSyncService) {
   return async (request: ApiRequest, response: ApiResponse) => {
     secureJson(response);

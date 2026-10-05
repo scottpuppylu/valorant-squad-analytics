@@ -2,7 +2,7 @@
 
 ## DATA-05A persistent orchestration
 
-- api/valorant/cron/{recent,history}.ts -> server/sync/cronHandler.ts: fail-closed server-only bearer auth.
+- api/valorant/cron/[job].ts -> server/sync/cronHandler.ts: one function serves recent/history with fail-closed server-only bearer auth (12-function Hobby limit).
 - server/sync/scheduledSyncService.ts: serial eligibility/work budget/aggregate response.
 - server/sync/scheduledRuntime.ts and postgresSyncStore.ts: shared advisory lock, due policy, terminal cooldown/reset and scheduled audit.
 - deepHistoryChunk.ts / historicalSyncService.ts: repeated-page pause/backoff, stored fallback and partial terminal sweeps.

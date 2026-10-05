@@ -19,6 +19,10 @@ human decision, not by deployment success.
 
 ## Jobs and authorization
 
+Both URLs share `api/valorant/cron/[job].ts`, which dispatches only `recent` and
+`history`. This keeps the project at 12 Vercel Functions within the Hobby limit;
+unknown or ambiguous jobs fail closed without constructing a sync service.
+
 GET `/api/valorant/cron/recent` and `/api/valorant/cron/history` require exact
 `Authorization: Bearer <CRON_SECRET>`, compared in constant time. Missing secret
 returns 503; absent/wrong/array authorization returns 401 before runtime creation.

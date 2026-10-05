@@ -36,3 +36,14 @@ Full audit remains five high, NOT FIXED. No migration created/applied.
 Local Chrome Connect renders, disabled Demo connection and zero console errors.
 Port 5173 EACCES; alternate 4173 runs successfully. REAL progress/cron provider
 end-to-end NOT VERIFIED (secret gate); no consenting identity entered.
+
+Deployment correction: commit 0ec2374 failed Vercel output deployment because
+13 functions exceeded the Hobby maximum of 12. Merge the two cron entrypoints
+into `api/valorant/cron/[job].ts`, preserving both URLs, exact bearer auth and
+the secret activation gate. No other API or gameplay behavior changes. Re-run
+local quality gates and verify the replacement deployment before handoff.
+
+Correction gates: lint PASS; 24 files / 353 tests PASS (44.46s), source boundary
+PASS; build PASS (712 modules, 3.97s), dist boundary PASS; bundle sizes unchanged.
+Production audit zero; full audit five high (SEC-2026-001, NOT FIXED);
+DB validation 16 PASS (18.36s). No dependency/schema/cron registration changes.
