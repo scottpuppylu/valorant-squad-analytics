@@ -68,6 +68,7 @@ server-side (tested).
 | actOverview (+ map/agent) | all tracked matches tagged with the Act; unknown Act never included; partial coverage → `partial` | phase 2 ≤ 2000 |
 | fixedRecent | explicit newest 10/30 per player | 30 per player |
 | synergy | one PAIR context for shared and both baselines; opponents excluded | phase 2 ≤ 2000 |
+| improvementIndex (TASK-PROGRESS-01, player context only) | current + strictly older baseline per player (same Act first, explicit previous-Act fallback) | ≤ 30 + 60 per player; independent of the 2000 bound |
 
 If a LIFETIME/ACT/PAIR population exceeds 2000 matches, the newest 2000 are used and the
 response says `status: partial` with `server_population_limit`. This is a disclosed bound and

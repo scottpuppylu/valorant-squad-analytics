@@ -1,6 +1,11 @@
 # V1 release preflight
 
-## Current release gate — TASK-DATA-03B.2B (2026-10-05)
+## Current release gate — TASK-PROGRESS-01 (2026-10-05)
+
+Adaptive Improvement Index implemented (PROGRESS_INDEX.md). The production SQL health check is
+still NOT VERIFIED and remains a V1 gate. RELEASE-01 PAUSED; V1 NOT YET RELEASED; no tag.
+
+## Earlier release gate — TASK-DATA-03B.2B (2026-10-05)
 
 Server-side analytics consumption COMPLETE / ACCEPTED (SERVER_ANALYTICS.md). RELEASE-01 PAUSED;
 V1 NOT YET RELEASED; no tag.

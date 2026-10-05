@@ -3,6 +3,14 @@
 Versions: `community-score-v2`, `community-benchmarks-v1`, `overall-profile-v1`.
 This is not Riot MMR, Elo, an official rank or a replacement for ranked matchmaking. Benchmark ranges are transparent product-design calibration, not global population percentiles. Scores are calculated in the frontend from sanitized selected evidence; never persisted in Neon. Migration: NONE.
 
+## Separate metric: Adaptive Improvement Index (TASK-PROGRESS-01)
+
+`improvement-index-v1` / `improvement-benchmarks-v1` is a separate signed −100..+100 progress
+metric. It reuses this engine's dimension scores without changing any formula, weight or gate:
+the overall-profile-v1-weighted common-dimension delta, jackknife trend stability, round-based
+shrinkage, and an optional future rank component. Its confidence is reported separately, and it
+never affects Overall or the ranking. Full formula: [PROGRESS_INDEX.md](PROGRESS_INDEX.md).
+
 ## Input populations (feature-scope-policy-v1)
 
 TASK-DATA-03B.2B: in production these populations are resolved by the server over all durable

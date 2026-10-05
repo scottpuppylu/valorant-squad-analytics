@@ -4,7 +4,15 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-03B.2B (2026-10-05)
+## Current decision — TASK-PROGRESS-01 (2026-10-05)
+
+Adaptive Improvement Index authorized and implemented: `improvement-index-v1`,
+`improvement-benchmarks-v1`, `feature-scope-policy-v2`. See [PROGRESS_INDEX.md](PROGRESS_INDEX.md).
+Production acceptance is recorded there. TASK-DATA-RANK-01 NOT STARTED. DATA-03B.2C DEFERRED —
+required before a true LIFETIME/ACT/PAIR population can exceed the 2000-match analytical bound
+without becoming partial.
+
+## Earlier decision — TASK-DATA-03B.2B (2026-10-05)
 
 **COMPLETE / ACCEPTED.** Server-side context-aware analytics consumption; see
 [SERVER_ANALYTICS.md](SERVER_ANALYTICS.md). Analytics no longer depend on snapshot completeness.

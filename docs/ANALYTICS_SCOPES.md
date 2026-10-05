@@ -15,6 +15,11 @@ a transport / initial-snapshot optimization, never the universal analytical popu
 | A. What data do we have? | All durable tracked history in Neon (DATA-05A); browsable via `view=history` (DATA-03B.1). |
 | B. What data should this metric use? | `feature-scope-policy-v1` + `analysis-scope-v1` + `adaptive-window-v1` (this task). |
 
+## Update — TASK-PROGRESS-01 (2026-10-05)
+
+The registry is now `feature-scope-policy-v2`: the `improvementIndex` entry is wired with its
+final bounds, and every other feature is unchanged. See [PROGRESS_INDEX.md](PROGRESS_INDEX.md).
+
 ## Update — TASK-DATA-03B.2B (2026-10-05)
 
 The same engine now runs server-side over all eligible durable history (`view=analysis`,
@@ -90,7 +95,7 @@ becomes LIFETIME, and an unavailable adaptive window never becomes "all matches"
 | Explicit 最近 10/30 場 | RECENT fixed N per player | legacy | none | existing | wired (unchanged) |
 | Trends (最近六場 chart) | RECENT fixed 6 | descriptive | none | n/a | declared |
 | Synergy / pair baselines | PAIR: 全部已追蹤 or 指定 Act + date/map/mode, shared by pair sample and both baselines | duo-synergy-v1 gates unchanged | none | duo-synergy-v1 confidence | wired |
-| Improvement Index | ADAPTIVE (design) | see PROGRESS_INDEX.md | — | — | **design only** |
+| Improvement Index (進步指數) | ADAPTIVE `improvementIndex`, Competitive; same-Act baseline first, explicit previous-Act fallback | current min 5 / 100 rounds, target 200 rounds, max 30, span 45 d; baseline ≥ 0.8× current rounds, max 60 | extend within bounds; explicit previous-Act fallback only | separate progress confidence (sample × temporal × evidence × comparability) | **wired** (feature-scope-policy-v2, PROGRESS_INDEX.md) |
 
 Default page scopes: Dashboard, Leaderboard, Compare, Profile → 目前實力. Maps, Agents,
 Matches → 全部已追蹤. Synergy → 全部已追蹤 with optional Act. Users can switch scope

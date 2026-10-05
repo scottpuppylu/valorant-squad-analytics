@@ -1,5 +1,13 @@
 # Code map
 
+## TASK-PROGRESS-01 improvement index
+
+- src/analytics/progress/benchmarks.ts (improvement-benchmarks-v1), windows.ts (same-Act-first resolution, server-safe),
+  improvementIndex.ts (improvement-index-v1 formula, browser).
+- server/dataset/analysisService.ts feature `improvementIndex`; src/dataSources/server/analysisResult.ts `progressFromAnalysis`.
+- src/hooks/useScopedAnalysis.ts `useProgressIndex`; src/components/ProgressIndexCard.tsx (Profile).
+- tests/progressIndex.test.ts, tests/serverAnalysis.test.ts (improvementIndex), tests/serverAnalysisUi.test.tsx.
+
 ## TASK-DATA-03B.2B server analytics
 
 - server/dataset/analysisService.ts: request parsing, phase-1 observation SQL, shared-engine resolution, phase-2 projection, response.
