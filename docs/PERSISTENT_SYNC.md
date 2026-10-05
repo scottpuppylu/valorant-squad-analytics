@@ -1,7 +1,7 @@
 # Tracker-style persistent scheduled sync
 
 TASK-DATA-05A — SDD STRICT, 2026-10-05. Status: implementation/local gates complete;
-production activation in progress; canaries **NOT VERIFIED**.
+**PRODUCTION ACTIVATED / ACCEPTED**; both secured production canaries passed.
 
 ## Product contract
 
@@ -36,7 +36,7 @@ through stdin; no value was printed or retained in Git. Sensitive production
 variables cannot be pulled locally. Use the supported Vercel cron Run control
 for canaries and the verified read-only database Query editor for health checks.
 
-Activation configuration (UTC, daily only; deployed registration must be checked):
+Registered production configuration (verified Vercel Cron Jobs UI, UTC, daily only):
 
 ```json
 "crons": [
@@ -121,3 +121,50 @@ Pre-activation SELECT-only baseline (2026-10-05): 9 eligible/public players,
 and open deletion jobs; ledger 0001–0007. Incremental: 3 complete manual runs;
 deep: 2 paused and 1 failed manual run. The 9 players are maintainer-confirmed
 expected activity, not a fixture defect. No canary has run at this checkpoint.
+
+## Activation acceptance — 2026-10-05
+
+Starting HEAD 2c45e857fe2248be85ee54e5f3f615ab18af1ad8; activation commit
+d8b7b897c5ff5ae4093af0d33de8aee4a3da7e9e. Existing project production deployment
+dpl_Eu91SGVCQwThTS1Rune9DBEbU8zu READY (build 3m50s, post-build 17s), GitHub CI
+and Pages passed. Vercel settings displayed both paths/schedules and Enabled.
+Exactly one visible Run click for each job; no direct Henrik request, manual
+sync bypass, secret extraction, identity reset or deletion. The Run control
+uses deployed cron authorization; both requests returned HTTP 200.
+
+Pre-canary SELECT-only timestamp 2026-10-05T05:50:43.717022Z: 9 eligible/public,
+9 active memberships/current-policy consents, 50 sources, provider counters 83.
+Recent: one new scheduled incremental run, paused for bounded continuation;
+one provider request, 3 persisted sources, chunk 10.349s. Intermediate sources
+53 / counters 84. History: existing paused manual deep run resumed unchanged
+(trigger_kind remains manual), live_v4, one provider request, 3 persisted sources,
+chunk 10.627s, paused safely. No new deep run was manufactured. Each UI invocation
+had completed by its first 45-second observation; no platform timeout observed.
+Exact whole-request duration is NOT VERIFIED; chunk durations are runtime traces.
+
+Post-canary SELECT-only timestamp 2026-10-05T05:53:55.595585Z: 56 sources /
+counters 85 (+2 total, recent +1, history +1); all 50 pre-canary sources retained.
+Players/memberships/consents remain 9. Duplicates, participant/round/kill-event/
+round-participant/assistant/location orphans, consent-membership contradictions,
+deletion contradictions, ineligible pending/running runs, open deletion jobs,
+active/stale leases all zero. Ledger unchanged 0001–0007; no migration applied.
+Incremental: 3 complete manual, 1 paused scheduled. Deep: 2 paused manual,
+1 legacy failed manual (unchanged). Backfill: 2 complete / 1 paused manual.
+No new failed run; retries zero, no backoff active. Existing legacy failure is
+not repaired/bypassed by this acceptance. No observed concurrent manual write.
+
+Both canaries PASS: no runaway request, consent/integrity violation or source
+loss; recurring cron remains enabled and future normal eligible-player work is
+authorized. lifetimeComplete=false; neither provider window nor sweep exhaustion
+proves lifetime completeness. No live pagination repetition occurred: first
+5-minute, second 30-minute, third stored_index recovery and legacy failed-run
+selection are **NOT VERIFIED in this production canary**, tested locally only.
+Do not generate repeats or run another canary to exercise these branches.
+Recent cold-start emitted Node DEP0169 url.parse deprecation warning; HTTP 200,
+no identity/credential warning payload. No dependency force-fix in this task.
+
+Local activation gates: lint PASS; 24 files / 353 tests PASS (49.26s), source
+boundary PASS; build PASS (712 modules, 5.20s), dist boundary PASS; production
+audit zero; DB validation 16 PASS (27.62s). Full audit five high, SEC-2026-001,
+NOT FIXED. Final acceptance-copy gates recorded in TASK_DATA_05A_PLAN.md.
+DATA-03B recommended next, NOT STARTED; RELEASE-01 PAUSED, V1 NOT YET RELEASED.

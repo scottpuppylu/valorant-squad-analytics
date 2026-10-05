@@ -41,7 +41,10 @@
 - DATA-05A activation continuation: existing Vercel CLI/project authentication
   verified; production-only sensitive CRON_SECRET configured. Nine public players
   are maintainer-confirmed expected activity. Daily cron registration/canaries
-  are in progress, not accepted yet. No DATA-03B, Riot/RSO or V1 release.
+  are verified: both one-shot canaries passed; DATA-05A is PRODUCTION ACTIVATED /
+  ACCEPTED. Recurring eligible consenting-player acquisition is authorized.
+  Sources 50→56, provider requests +2; lifetimeComplete=false. No DATA-03B,
+  Riot/RSO or V1 release. See docs/PERSISTENT_SYNC.md for evidence/limitations.
 
 - Superseding human decision (2026-10-05): TASK-DATA-05A is ACTIVE — Tracker-style persistent scheduled sync. Maximize and retain observable Henrik history subject to consent/deletion; lifetimeComplete remains false. The Riot-response acquisition freeze below is historical and superseded. Ticket #139243830 remains OPEN / informational / non-blocking; DATA-04B is DEFERRED / NOT REQUIRED FOR CURRENT PRODUCT PATH. DATA-03A resumes as acquisition infrastructure; DATA-03B NOT STARTED. RELEASE-01 PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED. See docs/PERSISTENT_SYNC.md and docs/TASK_DATA_05A_PLAN.md. Secure production CRON_SECRET plus one recent and one historical passing canary gate recurring operation; if safe secret setting is unavailable, stop before cron activation. No Riot/RSO/application, player recreation, deletion, scoring/Synergy change or release authorization.
 

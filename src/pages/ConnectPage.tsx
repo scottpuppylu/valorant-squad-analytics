@@ -292,7 +292,7 @@ export function ConnectPage() {
         <section className="surface-card connect-panel">
           <p className="metric-label">目前資料來源</p>
           <h2>已追蹤戰績{datasetStatus === 'empty' ? '目前為空' : ''}</h2>
-          <p>歷史資料持續補齊中；已保存的戰績不會因資料來源視窗縮小而移除。自動排程尚未啟用，目前可手動同步。</p>
+          <p>歷史資料持續補齊中；已保存的戰績不會因資料來源視窗縮小而移除。每日自動同步已啟用，也可手動同步；歷史資料不代表完整生涯紀錄。</p>
           <p>目前有 {activeDataset.players.length} 位有效同意玩家、{activeDataset.matches.length} 場可用戰績；完整資料集不會保存於瀏覽器，也不會與虛構示範資料混合。</p>
           <div className="connect-actions"><button className="button-primary" type="button" onClick={openImportedDataset}>查看戰績</button><button className="button-secondary" type="button" onClick={() => void refresh()}>重新整理資料</button></div>
         </section>

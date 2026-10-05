@@ -19,7 +19,7 @@ scoring, Synergy and V1 release are out of scope.
    work requires both canaries to pass. If secret cannot safely be set, stop before
    registration/canaries and report the environment gate.
 
-Current environment gate: cached Vercel CLI 48.0.0 is available, but `whoami`
+Historical implementation environment gate: cached Vercel CLI 48.0.0 is available, but `whoami`
 reports no existing credentials. No secret generated, no cron enabled, no provider
 call or production gameplay write performed.
 
@@ -47,3 +47,23 @@ Correction gates: lint PASS; 24 files / 353 tests PASS (44.46s), source boundary
 PASS; build PASS (712 modules, 3.97s), dist boundary PASS; bundle sizes unchanged.
 Production audit zero; full audit five high (SEC-2026-001, NOT FIXED);
 DB validation 16 PASS (18.36s). No dependency/schema/cron registration changes.
+
+Activation continuation: official CLI 62.2.0 authenticated via existing Ubuntu
+WSL (Windows non-ASCII hostname header defect); existing project reused,
+production-only sensitive CRON_SECRET securely configured through stdin.
+d8b7b897c5ff5ae4093af0d33de8aee4a3da7e9e registered the daily UTC 18:05/18:35
+jobs; production READY, CI/Pages PASS. Exactly one recent and one history Run
+canary passed HTTP 200, provider counters 83→84→85, sources 50→53→56, all 50
+original sources retained; 9 eligible/public players confirmed expected.
+Zero integrity/consent/deletion contradictions, orphans, duplicates or leases;
+ledger 0001–0007 unchanged. See PERSISTENT_SYNC.md for aggregate evidence and
+NOT VERIFIED production branches. DATA-05A PRODUCTION ACTIVATED / ACCEPTED.
+Recurring eligible-player acquisition authorized; no DATA-03B or V1 release.
+
+Final acceptance-copy worktree gates: lint PASS; 24 files / 353 tests PASS
+(43.18s), source boundary PASS; build PASS (712 modules, 3.89s), dist boundary
+PASS. Main 363.14 kB / 116.46 gzip, chart 339.21 / 99.53, CSS 40.17 / 9.15,
+Connect 22.50 / 7.53; HTML 0.71 / 0.49. Production audit zero; full audit
+five high under SEC-2026-001, NOT FIXED. DB validation 16 PASS (17.87s),
+disposable local PGlite only. No dependency/schema changes. Post-canary all
+3 deep cursors are live_v4, live/stored exhaustion false; lifetimeComplete=false.

@@ -7,8 +7,14 @@ resumes as Tracker-style persistent acquisition infrastructure: daily recent syn
 bounded historical continuation and 7/30-day reconciliation. Repeated pages pause
 with durable backoff, third live repeat falls back to stored discovery; partial
 sweeps are terminal but never lifetime-complete. See PERSISTENT_SYNC.md. Registration
-is being deployed after verified CLI authentication and safe production-only
-CRON_SECRET configuration; production canaries NOT VERIFIED.
+and both secured production canaries passed after verified CLI authentication
+and safe production-only CRON_SECRET configuration. DATA-05A is PRODUCTION
+ACTIVATED / ACCEPTED; daily UTC recent 18:05/history 18:35 remain enabled.
+History canary resumed an existing manual deep run, preserved its trigger label,
+persisted 3 sources with one provider request, and paused safely (10.627s chunk).
+Live repeated-page 5/30-minute/third-fallback branches were not encountered:
+NOT VERIFIED in production, covered by local tests. Sources 50→56 across both
+canaries; lifetimeComplete=false. DATA-03B NOT STARTED. See PERSISTENT_SYNC.md.
 Historical P1/P2 and 30-source evidence below remains unchanged, not a fresh query.
 
 ## Superseding acquisition freeze — TASK-DATA-04A, 2026-10-04

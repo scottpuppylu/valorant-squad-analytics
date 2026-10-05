@@ -8,8 +8,13 @@ accumulate observable Henrik history, daily incremental and historical reconcili
 existing consent/deletion boundaries; lifetimeComplete=false. Implementation and
 environment acceptance tracked in [PERSISTENT_SYNC.md](PERSISTENT_SYNC.md).
 Vercel CLI authentication and production-only CRON_SECRET setup are complete.
-Daily registration/deployment/canary acceptance is in progress. Nine public
-players are maintainer-confirmed expected activity, not a drift investigation.
+DATA-05A is **PRODUCTION ACTIVATED / ACCEPTED**: both daily jobs registered and
+exactly one recent plus one historical secured canary passed (HTTP 200).
+Sources 50→56; provider counters 83→85; existing 50 sources preserved.
+Nine public players are maintainer-confirmed expected activity, not a drift
+investigation. Recurring eligible consenting-player acquisition is authorized.
+Pagination-repeat recovery was not encountered by these canaries; live branch
+verification remains NOT VERIFIED. DATA-03B remains NOT STARTED.
 
 - DATA-04A: WAITING ON RIOT — informational / non-blocking, ticket #139243830 OPEN.
 - DATA-04B: DEFERRED / NOT REQUIRED FOR CURRENT PRODUCT PATH.

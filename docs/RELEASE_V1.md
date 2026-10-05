@@ -7,8 +7,12 @@ persistent Henrik history replaces lifetime-proof as current operational target.
 Riot ticket #139243830 remains OPEN / informational / non-blocking; DATA-04B deferred.
 RELEASE-01 PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED. DATA-03B NOT STARTED.
 CLI authentication and production-only CRON_SECRET setup are complete; cron
-registration/deployment/canary acceptance is in progress. Nine public players
-are maintainer-confirmed expected activity; see PERSISTENT_SYNC.md.
+registration and both secured canaries passed: DATA-05A PRODUCTION ACTIVATED /
+ACCEPTED. Daily recent/history remain enabled (UTC 18:05/18:35).
+Nine public players are maintainer-confirmed expected activity. Sources 50→56,
+provider counters 83→85; all original sources retained, integrity checks zero.
+This is operational acceptance, not V1 release or lifetime-history proof.
+See PERSISTENT_SYNC.md for limitations and exact evidence.
 No release level/tag, Riot/RSO, scoring/Synergy change or destructive operation.
 The following freeze and fixture descriptions remain historical evidence only.
 
