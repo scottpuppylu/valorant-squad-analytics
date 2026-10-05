@@ -11,10 +11,28 @@ export type MapName = string;
 
 export type GameMode = string;
 
+/**
+ * TASK-IDENTITY-01 (member-identity-v1): a public `Player` is a MEMBER — a real person in the group —
+ * not a Riot account. `id` is the member public id; `handle`/`displayName` are the member (community)
+ * name, never `RiotName#Tag`. Riot accounts are listed in `accounts`.
+ */
+export interface PublicAccount {
+  /** Public ACCOUNT id (used by account-scoped sync); never a member id. */
+  id: string;
+  gameName: string;
+  tag: string;
+  isPrimary: boolean;
+  label?: string;
+}
+
 export interface Player {
   id: string;
   handle: string;
   displayName: string;
+  /** 'legacy_account' = migrated fallback from the account name; 'community' = maintainer-assigned. */
+  nameSource?: 'legacy_account' | 'community';
+  /** Currently public accounts of this member (REAL); fictional accounts in Demo. */
+  accounts?: PublicAccount[];
   role: PlayerRole;
   agents: AgentName[];
   accent: string;
@@ -24,7 +42,10 @@ export interface Player {
 }
 
 export interface MatchPerformance {
+  /** Member public id (the person). */
   playerId: string;
+  /** Public account id that actually played this match (metadata; analytics aggregate by member). */
+  accountId?: string;
   teamGroup?: 'A' | 'B';
   teamWon?: boolean;
   teamRoundsWon?: number;

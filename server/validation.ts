@@ -77,7 +77,13 @@ export function parseSyncStartInput(value: unknown): { playerId: string; kind: S
   if (body.intent !== undefined && (body.intent !== 'refresh_if_stale' || kind !== 'incremental')) {
     throw new PublicApiError(400, 'BAD_REQUEST', '更新意圖不正確。');
   }
-  return { playerId: publicUuid(body.playerId, '玩家識別碼'), kind, ...(body.intent === 'refresh_if_stale' ? { intent: 'refresh_if_stale' as const } : {}) };
+  // TASK-IDENTITY-01: sync is ACCOUNT-scoped. `accountId` is the explicit name; legacy `playerId`
+  // (always an account public id for these routes) stays accepted. Both present must agree.
+  if (body.accountId !== undefined && body.playerId !== undefined && body.accountId !== body.playerId) {
+    throw new PublicApiError(400, 'BAD_REQUEST', '帳號識別碼不一致。');
+  }
+  const accountId = publicUuid(body.accountId ?? body.playerId, '帳號識別碼');
+  return { playerId: accountId, kind, ...(body.intent === 'refresh_if_stale' ? { intent: 'refresh_if_stale' as const } : {}) };
 }
 
 export function parseSyncContinueInput(value: unknown): { runId: string } {

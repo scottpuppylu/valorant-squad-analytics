@@ -1,16 +1,26 @@
 import type { NormalizedAnalyticsDataset } from '../../src/dataSources/types.js';
 import type { SqlExecutor } from '../db/types.js';
 
-export const datasetSchemaVersion = 4 as const;
+export const datasetSchemaVersion = 5 as const;
+/** TASK-IDENTITY-01: public `Player` = MEMBER (person) with 1..N sanitized accounts. */
+export const datasetIdentityVersion = 'member-identity-v1' as const;
 export const datasetProjectionVersion = 'evidence-decoupled-projection-v1' as const;
 export const datasetWindowSize = 300;
 
+/** One public ACCOUNT row with its member (TASK-IDENTITY-01). Internal ids never leave the server. */
 export interface DatasetPlayerRow extends Record<string, unknown> {
   internal_player_id: string;
   public_id: string;
   display_name: string;
   display_tag: string;
   default_emoji: string;
+  is_primary_account: boolean;
+  account_label: string | null;
+  internal_member_id: string;
+  member_public_id: string;
+  member_display_name: string;
+  member_name_source: 'legacy_account' | 'community';
+  member_default_emoji: string;
 }
 
 export interface DatasetPerformanceRow extends Record<string, unknown> {
@@ -182,6 +192,7 @@ export interface DatasetHistoryPayload {
   view: 'history';
   historyVersion: typeof datasetHistoryVersion;
   projectionVersion: typeof datasetProjectionVersion;
+  identityVersion: typeof datasetIdentityVersion;
   state: 'ready' | 'empty';
   page: DatasetHistoryPage;
   tracked: DatasetHistoryTracked;
@@ -217,6 +228,7 @@ export interface DatasetSnapshot {
   generation: 'dataset-read-v4';
   source: 'durable-neon';
   projectionVersion: typeof datasetProjectionVersion;
+  identityVersion: typeof datasetIdentityVersion;
 }
 
 export interface DatasetReadPayload {

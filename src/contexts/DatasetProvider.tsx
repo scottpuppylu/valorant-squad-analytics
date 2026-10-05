@@ -84,7 +84,7 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
       // Prefetch the default 目前實力 population in parallel with the bootstrap snapshot.
       if (analysisLoader) void analysisLoader(defaultCurrentStrengthQuery).catch(() => undefined);
       const response = await client.load();
-      if (response.schemaVersion !== 4) throw new Error('Unsupported dataset schema.');
+      if (response.schemaVersion !== 5) throw new Error('Unsupported dataset schema.');
       if (response.state === 'disabled') {
         setState({ status: 'demo', source: 'DEMO', dataset: demo, message: '伺服器真實資料讀取目前刻意關閉；顯示虛構示範資料。' });
         return;
@@ -108,11 +108,11 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
   // TASK-DATA-FASTSYNC-01 per-tab, in-memory dedupe of the automatic attempt (UX only; the
   // server freshness gate is authoritative). Never persisted.
   const [automatic] = useState(() => new Map<string, Promise<RecentRefreshOutcome>>());
-  const recentRefresh = useCallback(async (playerId: string, mode: 'auto' | 'manual'): Promise<RecentRefreshOutcome> => {
+  const recentRefresh = useCallback(async (accountId: string, mode: 'auto' | 'manual'): Promise<RecentRefreshOutcome> => {
     const request = async (): Promise<RecentRefreshOutcome> => {
       try {
         if (!client.refreshRecent) throw new Error('Recent refresh is unavailable.');
-        const { refresh } = await client.refreshRecent(playerId);
+        const { refresh } = await client.refreshRecent(accountId);
         // Only durable new matches justify a reload (snapshot + analysis cache). No optimistic data.
         if (refresh.status === 'refreshed' && (refresh.newMatches ?? 0) > 0) await load(true);
         return refresh;
@@ -122,10 +122,10 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
       }
     };
     if (mode === 'manual') return request();
-    let pending = automatic.get(playerId);
+    let pending = automatic.get(accountId);
     if (!pending) {
       pending = request();
-      automatic.set(playerId, pending);
+      automatic.set(accountId, pending);
     }
     return pending;
   }, [automatic, client, load]);

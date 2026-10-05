@@ -15,9 +15,17 @@ import type {
 } from './types.js';
 import { PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
 
+/**
+ * Currently PUBLIC ACCOUNTS (TASK-IDENTITY-01: `players` rows are Riot accounts) with their
+ * non-archived member. Visibility stays account-scoped: a revoked account disappears on its own.
+ */
 export const activePlayers = `
-  SELECT p.id, p.public_id, p.display_name, p.display_tag, p.default_emoji
+  SELECT p.id, p.public_id, p.display_name, p.display_tag, p.default_emoji,
+         p.is_primary_account, p.account_label,
+         m.id AS member_id, m.public_id AS member_public_id, m.display_name AS member_display_name,
+         m.display_name_source AS member_name_source, m.default_emoji AS member_default_emoji
   FROM players p
+  JOIN members m ON m.id=p.member_id AND m.archived_at IS NULL
   WHERE p.anonymized_at IS NULL
     AND (SELECT count(*) FROM consents c WHERE c.player_id=p.id AND c.status='active') = 1
     AND EXISTS (
@@ -156,7 +164,9 @@ export function detailQueries(query: Query, cte: string, params: unknown[]) {
   ] as const;
 }
 
-export const playersQuery = `SELECT id AS internal_player_id, public_id, display_name, display_tag, default_emoji
+export const playersQuery = `SELECT id AS internal_player_id, public_id, display_name, display_tag, default_emoji,
+        is_primary_account, account_label, member_id AS internal_member_id, member_public_id::text AS member_public_id,
+        member_display_name, member_name_source, member_default_emoji
         FROM (${activePlayers}) active_player_rows ORDER BY public_id`;
 
 /** DATA-03B.2B phase 2: exactly the server-selected internal match ids (never exposed). */

@@ -12,7 +12,7 @@ import { ADAPTIVE_WINDOW_VERSION, ANALYSIS_SCOPE_VERSION, FEATURE_SCOPE_POLICY_V
 import type { MatchRecord, Player } from '../../src/types/valorant.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
 import { buildAnalyticsContext, PostgresAnalyticsContextRepository } from './analyticsContext.js';
-import type { DatasetProjectionService } from './datasetProjectionService.js';
+import { hasMemberCollision, membersFromRows, type DatasetProjectionService } from './datasetProjectionService.js';
 import { activePlayers, detailQueries, playersQuery, selectedMatches } from './postgresDatasetReadRepository.js';
 import type { DatasetPlayerRow, DatasetPerformanceRow, DatasetRoundParticipantRow, DatasetRoundRow, DatasetEventRow } from './types.js';
 import { datasetSchemaVersion } from './types.js';
@@ -125,6 +125,8 @@ interface ObservationRow extends Record<string, unknown> {
   season_short: string | null;
   internal_player_id: string;
   player_public_id: string;
+  /** TASK-IDENTITY-01: the person; skeleton performances are keyed by member like the projection. */
+  member_public_id: string;
   agent_name: string | null;
   team_won: boolean | null;
   rounds_won: number | null;
@@ -141,12 +143,12 @@ interface ObservationRow extends Record<string, unknown> {
 export const analysisObservationsSql = `
   WITH active_players AS (${activePlayers})
   SELECT v.match_id AS internal_match_id, v.public_id::text AS public_match_id, v.started_at, v.map_name, v.queue_id, v.queue_name,
-         v.game_length_ms, v.season_short, v.player_id AS internal_player_id, v.player_public_id::text AS player_public_id, v.agent_name,
+         v.game_length_ms, v.season_short, v.player_id AS internal_player_id, v.player_public_id::text AS player_public_id, v.member_public_id::text AS member_public_id, v.agent_name,
          mt.won AS team_won, mt.rounds_won, mt.rounds_lost,
          (v.core_ok AND rc.rounds > 0 AND pr.present = rc.rounds) AS usable
   FROM (
     SELECT sm.id AS match_id, sm.public_id, sm.started_at, sm.map_name, sm.queue_id, sm.queue_name, sm.game_length_ms, sm.season_short,
-           mp.id AS participant_id, mp.player_id, ap.public_id AS player_public_id, mp.agent_name,
+           mp.id AS participant_id, mp.player_id, ap.public_id AS player_public_id, ap.member_public_id, mp.agent_name,
            -- Projection's "first performance row": the lowest public id visible participant of the match.
            first_value(mp.team_key) OVER (PARTITION BY sm.id ORDER BY ap.public_id) AS first_team_key,
            (mp.stats_evidence_status='observed' AND mp.agent_name IS NOT NULL AND mp.kills IS NOT NULL AND mp.deaths IS NOT NULL
@@ -175,6 +177,8 @@ function skeletonMatches(rows: ObservationRow[]): { matches: MatchRecord[]; inte
   for (const [publicId, matchRows] of grouped) {
     const usable = matchRows.filter((row) => row.usable);
     if (usable.length === 0) continue;
+    // Same identity invariant as the projection: a member collision withholds the whole match.
+    if (hasMemberCollision(matchRows.map((row) => row.member_public_id))) continue;
     const first = matchRows[0]!;
     internalByPublic.set(publicId, first.internal_match_id);
     const playedAt = new Date(first.started_at).toISOString();
@@ -185,7 +189,7 @@ function skeletonMatches(rows: ObservationRow[]): { matches: MatchRecord[]; inte
       won: first.team_won === true, durationMinutes: Math.max(1, Math.round((first.game_length_ms ?? 0) / 60_000)),
       ...(seasonKey ? { seasonKey } : {}),
       // Skeleton performances: identity/agent only. They choose windows; they are never scored or returned.
-      performances: usable.map((row) => ({ playerId: row.player_public_id, agent: row.agent_name!, kills: 0, deaths: 0, assists: 0, acs: 0, adr: 0 })),
+      performances: usable.map((row) => ({ playerId: row.member_public_id, agent: row.agent_name!, kills: 0, deaths: 0, assists: 0, acs: 0, adr: 0 })),
     });
   }
   // Same order as the projection/snapshot so every downstream iteration order matches the browser.
@@ -236,10 +240,7 @@ export class ServerAnalysisService {
         if (!row.agent_name) continue;
         agentsByInternal.set(row.internal_player_id, (agentsByInternal.get(row.internal_player_id) ?? new Set()).add(row.agent_name));
       }
-      const skeletonPlayers: Player[] = playerRows.map((row) => ({
-        id: row.public_id, handle: `${row.display_name}#${row.display_tag}`, displayName: row.display_name, role: 'Duelist',
-        agents: [], accent: '', tagline: '', playstyle: '', defaultEmoji: '🤖',
-      }));
+      const skeletonPlayers: Player[] = membersFromRows(playerRows, new Map());
       const population: ScopePopulation = {
         ...populationFromMatches(skeletons, true),
         seasonKeys: [...new Set([...populationFromMatches(skeletons, true).seasonKeys, ...context.evidence.season.acts.map((act) => act.key)])].sort(),

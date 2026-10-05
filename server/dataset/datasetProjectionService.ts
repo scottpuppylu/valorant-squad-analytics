@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { playerEmojiOptions, type PlayerEmoji } from '../../src/types/avatar.js';
 import type { AdvancedMetrics } from '../../src/types/advancedMetrics.js';
-import type { MatchPairTradeEvidence, MatchPerformance, MatchRecord, Player } from '../../src/types/valorant.js';
+import type { MatchPairTradeEvidence, MatchPerformance, MatchRecord, Player, PublicAccount } from '../../src/types/valorant.js';
 import { primaryRoleForAgents } from '../../src/utils/agentRoles.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
 import { normalizeSeasonKey } from '../../src/analytics/scope/season.js';
@@ -15,11 +15,12 @@ import type {
   DatasetHistoryPageRequest,
   DatasetHistoryResult,
   DatasetPerformanceRow,
+  DatasetPlayerRow,
   DatasetProjectionResult,
   DatasetProjectionRows,
   DatasetReadRepository,
 } from './types.js';
-import { datasetHistoryVersion, datasetProjectionVersion, datasetSchemaVersion, datasetWindowSize } from './types.js';
+import { datasetHistoryVersion, datasetIdentityVersion, datasetProjectionVersion, datasetSchemaVersion, datasetWindowSize } from './types.js';
 import { encodeHistoryCursor } from './historyCursor.js';
 
 export type ProjectableRows = Pick<DatasetProjectionRows, 'players' | 'performances' | 'rounds' | 'roundParticipants' | 'events'>;
@@ -162,6 +163,44 @@ function publicAdvancedMetrics(metrics: ReconstructedAdvancedMetrics): AdvancedM
   };
 }
 
+/**
+ * TASK-IDENTITY-01 member projection: public ACCOUNT rows → one public Player per MEMBER.
+ * Agents are the union over the member's accounts; accounts are sanitized (public account id,
+ * Riot name/tag, primary flag, optional label) — never internal ids, PUUIDs or HMACs.
+ */
+export function membersFromRows(rows: DatasetPlayerRow[], agentsByAccount: Map<string, Set<string>>): Player[] {
+  const byMember = new Map<string, DatasetPlayerRow[]>();
+  for (const row of rows) byMember.set(row.member_public_id, [...(byMember.get(row.member_public_id) ?? []), row]);
+  return [...byMember.keys()].sort().map((memberId) => {
+    const accountRows = byMember.get(memberId)!;
+    const member = accountRows[0]!;
+    const agents = [...new Set(accountRows.flatMap((row) => [...(agentsByAccount.get(row.internal_player_id) ?? [])]))].sort();
+    const accounts: PublicAccount[] = [...accountRows]
+      .sort((a, b) => Number(b.is_primary_account) - Number(a.is_primary_account) || a.public_id.localeCompare(b.public_id))
+      .map((row) => ({ id: row.public_id, gameName: row.display_name, tag: row.display_tag, isPrimary: row.is_primary_account === true,
+        ...(row.account_label ? { label: row.account_label } : {}) }));
+    return {
+      id: memberId,
+      handle: member.member_display_name,
+      displayName: member.member_display_name,
+      nameSource: member.member_name_source === 'community' ? 'community' as const : 'legacy_account' as const,
+      accounts,
+      role: primaryRoleForAgents(agents),
+      agents,
+      accent: accentFor(memberId),
+      tagline: '持久化戰績成員',
+      playstyle: '依目前可用的持久化對戰證據呈現；不代表完整生涯紀錄。',
+      defaultEmoji: safePlayerEmoji(member.member_default_emoji),
+    };
+  });
+}
+
+/** Same-match duplicate-member guard: a person cannot normally play two accounts in one match. */
+export function hasMemberCollision(memberIds: (string | undefined)[]): boolean {
+  const known = memberIds.filter((id): id is string => id !== undefined);
+  return new Set(known).size !== known.length;
+}
+
 export class DatasetProjectionService {
   private readonly metricEngine = new EventMetricEngine();
 
@@ -185,20 +224,11 @@ export class DatasetProjectionService {
       agents.add(row.agent_name);
       agentsByPlayer.set(row.internal_player_id, agents);
     }
-    const players: Player[] = rows.players.map((row) => {
-      const agents = [...((playerAgents ?? agentsByPlayer).get(row.internal_player_id) ?? [])].sort();
-      return {
-        id: row.public_id,
-        handle: `${row.display_name}#${row.display_tag}`,
-        displayName: row.display_name,
-        role: primaryRoleForAgents(agents),
-        agents,
-        accent: accentFor(row.public_id),
-        tagline: '持久化戰績成員',
-        playstyle: '依目前可用的持久化對戰證據呈現；不代表完整生涯紀錄。',
-        defaultEmoji: safePlayerEmoji(row.default_emoji),
-      };
-    });
+    const players: Player[] = membersFromRows(rows.players, playerAgents ?? agentsByPlayer);
+    // accountId is emitted only for multi-account members (1:1 members stay byte-identical).
+    const accountsPerMember = new Map<string, number>();
+    for (const row of rows.players) accountsPerMember.set(row.member_public_id, (accountsPerMember.get(row.member_public_id) ?? 0) + 1);
+    let identityConflicts = 0;
 
     const performanceByMatch = groupBy(rows.performances, (row) => row.internal_match_id);
     const roundsByMatch = groupBy(rows.rounds, (row) => row.internal_match_id);
@@ -214,6 +244,11 @@ export class DatasetProjectionService {
       if (!first) continue;
       const playedAt = dateValue(first.started_at);
       if (!playedAt) continue;
+      // Identity invariant: never sum two account performances of one member in one match.
+      if (hasMemberCollision(performanceRows.map((row) => playerRowByInternalId.get(row.internal_player_id)?.member_public_id))) {
+        identityConflicts += 1;
+        continue;
+      }
       const matchRounds = roundsByMatch.get(matchId) ?? [];
       const matchRoundParticipants = roundParticipantsByMatch.get(matchId) ?? [];
       const participantRows = new Map<string, MetricParticipantInput>();
@@ -277,7 +312,8 @@ export class DatasetProjectionService {
           completeHeadshotEvidence = false;
         }
         return [{
-          playerId: player.public_id,
+          playerId: player.member_public_id,
+          ...((accountsPerMember.get(player.member_public_id) ?? 0) > 1 ? { accountId: player.public_id } : {}),
           ...(teamGroups.has(row.team_key) ? { teamGroup: teamGroups.get(row.team_key) } : {}),
           ...(typeof row.team_won === 'boolean' ? { teamWon: row.team_won } : {}),
           ...(finite(row.rounds_won) && row.rounds_won >= 0 ? { teamRoundsWon: row.rounds_won } : {}),
@@ -302,7 +338,7 @@ export class DatasetProjectionService {
         }];
       });
       if (performances.length === 0) continue;
-      const internalByPublic = new Map(performanceRows.map((row) => [playerRowByInternalId.get(row.internal_player_id)?.public_id, row.internal_participant_id]));
+      const internalByPublic = new Map(performanceRows.map((row) => [playerRowByInternalId.get(row.internal_player_id)?.member_public_id, row.internal_participant_id]));
       const edgeCounts = new Map(reconstruction.directTradeEdges.map((edge) => [JSON.stringify([edge.traderId, edge.victimId]), edge.count]));
       const complete = performances.every((p) => p.advancedMetrics?.evidence.trade === 'reconstructed');
       const synergyEvidence: MatchPairTradeEvidence = {ruleVersion:'event-metrics-v1',status:complete ? 'reconstructed' : 'unavailable',
@@ -331,6 +367,11 @@ export class DatasetProjectionService {
       });
     }
     matches.sort((a, b) => b.playedAt.localeCompare(a.playedAt) || a.id.localeCompare(b.id));
+    if (identityConflicts > 0) {
+      // Aggregate only: no member, account or match identifiers.
+      process.stdout.write(`${JSON.stringify({ event: 'member_identity_conflict', identityVersion: datasetIdentityVersion, matchesWithheld: identityConflicts })}
+`);
+    }
     const dataset = { players, matches, sourceId: 'durable-neon-v4', isDemo: false as const, mode: 'REAL' as const };
     const availability: DatasetEvidenceAvailability = {
       acs: 'derived' as const,
@@ -360,7 +401,7 @@ export class DatasetProjectionService {
       ok: true as const,
       schemaVersion: datasetSchemaVersion,
       state: matches.length === 0 ? 'empty' as const : 'ready' as const,
-      snapshot: { version, generation: 'dataset-read-v4' as const, source: 'durable-neon' as const, projectionVersion: datasetProjectionVersion },
+      snapshot: { version, generation: 'dataset-read-v4' as const, source: 'durable-neon' as const, projectionVersion: datasetProjectionVersion, identityVersion: datasetIdentityVersion },
       coverage,
       evidence: availability,
       dataset,
@@ -407,6 +448,7 @@ export class DatasetProjectionService {
       view: 'history' as const,
       historyVersion: datasetHistoryVersion,
       projectionVersion: datasetProjectionVersion,
+      identityVersion: datasetIdentityVersion,
       state: dataset.matches.length === 0 ? 'empty' as const : 'ready' as const,
       page: {
         limit: request.pageSize,

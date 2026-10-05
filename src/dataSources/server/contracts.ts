@@ -173,6 +173,8 @@ export interface DatasetSnapshotContract {
   generation: 'dataset-read-v4';
   source: 'durable-neon';
   projectionVersion: 'evidence-decoupled-projection-v1';
+  /** TASK-IDENTITY-01: public players are members with sanitized accounts. */
+  identityVersion: 'member-identity-v1';
 }
 
 export interface DatasetCoverageContract {
@@ -195,7 +197,7 @@ export interface DatasetEvidenceContract {
 
 export interface DatasetReadyResponse {
   ok: true;
-  schemaVersion: 4;
+  schemaVersion: 5;
   state: 'ready' | 'empty';
   snapshot: DatasetSnapshotContract;
   coverage: DatasetCoverageContract;
@@ -205,7 +207,7 @@ export interface DatasetReadyResponse {
 
 export interface DatasetDisabledResponse {
   ok: true;
-  schemaVersion: 4;
+  schemaVersion: 5;
   state: 'disabled';
   source: 'REAL_SERVER';
 }
@@ -234,10 +236,11 @@ export interface DatasetTrackedHistoryContract {
 
 export interface DatasetHistoryResponse {
   ok: true;
-  schemaVersion: 4;
+  schemaVersion: 5;
   view: 'history';
   historyVersion: 'dataset-history-v1';
   projectionVersion: 'evidence-decoupled-projection-v1';
+  identityVersion: 'member-identity-v1';
   state: 'ready' | 'empty';
   page: DatasetHistoryPageContract;
   tracked: DatasetTrackedHistoryContract;
@@ -256,7 +259,7 @@ type ScopeEvidenceStatus = 'available' | 'partial' | 'unavailable';
 /** TASK-DATA-03B.2A `GET /api/valorant/dataset?view=analytics` aggregate facts (no identities). */
 export interface DatasetAnalyticsContextResponse {
   ok: true;
-  schemaVersion: 4;
+  schemaVersion: 5;
   view: 'analytics';
   analyticsVersion: 'analytics-context-v1';
   scopeRuleVersion: 'analysis-scope-v1';

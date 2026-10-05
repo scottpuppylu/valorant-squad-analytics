@@ -2,14 +2,15 @@ import type { MatchRecord } from '../../types/valorant';
 
 const integer = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 const optionalInteger = (value: unknown) => value === undefined || integer(value);
-const performanceKeys = new Set(['playerId','agent','kills','deaths','assists','acs','adr','kast','eventEvidence','headshotPercentage','firstKills','firstDeaths','clutchAttempts','clutchWins','advancedMetrics','teamGroup','teamWon','teamRoundsWon','teamRoundsLost']);
+const performanceKeys = new Set(['playerId','agent','kills','deaths','assists','acs','adr','kast','eventEvidence','headshotPercentage','firstKills','firstDeaths','clutchAttempts','clutchWins','advancedMetrics','teamGroup','teamWon','teamRoundsWon','teamRoundsLost','accountId']);
 const pairKeys = new Set(['ruleVersion','status','reconstructedRounds','pairs']);
 
 /** Reject, rather than retain, malformed identity/topology at the new public boundary. */
 export function validSynergyContract(match: MatchRecord, publicPlayerIds: Set<string>): boolean {
   const ids = new Set<string>();
   for (const p of match.performances) {
-    if (Object.keys(p).some((key) => !performanceKeys.has(key)) || !publicPlayerIds.has(p.playerId) || ids.has(p.playerId)) return false;
+    if (Object.keys(p).some((key) => !performanceKeys.has(key)) || !publicPlayerIds.has(p.playerId) || ids.has(p.playerId)
+      || (p.accountId !== undefined && (typeof p.accountId !== 'string' || p.accountId.length === 0))) return false;
     ids.add(p.playerId);
     if (p.teamGroup !== undefined && p.teamGroup !== 'A' && p.teamGroup !== 'B') return false;
     if (p.teamWon !== undefined && typeof p.teamWon !== 'boolean') return false;

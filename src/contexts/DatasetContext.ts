@@ -23,11 +23,11 @@ export interface DatasetContextValue {
   /** DATA-03B.2B server analysis loader; present only for PUBLIC REAL. */
   loadAnalysis?: NonNullable<DatasetApiClient['loadAnalysis']>;
   /**
-   * TASK-DATA-FASTSYNC-01, PUBLIC REAL only. 'auto' runs at most once per player per tab; 'manual'
-   * asks again. Both obey the server freshness gate; new durable matches reload the snapshot,
-   * which also clears the per-tab analysis cache.
+   * TASK-DATA-FASTSYNC-01, PUBLIC REAL only. Takes a public ACCOUNT id (sync is account-scoped).
+   * 'auto' runs at most once per account per tab; 'manual' asks again. Both obey the server
+   * freshness gate; new durable matches reload the snapshot, which also clears the analysis cache.
    */
-  refreshRecent?(playerId: string, mode: 'auto' | 'manual'): Promise<RecentRefreshOutcome>;
+  refreshRecent?(accountId: string, mode: 'auto' | 'manual'): Promise<RecentRefreshOutcome>;
   refresh(): Promise<void>;
 }
 
