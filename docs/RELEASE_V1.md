@@ -6,7 +6,9 @@ Explicit human decision supersedes the Riot-response freeze below. Tracker-style
 persistent Henrik history replaces lifetime-proof as current operational target.
 Riot ticket #139243830 remains OPEN / informational / non-blocking; DATA-04B deferred.
 RELEASE-01 PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED. DATA-03B NOT STARTED.
-Cron production activation/canaries await secure CRON_SECRET; see PERSISTENT_SYNC.md.
+CLI authentication and production-only CRON_SECRET setup are complete; cron
+registration/deployment/canary acceptance is in progress. Nine public players
+are maintainer-confirmed expected activity; see PERSISTENT_SYNC.md.
 No release level/tag, Riot/RSO, scoring/Synergy change or destructive operation.
 The following freeze and fixture descriptions remain historical evidence only.
 

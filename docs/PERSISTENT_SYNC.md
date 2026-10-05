@@ -1,7 +1,7 @@
 # Tracker-style persistent scheduled sync
 
 TASK-DATA-05A — SDD STRICT, 2026-10-05. Status: implementation/local gates complete;
-production registration and canaries **NOT VERIFIED / NOT ENABLED**.
+production activation in progress; canaries **NOT VERIFIED**.
 
 ## Product contract
 
@@ -28,13 +28,15 @@ GET `/api/valorant/cron/recent` and `/api/valorant/cron/history` require exact
 returns 503; absent/wrong/array authorization returns 401 before runtime creation.
 Never put the secret in logs, URLs, browser source, Git or reports.
 
-Registration is intentionally omitted from vercel.json while CLI credentials
-are unavailable. Cached CLI 48.0.0 `whoami` reports no credentials. The operator
-must authenticate CLI, securely generate/set production-only sensitive CRON_SECRET
-through stdin (not command arguments/chat), then deploy the schedule configuration.
-Do not overwrite an existing secret without checking whether it already exists.
+Authentication completed through official CLI 62.2.0 in existing Ubuntu WSL.
+Windows CLI login fails on a non-ASCII hostname HTTP header; no CLI patch or
+machine-name change was used. Existing project/team/link and Git repository are
+preserved. Production-only sensitive CRON_SECRET was absent and securely added
+through stdin; no value was printed or retained in Git. Sensitive production
+variables cannot be pulled locally. Use the supported Vercel cron Run control
+for canaries and the verified read-only database Query editor for health checks.
 
-Pending registration (UTC, daily only):
+Activation configuration (UTC, daily only; deployed registration must be checked):
 
 ```json
 "crons": [
@@ -113,6 +115,9 @@ Only both PASS authorize normal recurring operation. Do not leave registered cro
 running after a failed canary: remove registration/disable scheduling and inspect.
 No player reconnect, destructive operation, raw archive, Riot/RSO, DATA-03B or V1 tag.
 
-Current environment stop: no CLI authentication, no secret set, no registration,
-no canary/provider calls or production gameplay writes. Historical baseline of
-two players/30 durable sources is preserved evidence, not a fresh database query.
+Pre-activation SELECT-only baseline (2026-10-05): 9 eligible/public players,
+9 current-policy consents/memberships, 50 durable sources, provider run counters
+83. Zero duplicates, participant/round/event/round-participant orphans, leases
+and open deletion jobs; ledger 0001–0007. Incremental: 3 complete manual runs;
+deep: 2 paused and 1 failed manual run. The 9 players are maintainer-confirmed
+expected activity, not a fixture defect. No canary has run at this checkpoint.

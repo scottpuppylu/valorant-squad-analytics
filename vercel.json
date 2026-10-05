@@ -3,6 +3,10 @@
   "framework": "vite",
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist",
+  "crons": [
+    { "path": "/api/valorant/cron/recent", "schedule": "5 18 * * *" },
+    { "path": "/api/valorant/cron/history", "schedule": "35 18 * * *" }
+  ],
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 60

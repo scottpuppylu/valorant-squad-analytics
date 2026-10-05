@@ -7,7 +7,9 @@ decision supersedes the prior Riot-response freeze. Primary strategy: permanentl
 accumulate observable Henrik history, daily incremental and historical reconciliation,
 existing consent/deletion boundaries; lifetimeComplete=false. Implementation and
 environment acceptance tracked in [PERSISTENT_SYNC.md](PERSISTENT_SYNC.md).
-CRON_SECRET authentication/registration/canary gate remains unsatisfied.
+Vercel CLI authentication and production-only CRON_SECRET setup are complete.
+Daily registration/deployment/canary acceptance is in progress. Nine public
+players are maintainer-confirmed expected activity, not a drift investigation.
 
 - DATA-04A: WAITING ON RIOT — informational / non-blocking, ticket #139243830 OPEN.
 - DATA-04B: DEFERRED / NOT REQUIRED FOR CURRENT PRODUCT PATH.
