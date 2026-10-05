@@ -51,6 +51,10 @@
 | TASK-PROGRESS-01 Adaptive Improvement Index | COMPLETE / ACCEPTED (2026-10-06; improvement-index-v1) — see docs/PROGRESS_INDEX.md |
 | TASK-DATA-FASTSYNC-01 opportunistic recent refresh | COMPLETE / ACCEPTED (2026-10-06; recent-refresh-v1) — see docs/FAST_RECENT_SYNC.md |
 | TASK-DATA-FASTSYNC-02 sub-daily scheduled recent sync | NOT STARTED / OPTIONAL FUTURE |
+| TASK-DATA-FASTSYNC-01.1 known-boundary fast path | DEFERRED |
+| TASK-IDENTITY-01 member / multi-account identity | COMPLETE / ACCEPTED (2026-10-06; member-identity-v1, schema 5, migration 0008) — production 9 members × 1 account, 0 merges; see docs/MEMBER_IDENTITY.md |
+| TASK-IDENTITY-01B community name assignment | NOT STARTED — waiting for maintainer-provided group names (current names are legacy account-name fallbacks) |
+| TASK-WEAPON-01 member-level weapon analytics | NOT STARTED — recommended next product analytics task |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
 | Riot ticket #139243830 | OPEN — informational / non-blocking |
@@ -60,6 +64,20 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-IDENTITY-01 COMPLETE / ACCEPTED (2026-10-06, SDD STRICT): public `Player` = MEMBER (person);
+  `players` rows are Riot ACCOUNTS. Human fact: the 9 current accounts are 9 different people.
+  Never merge them and never infer alts; there is no heuristic linking.
+  - Migration 0008 is append-only: deterministic 1:1 backfill reusing account ids/public ids, plus
+    a BEFORE INSERT trigger that gives each new account its own member.
+  - Consent, provider identities, sync (including FASTSYNC), deletion and match participants stay
+    account-scoped; analytics merge member evidence before scoping/scoring.
+  - Schema 5 / `member-identity-v1`. Same-match member collisions are withheld, never summed.
+  - Account linking is maintainer-only (`npm run member:admin`, `--confirm`) and fails closed on
+    coappearance. Never add a public admin API or a member picker on Connect.
+  - Member names are `legacy_account` until the maintainer assigns community names
+    (TASK-IDENTITY-01B); a Riot rename never changes a member name.
+  Read docs/MEMBER_IDENTITY.md before changing identity, visibility or aggregation.
 
 - TASK-DATA-FASTSYNC-01 COMPLETE / ACCEPTED (2026-10-06, SDD STRICT): `recent-refresh-v1`.
   `POST /api/valorant/sync/start` with `intent: refresh_if_stale` (incremental only; no new

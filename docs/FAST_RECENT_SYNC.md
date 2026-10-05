@@ -1,5 +1,7 @@
 # Fast recent match refresh (TASK-DATA-FASTSYNC-01)
 
+> **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** refresh-if-stale is ACCOUNT-scoped (`accountId`; legacy `playerId` is accepted). A one-account member keeps the automatic Profile refresh; a multi-account member gets per-account manual actions with no automatic fan-out. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
+
 Policy version: **`recent-refresh-v1`**. SDD STRICT, authorized 2026-10-06. Starting HEAD
 `6ed4da3411201227a05d35a28cafc2333f21e734`; checkpoint `checkpoint-before-data-fastsync-01`.
 

@@ -1,5 +1,7 @@
 # Data model
 
+> **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** public `Player` = MEMBER (person) with 1..N sanitized `accounts`; `players` rows are Riot ACCOUNTS; `MatchPerformance.playerId` = member public id, `accountId` only for multi-account members. Schema 5. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
+
 TASK-001 uses a deterministic fictional dataset. It contains no private player identifiers, Riot API data, or third-party match data.
 
 ## Entities

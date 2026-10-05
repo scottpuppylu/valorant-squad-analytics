@@ -1,5 +1,7 @@
 # Durable dataset runtime
 
+> **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** schema 5 with `snapshot.identityVersion`; players are members aggregated over their currently public accounts; a same-match member collision withholds the match; history pages carry `identityVersion`; cursors and ordering are unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
+
 > **TASK-DATA-FASTSYNC-01:** `DatasetContext.refreshRecent` exists only for PUBLIC REAL. A refresh
 > that durably committed new matches calls the normal snapshot reload, which clears the per-tab
 > `view=analysis` cache; the new snapshot version re-keys every analysis hook. Fresh, zero-new and

@@ -6,6 +6,7 @@ Tracker-style persistent Henrik accumulation is primary; Riot ticket is informat
 TASK-DATA-03B.2B: analytics pages use `view=analysis` over all durable history (SERVER_ANALYTICS.md).
 TASK-PROGRESS-01: Profile 進步指數 uses `view=analysis&feature=improvementIndex` (PROGRESS_INDEX.md).
 TASK-DATA-FASTSYNC-01: Profile refresh-if-stale through `POST sync/start` `intent=refresh_if_stale` (FAST_RECENT_SYNC.md); cron unchanged.
+TASK-IDENTITY-01: members (people) above Riot accounts; public schema 5 `member-identity-v1`; maintainer-only `npm run member:admin` (MEMBER_IDENTITY.md).
 TASK-DATA-SEASON-01 persists provider season evidence (SEASON_EVIDENCE.md).
 DATA-04B deferred. DATA-03B.1 (history pages via `/api/valorant/dataset?view=history`,
 same function to respect the 12-function Hobby limit) is accepted. DATA-03B.2A context-aware

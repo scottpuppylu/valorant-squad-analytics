@@ -1,5 +1,7 @@
 # Adaptive Improvement Index (進步指數)
 
+> **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** Progress is person-level: current/baseline windows are chosen over the member's merged chronological evidence from all linked accounts. improvement-index-v1 is unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
+
 TASK-PROGRESS-01 — SDD STRICT, authorized 2026-10-05. Starting HEAD
 `bca4dca9a97ca5677886116b88fba0e2d4f07f6c`; checkpoint `checkpoint-before-progress-01`.
 Versions: **`improvement-index-v1`** (formula) and **`improvement-benchmarks-v1`** (calibration),

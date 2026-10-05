@@ -1,5 +1,7 @@
 # Server-side context-aware analytics
 
+> **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** the `player` context is a MEMBER id; phase 1 observations carry `member_public_id` and phase 2 loads the selected matches across all of the member's accounts; populations are merged at evidence grain. No formula change. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
+
 > **TASK-DATA-FASTSYNC-01:** after a durable new match arrives from a Profile refresh, the browser
 > reloads the snapshot and clears this per-tab analysis cache. `view=analysis` itself is unchanged.
 > See [FAST_RECENT_SYNC.md](FAST_RECENT_SYNC.md).

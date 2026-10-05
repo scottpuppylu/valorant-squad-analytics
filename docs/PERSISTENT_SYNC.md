@@ -1,5 +1,7 @@
 # Tracker-style persistent scheduled sync
 
+> **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** scheduled sync stays ACCOUNT-scoped (cursors, runs, eligibility per Riot account). Cron is unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
+
 > **TASK-DATA-FASTSYNC-01 (2026-10-06):** the daily `recent`/`history` crons are unchanged and
 > remain the unattended safety net. Profile opens can additionally run one bounded incremental
 > chunk when the server-only 30-minute freshness gate says stale. See [FAST_RECENT_SYNC.md](FAST_RECENT_SYNC.md).

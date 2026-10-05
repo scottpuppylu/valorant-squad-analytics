@@ -1,6 +1,12 @@
 # V1 release preflight
 
-## Current release gate — TASK-DATA-FASTSYNC-01 (2026-10-06)
+## Current release gate — TASK-IDENTITY-01 (2026-10-06)
+
+Member identity COMPLETE / ACCEPTED (MEMBER_IDENTITY.md): 9 members × 1 account, 0 merges, schema 5.
+Community names are PENDING (TASK-IDENTITY-01B). The production SQL health check is still NOT
+VERIFIED and remains a V1 gate. RELEASE-01 PAUSED; V1 NOT YET RELEASED; no tag.
+
+## Earlier release gate — TASK-DATA-FASTSYNC-01 (2026-10-06)
 
 Opportunistic recent refresh COMPLETE / ACCEPTED (FAST_RECENT_SYNC.md). The production SQL health
 check is still NOT VERIFIED and remains a V1 gate. RELEASE-01 PAUSED; V1 NOT YET RELEASED; no tag.

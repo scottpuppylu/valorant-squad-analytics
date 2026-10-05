@@ -1,5 +1,7 @@
 # Evidence-aware teammate synergy — duo-synergy-v1
 
+> **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** pairs are member↔member; shared games from any linked account count toward the same pair. duo-synergy-v1 is unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
+
 Status: implementation complete; final release acceptance is recorded in TASK_SYNERGY_01_PLAN.md.
 This is **descriptive association**, not causal improvement, an objectively optimal pairing,
 communication-quality proof, Riot MMR/Elo or a ninth individual dimension. The existing

@@ -1,5 +1,16 @@
 # Code map
 
+## TASK-IDENTITY-01 member identity
+
+- migrations/0008_member_multi_account_identity.sql (members, 1:1 backfill, trigger, primary index).
+- server/dataset/datasetProjectionService.ts `membersFromRows`, `hasMemberCollision`; postgresDatasetReadRepository.ts
+  `activePlayers` (+ member columns); analysisService.ts (member-keyed skeletons).
+- server/identity/memberAdminService.ts + scripts/member-admin.ts (`npm run member:admin`, operator only).
+- server/deletion/revocationDeletionService.ts (legacy member name scrub and archive on account deletion).
+- src/types/valorant.ts `PublicAccount`, `Player.accounts/nameSource`, `MatchPerformance.accountId`;
+  src/analytics/identity.ts; src/components/MemberAccounts.tsx; RecentRefreshPanel (account-scoped).
+- tests/memberIdentity.test.ts, tests/memberIdentityUi.test.tsx.
+
 ## TASK-DATA-FASTSYNC-01 recent refresh
 
 - server/sync/recentRefresh.ts (recent-refresh-v1 pure decision and outcome type).

@@ -4,7 +4,20 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-FASTSYNC-01 (2026-10-06)
+## Current decision — TASK-IDENTITY-01 (2026-10-06)
+
+**COMPLETE / ACCEPTED.** Member / multi-account identity foundation (`member-identity-v1`, schema 5,
+migration 0008; [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md)). Human fact: the 9 current accounts are 9
+different people, so production is 9 members × 1 account with 0 merges. Community names are PENDING.
+
+- TASK-IDENTITY-01B (community name assignment): NOT STARTED — waiting for the maintainer's
+  account → group-name mapping. No provider call is needed; use `npm run member:admin -- rename-member`.
+- TASK-WEAPON-01: NOT STARTED — the recommended next product analytics task (member-level weapon
+  evidence).
+- TASK-DATA-FASTSYNC-01.1 (known-boundary fast path): DEFERRED.
+- TASK-DATA-RANK-01 NOT STARTED; DATA-03B.2C DEFERRED; RELEASE-01 PAUSED; V1 NOT YET RELEASED.
+
+## Earlier decision — TASK-DATA-FASTSYNC-01 (2026-10-06)
 
 **COMPLETE / ACCEPTED.** Opportunistic recent match refresh `recent-refresh-v1`
 ([FAST_RECENT_SYNC.md](FAST_RECENT_SYNC.md)): server-authoritative 30-minute freshness gate,

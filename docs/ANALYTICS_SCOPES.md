@@ -1,5 +1,7 @@
 # Context-aware analytics scopes
 
+> **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** every scope resolves over MEMBER evidence merged across that member's currently eligible accounts (never per account then averaged). The scope versions are unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
+
 TASK-DATA-03B.2 — **Context-Aware Analytics Scope Engine** (SDD STRICT, 2026-10-05).
 Starting HEAD `ddab905cddf27426ddf9b129a8a6a1d44e67e9cd`; checkpoint tag
 `checkpoint-before-data-03b2-context-scope-engine`.
