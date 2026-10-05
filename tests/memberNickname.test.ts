@@ -1,5 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { resolve } from 'node:path';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { PGlite } from '@electric-sql/pglite';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { applyMigrations, loadMigrations } from '../server/db/migrations';
@@ -244,7 +246,9 @@ describe('member-identity-v2 public contract', () => {
 describe('member:admin CLI safety', () => {
   const run = (args: string[]) => spawnSync(process.execPath, ['--import', 'tsx', 'scripts/member-admin.ts', ...args], { encoding: 'utf8', env: { ...process.env, DATABASE_URL: '' } });
   it('refuses mutations without --confirm before touching any database, and refuses without DATABASE_URL', () => {
-    for (const args of [['set-nickname', '--member', uuid(2, 1), '--nickname', 'x'], ['clear-nickname', '--member', uuid(2, 1)], ['rename-member', '--member', uuid(2, 1), '--name', 'x'], ['apply-names', '--mapping', 'ops/community-names-2026-10-06.json']]) {
+    const mappingPath = join(mkdtempSync(join(tmpdir(), 'member-admin-')), 'mapping.json');
+    writeFileSync(mappingPath, JSON.stringify(mapping));
+    for (const args of [['set-nickname', '--member', uuid(2, 1), '--nickname', 'x'], ['clear-nickname', '--member', uuid(2, 1)], ['rename-member', '--member', uuid(2, 1), '--name', 'x'], ['apply-names', '--mapping', mappingPath]]) {
       const result = run(args);
       expect(result.status, args.join(' ')).toBe(2);
       expect(result.stderr).toContain('--confirm');
