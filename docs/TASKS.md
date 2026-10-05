@@ -1,20 +1,24 @@
 # Development tasks
 
+> **AUTHORITATIVE STATUS** lives in the table under "Current stage" in AGENTS.md. Sections below
+> are dated decisions; status words inside "Earlier decision" sections are **historical** and
+> are marked [SUPERSEDED] where they conflict with current state.
+
 ## Current decision — TASK-DATA-03B.2B (2026-10-05)
 
 **COMPLETE / ACCEPTED.** Server-side context-aware analytics consumption; see
 [SERVER_ANALYTICS.md](SERVER_ANALYTICS.md). Analytics no longer depend on snapshot completeness.
 Staged: server view → fixture parity → production read-only parity (10/10) → consumer switch.
 Follow-up DATA-03B.2C (server aggregates/materialized facts beyond the 2000-match phase-2 bound):
-NOT STARTED, needs measured need. TASK-PROGRESS-01: RECOMMENDED NEXT, DESIGN ONLY / NOT STARTED.
+DEFERRED, needs measured need. TASK-PROGRESS-01: [SUPERSEDED: authorized 2026-10-05, see the TASK-PROGRESS-01 decision above].
 
 ## Earlier decision — TASK-DATA-SEASON-01 (2026-10-05)
 
 **COMPLETE / ACCEPTED.** Persist and reconcile match Act/season evidence; see
 [SEASON_EVIDENCE.md](SEASON_EVIDENCE.md). No migration; production Act coverage 173/183 (94.5 %,
 E11:A5); remaining 10 fill via normal cron. Act scopes are active. Production backfill
-uses supported deep sync endpoints only. TASK-DATA-RANK-01 NOT STARTED; TASK-PROGRESS-01
-DESIGN ONLY; DATA-03B.2B NOT STARTED; DATA-05A, DATA-03B.1 and DATA-03B.2A accepted.
+uses supported deep sync endpoints only. TASK-DATA-RANK-01 NOT STARTED. [SUPERSEDED at that time:
+TASK-PROGRESS-01 DESIGN ONLY; DATA-03B.2B NOT STARTED — both since authorized.] DATA-05A, DATA-03B.1 and DATA-03B.2A accepted.
 
 ## Earlier decision — TASK-DATA-03B.2 redefined (2026-10-05)
 
@@ -63,7 +67,7 @@ verification remains NOT VERIFIED. DATA-03B was NOT STARTED at this checkpoint (
 - DATA-04A: WAITING ON RIOT — informational / non-blocking, ticket #139243830 OPEN.
 - DATA-04B: DEFERRED / NOT REQUIRED FOR CURRENT PRODUCT PATH.
 - DATA-03A: resumed as acquisition infrastructure; preserve existing P1/P2 runs/data.
-- DATA-03B: NOT STARTED; public schema 4/newest-300 unchanged.
+- DATA-03B: NOT STARTED [SUPERSEDED: DATA-03B.1/2A/2B completed later]; public schema 4/newest-300 unchanged.
 - RELEASE-01: PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED.
 - No Riot/RSO, another application, destructive data operation or scoring/Synergy change.
 
@@ -87,7 +91,7 @@ Status: **BLOCKED ON DATA-04A / NOT STARTED**. Requires Riot clarification first
 
 Do not implement DATA-04B/Riot provider/RSO or submit another Production/RSO application until Riot clarifies the required sequence. The submitted support inquiry is not an application or access approval. TASK-RELEASE-01 is **PAUSED**; V1 is **NOT YET RELEASED**.
 
-This decision supersedes earlier continuation permissions. Preserve DATA-03A implementation and DATA-03A.1 hard-stop evidence: P1 paused, P2 failed `provider_repeated_page`, 30 durable unique sources, `lifetimeComplete=false`. DATA-03A production acceptance remains **BLOCKED**; DATA-03A.2 and P1/P2 continuation are frozen. DATA-03B remains **NOT STARTED**. RELEASE-01 remains **PAUSED**, V1 not released. No Riot/Henrik game API calls, production writes, migration or release levels/tags are authorized by DATA-04A. Historical roadmap entries below are retained, not renewed authorization.
+This decision supersedes earlier continuation permissions. Preserve DATA-03A implementation and DATA-03A.1 hard-stop evidence: P1 paused, P2 failed `provider_repeated_page`, 30 durable unique sources, `lifetimeComplete=false`. DATA-03A production acceptance remains **BLOCKED**; DATA-03A.2 and P1/P2 continuation are frozen. DATA-03B remains **NOT STARTED** [SUPERSEDED: completed later]. RELEASE-01 remains **PAUSED**, V1 not released. No Riot/Henrik game API calls, production writes, migration or release levels/tags are authorized by DATA-04A. Historical roadmap entries below are retained, not renewed authorization.
 
 ## Task 000 — repository and Codex setup
 
@@ -361,7 +365,7 @@ By explicit user decision, TASK-003 was executed before TASK-002B. It consumes t
 
 ### TASK-002B execution evidence
 
-Starting HEAD bb2bdb87a3ed3041decb0552177552cc4b1bb558; checkpoint-before-task-002b. Versioned eight-dimensional engine, explicit missing/partial policy, precision preservation, selected-role context, trace UI, radar gaps and fictional Demo evidence implemented. See TASK_002B_PLAN.md and SCORING.md. No migration or provider fetch; non-empty production scoring NOT YET EXERCISED. Next only recommended task: TASK-SYNERGY-01, NOT STARTED.
+Starting HEAD bb2bdb87a3ed3041decb0552177552cc4b1bb558; checkpoint-before-task-002b. Versioned eight-dimensional engine, explicit missing/partial policy, precision preservation, selected-role context, trace UI, radar gaps and fictional Demo evidence implemented. See TASK_002B_PLAN.md and SCORING.md. No migration or provider fetch; non-empty production scoring NOT YET EXERCISED. Next only recommended task: TASK-SYNERGY-01, NOT STARTED [SUPERSEDED: TASK-SYNERGY-01 completed later].
 Eight dimensions, missing/partial gates, profile/benchmark versions, independent confidence, role-aware traces, eight-axis radar gaps, deterministic Demo and regression gates are complete. First release CI/Pages/Vercel succeeded; final commit release acceptance is reported at handoff. Public REAL remains empty, non-empty scoring NOT YET EXERCISED. No migration; no provider request. Synergy was not started at this historical checkpoint and is now tracked below.
 
 ## TASK-SYNERGY-01 — evidence-aware teammate analytics
@@ -483,7 +487,7 @@ the subsequent hard stop does not authorize a new crawl or repair. No lifetime g
 ## TASK-DATA-03B — Full-history runtime consumption
 
 Status: **SPLIT** (2026-10-05). DATA-03B.1 paginated runtime + browse consumption
-IMPLEMENTED; DATA-03B.2 all-history analytics NOT STARTED. The newest-300 snapshot
+IMPLEMENTED; DATA-03B.2 all-history analytics NOT STARTED [SUPERSEDED: redefined and completed as DATA-03B.2A/2B]. The newest-300 snapshot
 was not enlarged. See [TASK_DATA_03B_PLAN.md](TASK_DATA_03B_PLAN.md). No v1.0.0.
 
 ## TASK-SECURITY-01 — braces advisory follow-up

@@ -38,6 +38,27 @@
 
 ## Current stage
 
+### AUTHORITATIVE STATUS (updated 2026-10-05 — this table wins over every older line below)
+
+| Task | Status |
+|---|---|
+| DATA-05A persistent scheduled sync | PRODUCTION ACTIVATED / ACCEPTED (cron enabled) |
+| DATA-03B.1 history pagination | COMPLETE / ACCEPTED |
+| DATA-03B.2A scope engine | COMPLETE / ACCEPTED |
+| DATA-03B.2B server analytics (`view=analysis`) | COMPLETE / ACCEPTED |
+| DATA-03B.2C scalable LIFETIME/ACT/PAIR aggregation (>2000 phase-2 bound) | DEFERRED |
+| TASK-DATA-SEASON-01 season evidence | COMPLETE / ACCEPTED (Act data available; coverage partial and dynamic) |
+| TASK-PROGRESS-01 Adaptive Improvement Index | IN PROGRESS (authorized 2026-10-05) — see docs/PROGRESS_INDEX.md |
+| TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
+| DATA-04B Riot provider / RSO | DEFERRED |
+| Riot ticket #139243830 | OPEN — informational / non-blocking |
+| TASK-RELEASE-01 / V1 | PAUSED / NOT YET RELEASED (production SQL health check NOT VERIFIED is a release gate) |
+
+The dated bullets below are a chronological log. Status words inside them describe the moment
+they were written; lines marked **[SUPERSEDED]** must not be read as current state.
+
+### Dated stage log
+
 - TASK-DATA-03B.2B COMPLETE / ACCEPTED (2026-10-05, SDD STRICT): analytics pages consume
   `GET /api/valorant/dataset?view=analysis` (`server-analysis-v1`). Clients declare only a
   feature plus context. The server runs the SAME src/ scope engine over ALL eligible durable
@@ -45,7 +66,7 @@
   and the browser runs the unchanged scoring/Synergy code. The newest-300 snapshot stays the
   bootstrap but is not an analytics boundary. Never let a failed analysis request substitute
   another scope. LIFETIME/ACT/PAIR phase 2 is capped at 2000 with a disclosed reason. Read
-  docs/SERVER_ANALYTICS.md before changing analysis populations. TASK-PROGRESS-01 is DESIGN ONLY;
+  docs/SERVER_ANALYTICS.md before changing analysis populations. TASK-PROGRESS-01 is DESIGN ONLY [SUPERSEDED: authorized / in progress, see status table];
   TASK-DATA-RANK-01 is NOT STARTED.
 
 - TASK-DATA-SEASON-01 COMPLETE / ACCEPTED (2026-10-05, SDD STRICT): match season evidence from Henrik v4
@@ -54,7 +75,7 @@
   later value corrects. `season_id` is server-only; the browser gets only a recognized public
   `seasonKey`. Stored rows may fill season ONLY for already durable, participant, consented
   matches. Never claim the current official Act. Read docs/SEASON_EVIDENCE.md before changing
-  season handling. TASK-DATA-RANK-01, TASK-PROGRESS-01 and DATA-03B.2B remain NOT STARTED.
+  season handling. [SUPERSEDED: at that time TASK-DATA-RANK-01, TASK-PROGRESS-01 and DATA-03B.2B were NOT STARTED; see status table.]
 
 - TASK-DATA-03B.2 (2026-10-05, SDD STRICT) is redefined as the **Context-Aware
   Analytics Scope Engine**; the earlier "all-history analytics" definition is
@@ -63,11 +84,9 @@
   `adaptive-window-v1`, and `view=analytics` aggregate facts. Pages never select windows
   themselves: everything goes through `selectPerformances` -> `resolveScopeSelection`.
   Score pages default to 目前實力 (adaptive, Competitive); maps/agents/matches default to
-  全部已追蹤. No fallback across horizons. Act evidence is UNAVAILABLE (season is never
-  persisted) and rank is UNAVAILABLE (never ingested). Do not guess Acts, hardcode season
-  dates, claim the current official Act, or invent rank. DATA-03B.2B (server aggregates),
-  TASK-DATA-SEASON-01, TASK-DATA-RANK-01 and TASK-PROGRESS-01 are NOT STARTED and need
-  explicit authorization. Score/Synergy formulas are unchanged. Read docs/ANALYTICS_SCOPES.md
+  全部已追蹤. No fallback across horizons. [SUPERSEDED: Act evidence was UNAVAILABLE at that time; TASK-DATA-SEASON-01 now persists it.] Rank is UNAVAILABLE (never ingested). Do not guess Acts, hardcode season
+  dates, claim the current official Act, or invent rank. [SUPERSEDED: DATA-03B.2B, TASK-DATA-SEASON-01 and TASK-PROGRESS-01 have since been authorized; see status table.]
+  TASK-DATA-RANK-01 is NOT STARTED and needs explicit authorization. Score/Synergy formulas are unchanged. Read docs/ANALYTICS_SCOPES.md
   before changing any analytical population. DATA-03B.1 COMPLETE / ACCEPTED.
 
 - TASK-DATA-03B.1 (2026-10-05, SDD STRICT): bounded keyset history runtime is
@@ -75,10 +94,8 @@
   same function — 12-function Hobby limit). Default schema 4 newest-300 snapshot is
   unchanged. Signed position-only cursor; every page re-evaluates current consent;
   `trackedMatchCount` = eligible durable matches, never Riot lifetime;
-  lifetimeComplete=false. History is BROWSE-ONLY on the Matches page: rankings,
-  scores, profiles and Synergy still use the newest-300 snapshot. DATA-03B.2
-  (all-history server-side aggregation) is NOT STARTED and needs explicit
-  authorization. No migration. Read docs/TASK_DATA_03B_PLAN.md before changing
+  lifetimeComplete=false. History is BROWSE-ONLY on the Matches page. [SUPERSEDED: analytics now use server
+  history via DATA-03B.2B, not the newest-300 snapshot.] No migration. Read docs/TASK_DATA_03B_PLAN.md before changing
   history pagination. DATA-05A remains PRODUCTION ACTIVATED / ACCEPTED.
 
 - DATA-05A activation continuation: existing Vercel CLI/project authentication
@@ -86,10 +103,10 @@
   are maintainer-confirmed expected activity. Daily cron registration/canaries
   are verified: both one-shot canaries passed; DATA-05A is PRODUCTION ACTIVATED /
   ACCEPTED. Recurring eligible consenting-player acquisition is authorized.
-  Sources 50→56, provider requests +2; lifetimeComplete=false. No DATA-03B,
-  Riot/RSO or V1 release. See docs/PERSISTENT_SYNC.md for evidence/limitations.
+  Sources 50→56, provider requests +2; lifetimeComplete=false. No Riot/RSO or V1 release.
+  [SUPERSEDED: "No DATA-03B" — DATA-03B.1/2A/2B have since completed.] See docs/PERSISTENT_SYNC.md for evidence/limitations.
 
-- Superseding human decision (2026-10-05): TASK-DATA-05A is ACTIVE — Tracker-style persistent scheduled sync. Maximize and retain observable Henrik history subject to consent/deletion; lifetimeComplete remains false. The Riot-response acquisition freeze below is historical and superseded. Ticket #139243830 remains OPEN / informational / non-blocking; DATA-04B is DEFERRED / NOT REQUIRED FOR CURRENT PRODUCT PATH. DATA-03A resumes as acquisition infrastructure; DATA-03B NOT STARTED. RELEASE-01 PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED. See docs/PERSISTENT_SYNC.md and docs/TASK_DATA_05A_PLAN.md. Secure production CRON_SECRET plus one recent and one historical passing canary gate recurring operation; if safe secret setting is unavailable, stop before cron activation. No Riot/RSO/application, player recreation, deletion, scoring/Synergy change or release authorization.
+- Superseding human decision (2026-10-05): TASK-DATA-05A is ACTIVE — Tracker-style persistent scheduled sync. Maximize and retain observable Henrik history subject to consent/deletion; lifetimeComplete remains false. The Riot-response acquisition freeze below is historical and superseded. Ticket #139243830 remains OPEN / informational / non-blocking; DATA-04B is DEFERRED / NOT REQUIRED FOR CURRENT PRODUCT PATH. DATA-03A resumes as acquisition infrastructure; DATA-03B NOT STARTED [SUPERSEDED: completed later]. RELEASE-01 PAUSED FOR DATA-05A / DATA-03B; V1 NOT YET RELEASED. See docs/PERSISTENT_SYNC.md and docs/TASK_DATA_05A_PLAN.md. Secure production CRON_SECRET plus one recent and one historical passing canary gate recurring operation; if safe secret setting is unavailable, stop before cron activation. No Riot/RSO/application, player recreation, deletion, scoring/Synergy change or release authorization.
 
 ### Superseded governance checkpoint
 
