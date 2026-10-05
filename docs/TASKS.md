@@ -2,8 +2,9 @@
 
 ## Current decision — TASK-DATA-SEASON-01 (2026-10-05)
 
-Persist and reconcile match Act/season evidence; see [SEASON_EVIDENCE.md](SEASON_EVIDENCE.md).
-No migration; Act scopes activate automatically from durable evidence. Production backfill
+**COMPLETE / ACCEPTED.** Persist and reconcile match Act/season evidence; see
+[SEASON_EVIDENCE.md](SEASON_EVIDENCE.md). No migration; production Act coverage 173/183 (94.5 %,
+E11:A5); remaining 10 fill via normal cron. Act scopes are active. Production backfill
 uses supported deep sync endpoints only. TASK-DATA-RANK-01 NOT STARTED; TASK-PROGRESS-01
 DESIGN ONLY; DATA-03B.2B NOT STARTED; DATA-05A, DATA-03B.1 and DATA-03B.2A accepted.
 

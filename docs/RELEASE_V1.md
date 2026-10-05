@@ -2,7 +2,7 @@
 
 ## Current release gate — TASK-DATA-SEASON-01 (2026-10-05)
 
-Season evidence persistence and reconciliation; see SEASON_EVIDENCE.md. RELEASE-01 PAUSED;
+TASK-DATA-SEASON-01 COMPLETE / ACCEPTED: production Act coverage 94.5 % (E11:A5); see SEASON_EVIDENCE.md. RELEASE-01 PAUSED;
 V1 NOT YET RELEASED; no tag.
 
 ## Earlier release gate — DATA-03B.2A (2026-10-05)

@@ -38,7 +38,7 @@
 
 ## Current stage
 
-- TASK-DATA-SEASON-01 (2026-10-05, SDD STRICT): match season evidence from Henrik v4
+- TASK-DATA-SEASON-01 COMPLETE / ACCEPTED (2026-10-05, SDD STRICT): match season evidence from Henrik v4
   `metadata.season` / Stored `meta.season` is normalized and persisted to existing
   `source_matches.season_id/season_short` (no migration). Missing/invalid never erases; a valid
   later value corrects. `season_id` is server-only; the browser gets only a recognized public

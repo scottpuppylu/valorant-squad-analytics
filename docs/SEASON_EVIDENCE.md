@@ -1,5 +1,7 @@
 # Match Act / season evidence
 
+**TASK-DATA-SEASON-01: COMPLETE / ACCEPTED (2026-10-05).**
+
 TASK-DATA-SEASON-01 — SDD STRICT, 2026-10-05. Starting HEAD
 `df9a0e90c6a96a08c3862ad35cbf850e60c7bc40`; checkpoint `checkpoint-before-data-season-01`.
 Not Riot API, not RSO, not a new provider, not a season calendar, not rank ingestion, not a
@@ -94,3 +96,49 @@ The application's own supported paths, with no SQL writes and no direct provider
 - `recentForm`: the current window keeps the Act boundary. Its **baseline is allowed to cross
   Acts** (policy unchanged) and records `season_crossed_in_baseline`. Review item for
   TASK-PROGRESS-01: whether progression baselines should prefer same-Act evidence.
+
+## Production acceptance — 2026-10-05
+
+Code 00defc2 (feat/test/docs) was deployed: GitHub CI, Pages and Vercel succeeded. No migration.
+Every production action used the public application endpoints (`/api/valorant/sync/start|continue`,
+`view=analytics`, `view=history`, snapshot), serially and at least 8 s apart. There was no direct
+provider call, SQL write, secret access, consent change or cron change. DATA-05A cron stays
+enabled; no lock contention, backoff or pagination repeat occurred.
+
+| Read-only `view=analytics` | Baseline 11:46Z | Final 12:30Z |
+|---|---:|---:|
+| tracked matches | 56 | 183 |
+| `season_id` non-null | 0 | 173 |
+| `season_short` non-null | 0 | 173 |
+| public Act keys | none | E11:A5 = 173 |
+| Act coverage | 0 % (unavailable) | **94.5 %** (partial) |
+| unrecognized codes | 0 | 0 |
+
+- **Canary** (1 chunk, 1 provider request): 3 overlaps re-observed, season filled 0 → 3,
+  tracked unchanged. Observed provider format `e11a5` (the documented `e#a#` pattern) →
+  public key E11:A5.
+- **Continuation**: 9 players. Pass 1 stopped each player after 2 chunks without new overlaps;
+  pass 2 stopped after 3 chunks without reducing "durable matches lacking season"; then one
+  incremental (recent) chunk for each of 3 players. About 78 server chunks in total, each with
+  one live-v4 provider request (no stored or detail phase was reached). There were no non-200
+  responses.
+- **Matches**: 46 of the 56 original durable matches now carry season. 127 new durable matches
+  were acquired as normal consented DATA-05A deep/incremental behaviour, and all carry season.
+  Public IDs are unique (183/183 in the snapshot and across history pages).
+- **Remaining 10**: original matches belonging to the three players whose pre-existing deep
+  runs had already passed their newest region. They have not been re-observed yet; the
+  provider is not known to lack season for them. They will fill through the normal daily
+  history cron once those runs reach the stored index (season-only fill), or on the next sweep
+  after cooldown. No SQL backfill.
+- All tracked history currently lies in one observed Act (E11:A5). The Act *boundary* in
+  `currentStrength` is therefore not exercised in production yet (covered by tests).
+  `latestRecordedAct` = e11a5 and `currentActKnown` = false.
+- UI: the Act selector is enabled on Leaderboard / Compare / Profile / Maps / Agents / Matches,
+  and Synergy offers 「指定 Act：E11:A5（最新有紀錄）」. The ACT disclosure says 部分樣本 ·
+  「僅部分對戰有 Act 證據」. The only 完整生涯 mentions are negated disclaimers. No error pages,
+  NaN or failed requests. Pages Demo shows Act disabled (fictional data has no Act) and makes
+  zero `/api` calls.
+- SQL-level duplicate/orphan health checks were **NOT RUN** in this session (no read-only
+  database console access). Public invariants hold: unique public match IDs and tracked count
+  equal to the history traversal count. Running the DATA-05A SELECT-only health query from the
+  maintainer's console is recommended.
