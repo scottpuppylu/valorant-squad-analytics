@@ -16,9 +16,9 @@ function response(state: 'ready' | 'empty'): DatasetReadyResponse {
   for (const match of demo.matches) for (const p of match.performances) p.eventEvidence = { kast: 'reconstructed', opening: 'reconstructed' };
   return {
     ok: true,
-    schemaVersion: 4,
+    schemaVersion: 5,
     state,
-    snapshot: { version: state, generation: 'dataset-read-v4', source: 'durable-neon', projectionVersion: 'evidence-decoupled-projection-v1' },
+    snapshot: { version: state, generation: 'dataset-read-v4', source: 'durable-neon', projectionVersion: 'evidence-decoupled-projection-v1', identityVersion: 'member-identity-v1' },
     coverage: { completeForProviderWindow: false, boundedMatchLimit: 300, lifetimeComplete: false },
     evidence: { acs: 'derived', adr: 'derived', headshotPercentage: 'derived', kast: 'reconstructed', firstKills: 'reconstructed', firstDeaths: 'reconstructed' },
     dataset: state === 'ready'

@@ -132,6 +132,14 @@ describe('recent-refresh-v1 decision (pure, server-authoritative)', () => {
 
 describe('refresh_if_stale request contract', () => {
   const playerId = randomUUID();
+  it('TASK-IDENTITY-01: sync input is an ACCOUNT id; accountId and legacy playerId are accepted and must agree', () => {
+    const other = randomUUID();
+    expect(parseSyncStartInput({ accountId: playerId, kind: 'incremental', intent: 'refresh_if_stale' })).toEqual({ playerId, kind: 'incremental', intent: 'refresh_if_stale' });
+    expect(parseSyncStartInput({ accountId: playerId, playerId, kind: 'incremental' })).toEqual({ playerId, kind: 'incremental' });
+    expect(() => parseSyncStartInput({ accountId: playerId, playerId: other, kind: 'incremental' })).toThrow();
+    expect(() => parseSyncStartInput({ accountId: 'not-a-uuid', kind: 'incremental' })).toThrow();
+  });
+
   it('accepts only the declared intent with incremental; existing callers are unchanged', () => {
     expect(parseSyncStartInput({ playerId, kind: 'incremental' })).toEqual({ playerId, kind: 'incremental' });
     expect(parseSyncStartInput({ playerId, kind: 'incremental', intent: 'refresh_if_stale' })).toEqual({ playerId, kind: 'incremental', intent: 'refresh_if_stale' });

@@ -11,7 +11,8 @@ import { dimensions } from '../src/scoring/versions';
 // Entirely fictional rows: no production identities, queries, credentials or payloads.
 function fixture(kind: 'complete' | 'self' | 'repeat' | 'dead' = 'self', count = 1, players = 1): DatasetProjectionRows {
   const rows: DatasetProjectionRows = { players: [], performances: [], rounds: [], roundParticipants: [], events: [], coverage: null, sqlQueryCount: 6, databaseMs: 0 };
-  for (let p = 0; p < players; p++) rows.players.push({ internal_player_id: `player-${p}`, public_id: `public-${p}`, display_name: `Fictional ${p}`, display_tag: 'DEMO', default_emoji: '🤖' });
+  for (let p = 0; p < players; p++) rows.players.push({ internal_player_id: `player-${p}`, public_id: `public-${p}`, display_name: `Fictional ${p}`, display_tag: 'DEMO', default_emoji: '🤖',
+    is_primary_account: true, account_label: null, internal_member_id: `player-${p}`, member_public_id: `public-${p}`, member_display_name: `Fictional ${p}`, member_name_source: 'legacy_account', member_default_emoji: '🤖' });
   for (let m = 0; m < count; m++) {
     const match = `match-${m}`, round = `round-${m}`, a = `a-${m}`, b = `b-${m}`;
     rows.rounds.push({ internal_match_id: match, internal_round_id: round, round_number: 1, winning_team: 'Blue', participants_evidence_status: 'observed', plant_status: 'absent', plant_participant_id: null, defuse_status: 'absent', defuse_participant_id: null });

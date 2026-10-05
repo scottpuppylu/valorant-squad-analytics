@@ -10,6 +10,7 @@ import { assertProviderAuditAllowed } from '../server/providerAuditAccess';
 import type { MatchImportInput } from '../server/contracts';
 import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy';
 import { HenrikDataProvider } from '../server/henrikDataProvider';
+import { MemberAdminService } from '../server/identity/memberAdminService';
 
 const hmacKey = 'test-only-key-material-with-at-least-thirty-two-bytes';
 const input: MatchImportInput = {
@@ -117,6 +118,7 @@ describe('durable database and consent foundation', () => {
       { version: '0005', applied: '1' },
       { version: '0006', applied: '1' },
       { version: '0007', applied: '1' },
+      { version: '0008', applied: '1' },
     ]);
     const cursorColumns = await database.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name='sync_cursors'`,
@@ -136,6 +138,20 @@ describe('durable database and consent foundation', () => {
     expect(evidenceColumns.rows).toHaveLength(5);
   });
 
+  it('validates member-identity-v1 invariants: 1 member per account, <=1 primary, no empty or colliding members', async () => {
+    const writer = new DurableEvidenceService(database, hmacKey);
+    for (const [index, name] of ['IdentityOne', 'IdentityTwo', 'IdentityThree'].entries()) {
+      await writer.persistConnection({ ...input, gameName: name }, `identity-puuid-${index}`);
+    }
+    expect(await new MemberAdminService(database).invariants()).toEqual({
+      members: 3, archivedMembers: 0, accounts: 3, liveAccounts: 3, accountsWithoutMember: 0, membersWithMultiplePrimaries: 0,
+      activeMembersWithoutLiveAccount: 0, liveAccountsOnArchivedMember: 0, sameMatchMemberCollisions: 0, accountsPerMember: { 1: 3 },
+    });
+    const columns = await database.query<{ column_name: string; is_nullable: string }>(
+      `SELECT column_name, is_nullable FROM information_schema.columns WHERE table_name='players' AND column_name IN ('member_id','is_primary_account') ORDER BY column_name`);
+    expect(columns.rows).toEqual([{ column_name: 'is_primary_account', is_nullable: 'NO' }, { column_name: 'member_id', is_nullable: 'NO' }]);
+  });
+
   it('enforces database uniqueness independently of application checks', async () => {
     await database.query(`INSERT INTO squads (id, slug, display_name) VALUES ('00000000-0000-4000-8000-000000000001','unique-squad','Unique')`);
     await expect(database.query(`INSERT INTO squads (id, slug, display_name) VALUES ('00000000-0000-4000-8000-000000000002','unique-squad','Duplicate')`)).rejects.toThrow();
@@ -150,7 +166,7 @@ describe('durable database and consent foundation', () => {
         VALUES ('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000102','Upgrade','TW')`);
       await existing.query(`INSERT INTO consents (id,player_id,status,consent_method,privacy_version,consented_at)
         VALUES ('00000000-0000-4000-8000-000000000103','00000000-0000-4000-8000-000000000101','active','self_asserted','old-v1',now())`);
-      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006', '0007']);
+      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006', '0007', '0008']);
       expect(await applyMigrations(existing, migrations)).toEqual([]);
     } finally {
       await existing.close();
@@ -169,7 +185,7 @@ describe('durable database and consent foundation', () => {
         SELECT '00000000-0000-4000-8000-000000000121',id,'HenrikDev','ap','backfill',159,2 FROM players LIMIT 1`);
       await existing.query(`INSERT INTO sync_runs (id,squad_id,player_id,provider,trigger_kind,status,started_at,sync_kind,matches_seen)
         SELECT '00000000-0000-4000-8000-000000000122',squad_id,player_id,'HenrikDev','manual','paused',now(),'backfill',159 FROM squad_memberships LIMIT 1`);
-      expect(await applyMigrations(existing, migrations)).toEqual(['0007']);
+      expect(await applyMigrations(existing, migrations)).toEqual(['0007', '0008']);
       expect(await applyMigrations(existing, migrations)).toEqual([]);
       expect((await existing.query('SELECT sync_kind,next_start,retry_count,stored_page,stored_item_index FROM sync_cursors')).rows[0]).toEqual({ sync_kind: 'backfill', next_start: 159, retry_count: 2, stored_page: 1, stored_item_index: 0 });
       expect((await existing.query('SELECT sync_kind,status,matches_seen FROM sync_runs')).rows[0]).toEqual({ sync_kind: 'backfill', status: 'paused', matches_seen: 159 });

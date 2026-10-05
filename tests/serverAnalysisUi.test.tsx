@@ -27,7 +27,7 @@ function realDemo(): NormalizedAnalyticsDataset {
 const evidence = { acs: 'derived', adr: 'derived', headshotPercentage: 'derived', kast: 'reconstructed', firstKills: 'reconstructed', firstDeaths: 'reconstructed' } as const;
 
 function snapshotOf(dataset: NormalizedAnalyticsDataset): DatasetReadyResponse {
-  return { ok: true, schemaVersion: 4, state: 'ready', snapshot: { version: 'v', generation: 'dataset-read-v4', source: 'durable-neon', projectionVersion: 'evidence-decoupled-projection-v1' },
+  return { ok: true, schemaVersion: 5, state: 'ready', snapshot: { version: 'v', generation: 'dataset-read-v4', source: 'durable-neon', projectionVersion: 'evidence-decoupled-projection-v1', identityVersion: 'member-identity-v1' },
     coverage: { completeForProviderWindow: false, boundedMatchLimit: 300, lifetimeComplete: false }, evidence, dataset };
 }
 
@@ -39,7 +39,7 @@ function serverAnswer(full: NormalizedAnalyticsDataset, query: AnalysisQuery, se
   const population = populationFromMatches(full.matches, true);
   const selection = selectPerformances(createPerformanceEntries(full), filters, { population });
   const ids = new Set(selection.entries.map((e) => e.match.id));
-  return { ok: true, schemaVersion: 4, view: 'analysis', analysisVersion: 'server-analysis-v1', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v2',
+  return { ok: true, schemaVersion: 5, view: 'analysis', analysisVersion: 'server-analysis-v1', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v2',
     adaptiveWindowVersion: 'adaptive-window-v1', scoreVersion: 'community-score-v2', feature: query.feature, status: 'available', reasons: [],
     coverage: { trackedMatchCount: full.matches.length, populationComplete: true, serverHistoryUsed: true, transportSnapshotUsed: false, populationLimit: 2000, lifetimeComplete: false },
     population: { seasonKeys: [], seasonStatus: 'unavailable', rankStatus: 'unavailable' },
