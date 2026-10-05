@@ -1,5 +1,6 @@
 import type { ApiRequest, ApiResponse } from '../../server/contracts.js';
-import { createDatasetProjectionService, datasetReadMode } from '../../server/dataset/runtime.js';
+import { createAnalyticsContextRepository, createDatasetProjectionService, datasetReadMode } from '../../server/dataset/runtime.js';
+import { buildAnalyticsContext } from '../../server/dataset/analyticsContext.js';
 import { parseDatasetView, parseHistoryRequest } from '../../server/dataset/historyCursor.js';
 import { datasetSchemaVersion } from '../../server/dataset/types.js';
 import { requireMethod, secureJson, sendError } from '../../server/http.js';
@@ -8,17 +9,22 @@ import { clientKey } from '../../server/http.js';
 
 /**
  * Absent `view`: unchanged schema 4 newest-300 snapshot.
- * `view=history`: DATA-03B.1 bounded keyset page (served by this same function to stay
- * within the 12-function Vercel Hobby limit).
+ * `view=history`: DATA-03B.1 bounded keyset page (browse only).
+ * `view=analytics`: DATA-03B.2A aggregate population/evidence facts for scope labels.
+ * All served by this same function to stay within the 12-function Vercel Hobby limit.
  */
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   secureJson(response);
   try {
     requireMethod(request, 'GET');
     const view = parseDatasetView(request.query);
-    enforceRateLimit(`${view === 'history' ? 'dataset-history' : 'dataset-read'}:${clientKey(request)}`, Date.now(), 30);
+    enforceRateLimit(`dataset-${view === 'snapshot' ? 'read' : view}:${clientKey(request)}`, Date.now(), 30);
     if (datasetReadMode() !== 'public') {
       response.status(200).json({ ok: true, schemaVersion: datasetSchemaVersion, state: 'disabled', source: 'REAL_SERVER' });
+      return;
+    }
+    if (view === 'analytics') {
+      response.status(200).json(buildAnalyticsContext(await createAnalyticsContextRepository().readContextRows()));
       return;
     }
     if (view === 'history') {

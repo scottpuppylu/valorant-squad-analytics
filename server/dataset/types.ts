@@ -21,6 +21,8 @@ export interface DatasetPerformanceRow extends Record<string, unknown> {
   queue_id: string | null;
   queue_name: string | null;
   game_length_ms: number | null;
+  /** Human-readable provider season code; only a normalized public Act key is projected. */
+  season_short?: string | null;
   internal_participant_id: string;
   internal_player_id: string;
   team_key: string;

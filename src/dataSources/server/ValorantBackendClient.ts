@@ -14,6 +14,7 @@ import type {
   DatasetDisabledResponse,
   DatasetHistoryQuery,
   DatasetHistoryResponse,
+  DatasetAnalyticsContextResponse,
 } from './contracts';
 
 export class BackendApiError extends Error {
@@ -56,6 +57,11 @@ export class ValorantBackendClient {
 
   dataset(signal?: AbortSignal): Promise<DatasetResponse> {
     return requestJson('/api/valorant/dataset', { signal });
+  }
+
+  /** DATA-03B.2A aggregate analytics facts (population coverage, Act/rank/duration availability). */
+  datasetAnalyticsContext(signal?: AbortSignal): Promise<DatasetAnalyticsContextResponse | DatasetDisabledResponse> {
+    return requestJson('/api/valorant/dataset?view=analytics', { signal });
   }
 
   /** DATA-03B.1 bounded history page; the cursor is an opaque position, never authorization. */

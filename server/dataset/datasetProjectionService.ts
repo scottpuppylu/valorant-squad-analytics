@@ -4,6 +4,7 @@ import type { AdvancedMetrics } from '../../src/types/advancedMetrics.js';
 import type { MatchPairTradeEvidence, MatchPerformance, MatchRecord, Player } from '../../src/types/valorant.js';
 import { primaryRoleForAgents } from '../../src/utils/agentRoles.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
+import { normalizeSeasonKey } from '../../src/analytics/scope/season.js';
 import type { EvidenceStatus } from '../evidence/types.js';
 import { PublicApiError } from '../errors.js';
 import { EventMetricEngine } from '../metrics/eventMetricEngine.js';
@@ -320,6 +321,7 @@ export class DatasetProjectionService {
         scoreAgainst: first.rounds_lost ?? 0,
         won: first.team_won === true,
         durationMinutes: Math.max(1, Math.round((first.game_length_ms ?? 0) / 60_000)),
+        ...(normalizeSeasonKey(first.season_short) ? { seasonKey: normalizeSeasonKey(first.season_short) } : {}),
         performances,
         ...(synergyEvidence.pairs.length ? { synergyEvidence } : {}),
       });

@@ -112,7 +112,7 @@ function detailQueries(query: Query, cte: string, params: unknown[]) {
   return [
     query<DatasetPerformanceRow>(`${cte}
         SELECT sm.id AS internal_match_id, sm.public_id AS public_match_id, sm.started_at, sm.map_name,
-               sm.queue_id, sm.queue_name, sm.game_length_ms,
+               sm.queue_id, sm.queue_name, sm.game_length_ms, sm.season_short,
                mp.id AS internal_participant_id, mp.player_id AS internal_player_id, mp.team_key,
                mp.agent_name, mp.stats_evidence_status, mp.kills, mp.deaths, mp.assists, mp.score,
                mp.damage_dealt, mp.headshots, mp.bodyshots, mp.legshots,

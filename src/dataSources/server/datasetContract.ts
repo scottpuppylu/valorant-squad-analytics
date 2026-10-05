@@ -1,4 +1,5 @@
-import type { DatasetHistoryResponse, DatasetReadyResponse } from './contracts';
+import type { DatasetAnalyticsContextResponse, DatasetHistoryResponse, DatasetReadyResponse } from './contracts';
+import { normalizeSeasonKey } from '../../analytics/scope/season';
 import type { NormalizedAnalyticsDataset } from '../types';
 import { validSynergyContract } from './synergyContract';
 
@@ -87,4 +88,24 @@ function isEventEvidence(performance: Record<string, unknown>): boolean {
     if (typeof performance.firstKills !== 'number' || typeof performance.firstDeaths !== 'number') return false;
   } else if (performance.firstKills !== undefined || performance.firstDeaths !== undefined) return false;
   return true;
+}
+
+const scopeStatuses = new Set(['available', 'partial', 'unavailable']);
+
+/** TASK-DATA-03B.2A analytics facts; rejects any lifetime/current-Act claim or non-public Act key. */
+export function isDatasetAnalyticsContextResponse(value: unknown): value is DatasetAnalyticsContextResponse {
+  if (!isRecord(value)) return false;
+  const candidate = value as Partial<DatasetAnalyticsContextResponse>;
+  const population = candidate.population;
+  const evidence = candidate.evidence;
+  return candidate.ok === true && candidate.schemaVersion === 4 && candidate.view === 'analytics'
+    && candidate.analyticsVersion === 'analytics-context-v1' && candidate.scopeRuleVersion === 'analysis-scope-v1'
+    && candidate.featurePolicyVersion === 'feature-scope-policy-v1' && candidate.adaptiveWindowVersion === 'adaptive-window-v1'
+    && isRecord(population) && count(population.trackedMatchCount) && typeof population.snapshotCoversTrackedHistory === 'boolean'
+    && population.lifetimeComplete === false
+    && isRecord(evidence) && isRecord(evidence.season) && scopeStatuses.has(evidence.season.status)
+    && evidence.season.currentActKnown === false && Array.isArray(evidence.season.acts)
+    && evidence.season.acts.every((act) => isRecord(act) && normalizeSeasonKey(act.key) === act.key && count(act.matches))
+    && isRecord(evidence.rank) && scopeStatuses.has(evidence.rank.status)
+    && isRecord(evidence.duration) && Array.isArray(evidence.queues);
 }

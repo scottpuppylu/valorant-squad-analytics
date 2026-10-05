@@ -232,3 +232,25 @@ export interface DatasetHistoryQuery {
   before?: string;
   limit?: number;
 }
+
+type ScopeEvidenceStatus = 'available' | 'partial' | 'unavailable';
+
+/** TASK-DATA-03B.2A `GET /api/valorant/dataset?view=analytics` aggregate facts (no identities). */
+export interface DatasetAnalyticsContextResponse {
+  ok: true;
+  schemaVersion: 4;
+  view: 'analytics';
+  analyticsVersion: 'analytics-context-v1';
+  scopeRuleVersion: 'analysis-scope-v1';
+  featurePolicyVersion: 'feature-scope-policy-v1';
+  adaptiveWindowVersion: 'adaptive-window-v1';
+  population: { trackedMatchCount: number; snapshotWindow: number; snapshotCoversTrackedHistory: boolean; lifetimeComplete: false };
+  evidence: {
+    season: { status: ScopeEvidenceStatus; matchesWithAct: number; matchesWithoutAct: number; seasonIdWithoutPublicAct: number;
+      unrecognizedSeasonCodes: number; currentActKnown: false; acts: { key: string; label: string; matches: number }[] };
+    duration: { status: ScopeEvidenceStatus; matchesWithDuration: number; matchesWithoutDuration: number };
+    queues: { gameMode: string; matches: number }[];
+    rank: { status: ScopeEvidenceStatus; observations: number; reason: 'not_ingested' | 'not_tied_to_matches' };
+  };
+  policies: { feature: string; horizon: string; queues: 'all' | string[]; implementation: string }[];
+}

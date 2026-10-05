@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 import type { DatasetAnalytics } from '../data/analytics';
-import type { DatasetCoverageContract, DatasetEvidenceContract, DatasetSnapshotContract } from '../dataSources/server/contracts';
+import type { DatasetAnalyticsContextResponse, DatasetCoverageContract, DatasetEvidenceContract, DatasetSnapshotContract } from '../dataSources/server/contracts';
 import type { DatasetApiClient } from '../dataSources/server/DatasetApiClient';
 import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 
@@ -18,6 +18,8 @@ export interface DatasetContextValue {
   message?: string;
   /** Present only for the PUBLIC REAL server runtime; Demo/Pages never request history. */
   loadHistory?: NonNullable<DatasetApiClient['loadHistory']>;
+  /** DATA-03B.2A aggregate facts for the current REAL snapshot, when loaded. */
+  analyticsContext?: DatasetAnalyticsContextResponse;
   refresh(): Promise<void>;
 }
 

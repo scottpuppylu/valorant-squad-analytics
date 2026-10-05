@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { buildAnalytics } from '../data/analytics';
+import { buildAnalytics, type AnalyticsPopulationFacts } from '../data/analytics';
 import { demoDataSource } from '../dataSources/demo/DemoDataSource';
 import { removeBrowserRealDataset } from '../dataSources/real/BrowserRealDatasetRepository';
 import { serverDatasetApiClient, type DatasetApiClient } from '../dataSources/server/DatasetApiClient';
@@ -7,7 +7,8 @@ import type { DatasetReadyResponse } from '../dataSources/server/contracts';
 import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 import type { DatasetContextValue, DatasetRuntimeSource, DatasetRuntimeStatus } from './DatasetContext';
 import { DatasetContext } from './DatasetContext';
-import { isDatasetResponse } from '../dataSources/server/datasetContract';
+import { isDatasetAnalyticsContextResponse, isDatasetResponse } from '../dataSources/server/datasetContract';
+import type { DatasetAnalyticsContextResponse } from '../dataSources/server/contracts';
 
 interface RuntimeState {
   status: DatasetRuntimeStatus;
@@ -36,6 +37,8 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
   const demo = useMemo(() => demoDataSource.snapshot(), []);
   const [state, setState] = useState<RuntimeState>({ status: 'loading', source: 'DEMO', dataset: demo });
   const stateRef = useRef(state);
+  // view=analytics facts, scoped to the snapshot version they were fetched for.
+  const [context, setContext] = useState<{ version: string; response: DatasetAnalyticsContextResponse } | undefined>();
 
   useEffect(() => {
     stateRef.current = state;
@@ -72,7 +75,23 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
     void load(false);
   }, [load]);
 
-  const analytics = useMemo(() => buildAnalytics(state.dataset), [state.dataset]);
+  const snapshotVersion = state.source === 'REAL_SERVER' ? state.response?.snapshot.version : undefined;
+  useEffect(() => {
+    if (!snapshotVersion || !client.loadAnalyticsContext) return undefined;
+    const abort = new AbortController();
+    client.loadAnalyticsContext(abort.signal).then((response) => {
+      if (!abort.signal.aborted && isDatasetAnalyticsContextResponse(response)) setContext({ version: snapshotVersion, response });
+    }).catch(() => undefined);
+    return () => abort.abort();
+  }, [client, snapshotVersion]);
+  const activeContext = context && context.version === snapshotVersion ? context.response : undefined;
+  const facts = useMemo<AnalyticsPopulationFacts | undefined>(() => activeContext ? {
+    snapshotCoversTrackedHistory: activeContext.population.snapshotCoversTrackedHistory,
+    seasonKeys: activeContext.evidence.season.acts.map((act) => act.key),
+    seasonStatus: activeContext.evidence.season.status,
+    rankStatus: activeContext.evidence.rank.status,
+  } : undefined, [activeContext]);
+  const analytics = useMemo(() => buildAnalytics(state.dataset, state.source === 'REAL_SERVER' ? facts : undefined), [facts, state.dataset, state.source]);
   const historyLoader = useMemo(() => client.loadHistory?.bind(client), [client]);
   const value = useMemo<DatasetContextValue>(() => ({
     status: state.status,
@@ -84,8 +103,9 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
     evidence: state.response?.evidence,
     message: state.message,
     ...(state.source === 'REAL_SERVER' && historyLoader ? { loadHistory: historyLoader } : {}),
+    ...(state.source === 'REAL_SERVER' && activeContext ? { analyticsContext: activeContext } : {}),
     refresh: () => load(true),
-  }), [analytics, historyLoader, load, state]);
+  }), [activeContext, analytics, historyLoader, load, state]);
 
   return <DatasetContext.Provider value={value}>{children}</DatasetContext.Provider>;
 }
