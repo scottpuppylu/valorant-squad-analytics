@@ -1,5 +1,12 @@
 # Code map
 
+## TASK-IDENTITY-01B member naming
+
+- migrations/0009_member_nickname.sql; server/identity/memberAdminService.ts `validateNickname`, `setNickname`,
+  `clearNickname`, `planCommunityNames`, `applyCommunityNames`; scripts/member-admin.ts (args validated before DB).
+- ops/community-names-2026-10-06.json (approved Riot game name → community name; no ids).
+- src/components/MemberNickname.tsx (secondary nickname); tests/memberNickname.test.ts.
+
 ## TASK-IDENTITY-01 member identity
 
 - migrations/0008_member_multi_account_identity.sql (members, 1:1 backfill, trigger, primary index).

@@ -53,7 +53,8 @@
 | TASK-DATA-FASTSYNC-02 sub-daily scheduled recent sync | NOT STARTED / OPTIONAL FUTURE |
 | TASK-DATA-FASTSYNC-01.1 known-boundary fast path | DEFERRED |
 | TASK-IDENTITY-01 member / multi-account identity | COMPLETE / ACCEPTED (2026-10-06; member-identity-v1, schema 5, migration 0008) — production 9 members × 1 account, 0 merges; see docs/MEMBER_IDENTITY.md |
-| TASK-IDENTITY-01B community name assignment | NOT STARTED — waiting for maintainer-provided group names (current names are legacy account-name fallbacks) |
+| TASK-IDENTITY-01B community names + nickname | IN PROGRESS — nickname support deployed (member-identity-v2, schema 6, migration 0009); 9 approved names PENDING maintainer `member:admin apply-names` (agent has no production DB credential); nicknames unset |
+| TASK-ADMIN-01 authenticated browser administration | NOT STARTED (no public edit endpoint until then) |
 | TASK-WEAPON-01 member-level weapon analytics | NOT STARTED — recommended next product analytics task |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
@@ -64,6 +65,16 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-IDENTITY-01B (2026-10-06, SDD STRICT): `members.display_name` = primary community name;
+  `members.nickname` = optional second name of the PERSON (NULL = unset, never ''). The Riot
+  `GameName#Tag` stays on the account. Names are presentation only: never ids, routes, analytics
+  keys or sort keys.
+  - Schema 6 / `member-identity-v2`, migration 0009.
+  - All edits are maintainer-only via `npm run member:admin`; never add a public edit endpoint.
+  - The approved name mapping lives in `ops/community-names-2026-10-06.json`; apply it only with
+    `plan-names` then `apply-names --confirm`, using exact matching.
+  - Never invent nicknames. Read docs/MEMBER_IDENTITY.md (naming model) first.
 
 - TASK-IDENTITY-01 COMPLETE / ACCEPTED (2026-10-06, SDD STRICT): public `Player` = MEMBER (person);
   `players` rows are Riot ACCOUNTS. Human fact: the 9 current accounts are 9 different people.

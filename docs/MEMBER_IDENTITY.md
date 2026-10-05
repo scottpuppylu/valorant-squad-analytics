@@ -1,5 +1,111 @@
 # Member / multi-account identity (TASK-IDENTITY-01)
 
+> **Current contract: `member-identity-v2`, public schema 6** (TASK-IDENTITY-01B, migration 0009).
+> Sections below that say v1 / schema 5 describe the TASK-IDENTITY-01 state they were written for.
+
+## Member naming model (TASK-IDENTITY-01B)
+
+Three separate concepts:
+
+| Field | Storage | Meaning | Editable by |
+|---|---|---|---|
+| Primary community name | `members.display_name` (+ `display_name_source`) | The person's group name. Primary UI identity everywhere | Maintainer: `rename-member` |
+| Nickname | `members.nickname` (NULL = unset) | Optional second name of the PERSON. Secondary text only | Maintainer: `set-nickname` / `clear-nickname` |
+| Riot account | `players.display_name` + `display_tag` | `GameName#Tag` of one account. Updated by reconnects only | Provider (reconnect) |
+
+Neither name is ever an id, a route or an analytics key; those stay `Member.public_id`.
+`players.account_label` (主帳/小帳 style account labels) is unrelated to the member nickname.
+
+**Validation (both names):** NFC, trimmed, 1–32 visible characters, Unicode allowed, no control
+or format characters, newlines or tabs. A nickname that is empty or whitespace-only becomes
+NULL; an empty string is never stored, and the database CHECK rejects '' and padded values.
+
+**Public contract:** `Player.nickname?: string` is present only when set.
+- The snapshot, history, `view=analytics` and `view=analysis` all report schema 6.
+- `identityVersion` is `member-identity-v2` on the snapshot and history.
+- Validators reject empty, padded, oversized or non-string nicknames, and the old schema/identity.
+
+**UI:**
+- Profile: `<h1>` community name, then a `綽號：…` line only when a nickname exists, then
+  遊戲帳號.
+- Leaderboard, Compare, Dashboard leader, category leaders, player cards and Synergy detail show
+  the nickname as small secondary text.
+- The nickname never affects sorting. Score tie-breaks still use the primary name, so renaming a
+  member can reorder only exact score ties; no score changes.
+
+**Editing boundary:**
+- All name and nickname mutations are maintainer-only through `npm run member:admin`, which needs
+  server-side `DATABASE_URL`.
+- There is **no public edit button and no HTTP mutation endpoint**, because there is no trusted
+  administrator authentication boundary. Authenticated browser administration would be a future
+  TASK-ADMIN-01, not implemented.
+- Edits change no ids, ownership, evidence, consent, sync or scores, and make no provider calls.
+  The public snapshot reflects them on the next fetch.
+- A Riot reconnect or rename never overwrites `display_name` or `nickname` (tested).
+
+**Commands added:**
+
+| Command | Effect |
+|---|---|
+| `set-nickname --member <id> --nickname "…" --confirm` | Sets the nickname |
+| `clear-nickname --member <id> --confirm` | Clears it |
+| `plan-names --mapping <json>` | Read-only exact plan |
+| `apply-names --mapping <json> --confirm` | Re-plans, refuses on any problem, then runs `rename-member` per member and stops at the first failure without rollback |
+
+All arguments and `--confirm` are validated before any database connection.
+
+### Approved production mapping (human-approved 2026-10-06)
+
+Stored without any ids in `ops/community-names-2026-10-06.json` (current Riot game name → community name):
+
+| Riot game name | Community name |
+|---|---|
+| 我架天空架姚明 | 小麻花 |
+| jack5487 | jack |
+| 我架右邊我泡槍 | 天堂 |
+| 我架左邊我被殺 | 魔王 |
+| 夏天到了喔耶耶耶 | 夏天 |
+| 這個ü加分喔 | 加分 |
+| 誰的骨盆最端正 | 走路 |
+| 火鍋加芋頭是真理 | 滑板車 |
+| 倫家愛滑鏟 | 滑鏟 |
+
+Nicknames: **none provided, so all remain NULL**. Never derive them from community names, Riot
+names, tags or account labels.
+
+**Matching rule:** exact equality after trimming surrounding whitespace (Unicode preserved).
+- Every entry must hit exactly one live account, and no account may be hit twice.
+- The mapping must cover every live 1:1 member.
+- Otherwise: no write. Never fuzzy, never by tag, stats or history.
+
+The public pre-check (2026-10-06, schema 5 snapshot) resolved all 9 names to exactly one account
+each (9 distinct game names, 9 members, 9 accounts, tracked 191).
+
+### Production name assignment status
+
+**PENDING MAINTAINER EXECUTION.**
+- The code and migration 0009 are deployed: production serves schema 6 / v2, with 9 members, 9
+  accounts, all `legacy_account` and all nicknames NULL.
+- Production `DATABASE_URL` is a Vercel *Sensitive* variable: `vercel env pull` returns only a
+  placeholder, so the agent session has no database credential. None was requested in chat and no
+  public admin endpoint was built.
+
+The maintainer runs these locally, with the Neon connection string set only in their own terminal:
+
+```
+npm run member:admin -- plan-names --mapping ops/community-names-2026-10-06.json
+npm run member:admin -- apply-names --mapping ops/community-names-2026-10-06.json --confirm
+npm run member:admin -- check
+```
+
+Then read-only public acceptance confirms:
+- all 9 names, `community` source and nicknames NULL;
+- unchanged Riot `Name#Tag`;
+- 9 × 1 accounts and 0 merges;
+- numeric parity.
+
+## TASK-IDENTITY-01 contract (member-identity-v1)
+
 Identity contract: **`member-identity-v1`**. Public dataset **schema 5**. Migration **0008**. SDD
 STRICT, 2026-10-06. Starting HEAD `52a61a86187b9109b7ee21e762ecec1c2080975c`; checkpoint
 `checkpoint-before-identity-01`.

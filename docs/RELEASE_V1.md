@@ -1,6 +1,13 @@
 # V1 release preflight
 
-## Current release gate — TASK-IDENTITY-01 (2026-10-06)
+## Current release gate — TASK-IDENTITY-01B (2026-10-06)
+
+Nickname support is deployed (schema 6, migration 0009). Production community-name assignment is
+PENDING maintainer execution of `member:admin apply-names`, because the agent has no database
+credential. The production SQL health check is still NOT VERIFIED (V1 gate). RELEASE-01 PAUSED;
+V1 NOT YET RELEASED.
+
+## Earlier release gate — TASK-IDENTITY-01 (2026-10-06)
 
 Member identity COMPLETE / ACCEPTED (MEMBER_IDENTITY.md): 9 members × 1 account, 0 merges, schema 5.
 Community names are PENDING (TASK-IDENTITY-01B). The production SQL health check is still NOT

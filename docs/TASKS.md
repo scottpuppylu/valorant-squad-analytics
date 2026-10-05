@@ -4,7 +4,18 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-IDENTITY-01 (2026-10-06)
+## Current decision — TASK-IDENTITY-01B (2026-10-06)
+
+**IN PROGRESS — code deployed; production name write PENDING maintainer execution.**
+- Done: primary community name + optional nickname (`member-identity-v2`, schema 6, migration
+  0009) and operator-only editing (`set-nickname`, `clear-nickname`, `plan-names`, `apply-names`).
+- Pending: the 9 approved names (`ops/community-names-2026-10-06.json`) pre-check as unambiguous
+  but are not yet written. Production `DATABASE_URL` is a Vercel Sensitive variable and is not
+  available to the agent.
+- Nicknames are unset. No public edit endpoint exists (future TASK-ADMIN-01).
+- TASK-WEAPON-01 NOT STARTED.
+
+## Earlier decision — TASK-IDENTITY-01 (2026-10-06)
 
 **COMPLETE / ACCEPTED.** Member / multi-account identity foundation (`member-identity-v1`, schema 5,
 migration 0008; [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md)). Human fact: the 9 current accounts are 9

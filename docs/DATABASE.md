@@ -1,5 +1,7 @@
 # Durable database foundation
 
+> **TASK-IDENTITY-01B (member-identity-v2, schema 6):** migration 0009 adds `members.nickname` (NULL = unset; CHECK forbids '' and padded values). No data moved. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md#member-naming-model-task-identity-01b).
+
 > **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** migration 0008 adds `members` and `players.member_id/is_primary_account/account_label`, with a deterministic 1:1 backfill (member id/public id = account id/public id) and a BEFORE INSERT trigger that creates a new 1:1 member for every new account. Consent, identities, sync, deletion and participants stay account-scoped. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
 
 TASK-DATA-01A added the first server-side evidence store. TASK-DATA-02 later made Neon the PUBLIC REAL source of truth, and TASK-METRICS-01 added evidence-status columns needed by versioned reconstruction. The retired `BrowserRealDatasetRepository` is cleanup/test/rollback code only.
