@@ -139,7 +139,7 @@ describe('migration 0008 member-identity-v1', () => {
     const dump = async () => Object.fromEntries(await Promise.all(tables.map(async (table) => [table, (await db.query(`SELECT * FROM ${table} ORDER BY id`)).rows] as const)));
     const before = await dump();
 
-    expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual(['0008']);
+    expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual(['0008', '0009']);
     expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual([]);
     const after = await dump();
     for (const table of tables.filter((name) => name !== 'players')) expect(after[table], table).toEqual(before[table]);
@@ -155,7 +155,7 @@ describe('migration 0008 member-identity-v1', () => {
       { id: uuid(1, 3), public_id: uuid(2, 3), display_name: 'Account3', display_name_source: 'legacy_account', archived: false },
       { id: uuid(1, 9), public_id: uuid(2, 9), display_name: '已刪除成員', display_name_source: 'legacy_account', archived: true },
     ]);
-    expect((await db.query('SELECT version FROM schema_migrations ORDER BY version')).rows.at(-1)).toEqual({ version: '0008' });
+    expect((await db.query('SELECT version FROM schema_migrations ORDER BY version')).rows.slice(-2)).toEqual([{ version: '0008' }, { version: '0009' }]);
     expect(await new MemberAdminService(db).invariants()).toMatchObject({
       members: 4, archivedMembers: 1, accounts: 4, liveAccounts: 3, accountsWithoutMember: 0, membersWithMultiplePrimaries: 0,
       activeMembersWithoutLiveAccount: 0, liveAccountsOnArchivedMember: 0, sameMatchMemberCollisions: 0, accountsPerMember: { 1: 3 },
@@ -410,8 +410,8 @@ describe('public privacy of the member projection', () => {
     for (const text of [JSON.stringify(snapshot), JSON.stringify(payload)]) {
       for (const internal of [uuid(1, 1), uuid(1, 2), uuid(1, 3), hex(1), 'lookup_hmac', 'puuid', 'member_id', 'lease', 'management']) expect(text).not.toContain(internal);
     }
-    expect(snapshot.snapshot.identityVersion).toBe('member-identity-v1');
-    expect(snapshot.schemaVersion).toBe(5);
+    expect(snapshot.snapshot.identityVersion).toBe('member-identity-v2');
+    expect(snapshot.schemaVersion).toBe(6);
   });
 });
 

@@ -24,8 +24,8 @@ function realMatches(): { players: DatasetReadyResponse['dataset']['players']; m
 
 function snapshot(players: DatasetReadyResponse['dataset']['players'], matches: MatchRecord[]): DatasetReadyResponse {
   return {
-    ok: true, schemaVersion: 5, state: 'ready',
-    snapshot: { version: 'history-ui', generation: 'dataset-read-v4', source: 'durable-neon', projectionVersion: 'evidence-decoupled-projection-v1', identityVersion: 'member-identity-v1' },
+    ok: true, schemaVersion: 6, state: 'ready',
+    snapshot: { version: 'history-ui', generation: 'dataset-read-v4', source: 'durable-neon', projectionVersion: 'evidence-decoupled-projection-v1', identityVersion: 'member-identity-v2' },
     coverage: { completeForProviderWindow: false, boundedMatchLimit: 300, lifetimeComplete: false },
     evidence,
     dataset: { players, matches, mode: 'REAL', isDemo: false, sourceId: 'durable-neon-v4' },
@@ -34,7 +34,7 @@ function snapshot(players: DatasetReadyResponse['dataset']['players'], matches: 
 
 function page(players: DatasetReadyResponse['dataset']['players'], matches: MatchRecord[], hasMore: boolean, total: number, earliest: string): DatasetHistoryResponse {
   return {
-    ok: true, schemaVersion: 5, view: 'history', historyVersion: 'dataset-history-v1', projectionVersion: 'evidence-decoupled-projection-v1', identityVersion: 'member-identity-v1',
+    ok: true, schemaVersion: 6, view: 'history', historyVersion: 'dataset-history-v1', projectionVersion: 'evidence-decoupled-projection-v1', identityVersion: 'member-identity-v2',
     state: matches.length ? 'ready' : 'empty',
     page: { limit: 50, traversedMatchCount: matches.length, withheldMatchCount: 0, ...(matches.length ? { from: matches.at(-1)!.playedAt, to: matches[0]!.playedAt } : {}), hasMore, nextCursor: hasMore ? 'opaque.cursor-value-0000000' : null },
     tracked: { trackedMatchCount: total, earliestTrackedAt: earliest, lastSyncedAt: '2026-10-05T06:00:00.000Z', lifetimeComplete: false },

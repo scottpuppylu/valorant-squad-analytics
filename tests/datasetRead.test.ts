@@ -156,7 +156,7 @@ describe('dataset runtime migrations', () => {
     await database.query("INSERT INTO match_teams (id,source_match_id,team_key,won,rounds_won,rounds_lost) VALUES ($1,$2,'Red',false,0,1)",[uuid(7,999),uuid(5,1)]);
     await database.query("UPDATE match_participants SET team_key='Red' WHERE id=$1",[uuid(8,2)]);
     const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
-    expect(result.payload.schemaVersion).toBe(5);
+    expect(result.payload.schemaVersion).toBe(6);
     const match = result.payload.dataset.matches[0]!;
     expect(match.performances[0]).toMatchObject({teamGroup:'A',teamWon:true,teamRoundsWon:1,teamRoundsLost:0});
     expect(match.performances[1]).toMatchObject({teamGroup:'B',teamWon:false,teamRoundsWon:0,teamRoundsLost:1});
@@ -190,7 +190,7 @@ describe('dataset runtime migrations', () => {
     await existing.query(`INSERT INTO source_matches (id,squad_id,provider,provider_match_lookup_hmac,provider_schema_version,normalization_version,affinity,first_observed_at,last_observed_at)
       VALUES ($1,$2,'HenrikDev',$3,'v4','durable-evidence-v1','ap',now(),now())`, [uuid(5, 999), squadId, lookup(999)]);
     const all = await loadMigrations(migrationsPath);
-    expect(await applyMigrations(existing, all)).toEqual(['0004', '0005', '0006', '0007', '0008']);
+    expect(await applyMigrations(existing, all)).toEqual(['0004', '0005', '0006', '0007', '0008', '0009']);
     const before = (await existing.query<{ public_id: string }>('SELECT public_id FROM source_matches')).rows[0]!.public_id;
     expect(before).toMatch(/^[0-9a-f-]{36}$/u);
     expect(await applyMigrations(existing, all)).toEqual([]);
@@ -446,7 +446,7 @@ describe('dataset read gate', () => {
       else process.env.REAL_DATASET_READ_MODE = previous;
     }
     expect(status).toBe(200);
-    expect(body).toEqual({ ok: true, schemaVersion: 5, state: 'disabled', source: 'REAL_SERVER' });
+    expect(body).toEqual({ ok: true, schemaVersion: 6, state: 'disabled', source: 'REAL_SERVER' });
     expect(JSON.stringify(body)).not.toMatch(/player|match|count/iu);
     expect(headers.get('cache-control')).toBe('no-store');
     expect(request.headers).toEqual({});

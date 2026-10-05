@@ -24,7 +24,7 @@ function realDemo(): NormalizedAnalyticsDataset {
 
 /** Snapshot version follows durable content, like the server's content hash. */
 function snapshotOf(dataset: NormalizedAnalyticsDataset): DatasetReadyResponse {
-  return { ok: true, schemaVersion: 5, state: 'ready', snapshot: { version: `v${dataset.matches.length}`, generation: 'dataset-read-v4', source: 'durable-neon', projectionVersion: 'evidence-decoupled-projection-v1', identityVersion: 'member-identity-v1' },
+  return { ok: true, schemaVersion: 6, state: 'ready', snapshot: { version: `v${dataset.matches.length}`, generation: 'dataset-read-v4', source: 'durable-neon', projectionVersion: 'evidence-decoupled-projection-v1', identityVersion: 'member-identity-v2' },
     coverage: { completeForProviderWindow: false, boundedMatchLimit: 300, lifetimeComplete: false }, evidence, dataset: structuredClone(dataset) };
 }
 

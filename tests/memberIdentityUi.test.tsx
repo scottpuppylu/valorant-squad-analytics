@@ -17,7 +17,7 @@ describe('TASK-IDENTITY-01 Demo member presentation', () => {
   beforeEach(() => { container = document.createElement('div'); document.body.append(container); root = createRoot(container); localStorage.clear(); });
   afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
   const settle = async (predicate: () => boolean) => {
-    for (let i = 0; i < 200 && !predicate(); i += 1) await act(async () => { await new Promise((r) => setTimeout(r, 10)); });
+    for (let i = 0; i < 600 && !predicate(); i += 1) await act(async () => { await new Promise((r) => setTimeout(r, 10)); });
   };
   const render = async (hash: string) => {
     window.location.hash = hash;
@@ -42,6 +42,26 @@ describe('TASK-IDENTITY-01 Demo member presentation', () => {
     await render('#/players/echo-vale');
     await settle(() => accounts() !== null);
     expect(accounts()?.textContent).toBe('遊戲帳號 EchoVale#DEMO');
+  });
+
+  it('TASK-IDENTITY-01B: the nickname is a secondary Profile line only when set; Leaderboard keeps the primary name', async () => {
+    await render('#/players/nova-hex');
+    await settle(() => accounts() !== null);
+    expect(container.querySelector('h1')?.textContent).toBe('NovaHex');
+    expect(container.textContent).toContain('綽號：Nova');
+    await act(async () => { root.unmount(); });
+    root = createRoot(container);
+    await render('#/players/echo-vale');
+    await settle(() => accounts() !== null);
+    expect(container.textContent).not.toContain('綽號');
+    await act(async () => { root.unmount(); });
+    root = createRoot(container);
+    await render('#/leaderboard');
+    await settle(() => (container.querySelectorAll('a[href*="#/players/"]').length > 0));
+    const novaLink = [...container.querySelectorAll('table a[href$="#/players/nova-hex"]')][0]!;
+    expect(novaLink.querySelector('strong')?.textContent).toBe('NovaHex');
+    expect(novaLink.textContent).toContain('Nova');
+    expect(new Set([...container.querySelectorAll('table a[href*="#/players/"]')].map((a) => a.getAttribute('href'))).size).toBe(8);
   });
 
   it('the Demo multi-account member is one ranked person whose evidence spans both accounts', () => {

@@ -156,7 +156,7 @@ describe('DATA-03B.1 history pagination contract', () => {
     const ids = pages.flatMap((page) => page.dataset.matches.map((match) => match.id));
     expect(ids).toEqual(Array.from({ length: 120 }, (_, index) => uuid(6, index + 1)));
     for (const page of pages) {
-      expect(page).toMatchObject({ ok: true, schemaVersion: 5, view: 'history', historyVersion: 'dataset-history-v1', projectionVersion: 'evidence-decoupled-projection-v1', identityVersion: 'member-identity-v1' });
+      expect(page).toMatchObject({ ok: true, schemaVersion: 6, view: 'history', historyVersion: 'dataset-history-v1', projectionVersion: 'evidence-decoupled-projection-v1', identityVersion: 'member-identity-v2' });
       expect(page.tracked).toMatchObject({ trackedMatchCount: 120, lifetimeComplete: false });
       expect(page.tracked.earliestTrackedAt).toBe(new Date(Date.UTC(2026, 9, 1) - 120 * 60_000).toISOString());
       expect(page.page.from! <= page.page.to!).toBe(true);
@@ -385,7 +385,7 @@ describe('DATA-03B.1 handler', () => {
     try {
       const disabled = await invoke({ view: 'history', cursor: 'tampered.cursor' });
       expect(disabled.status).toBe(200);
-      expect(disabled.body).toEqual({ ok: true, schemaVersion: 5, state: 'disabled', source: 'REAL_SERVER' });
+      expect(disabled.body).toEqual({ ok: true, schemaVersion: 6, state: 'disabled', source: 'REAL_SERVER' });
       expect(disabled.headers.get('cache-control')).toBe('no-store');
       const unknown = await invoke({ view: 'everything' });
       expect(unknown.status).toBe(400);

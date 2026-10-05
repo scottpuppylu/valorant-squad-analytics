@@ -126,7 +126,7 @@ describe('view=analytics context facts (analytics-context-v1)', () => {
       if (previous === undefined) delete process.env.REAL_DATASET_READ_MODE; else process.env.REAL_DATASET_READ_MODE = previous;
     }
     expect(status).toBe(200);
-    expect(body).toEqual({ ok: true, schemaVersion: 5, state: 'disabled', source: 'REAL_SERVER' });
+    expect(body).toEqual({ ok: true, schemaVersion: 6, state: 'disabled', source: 'REAL_SERVER' });
     expect(headers.get('cache-control')).toBe('no-store');
   });
 });

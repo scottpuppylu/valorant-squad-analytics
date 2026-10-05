@@ -269,7 +269,7 @@ describe('feature-scope-policy-v2', () => {
     const demo = demoDataSource.snapshot();
     const snapshot = { ...demo, matches: demo.matches.slice(0, 20) };
     const before = buildAnalytics(snapshot);
-    const page = { ok: true, schemaVersion: 5, view: 'history', historyVersion: 'dataset-history-v1', projectionVersion: 'evidence-decoupled-projection-v1', state: 'ready',
+    const page = { ok: true, schemaVersion: 6, view: 'history', historyVersion: 'dataset-history-v1', projectionVersion: 'evidence-decoupled-projection-v1', state: 'ready',
       page: { limit: 50, traversedMatchCount: 12, withheldMatchCount: 0, hasMore: false, nextCursor: null },
       tracked: { trackedMatchCount: 32, lifetimeComplete: false }, evidence: {} as DatasetHistoryResponse['evidence'],
       dataset: { ...demo, matches: demo.matches.slice(20), mode: 'REAL', isDemo: false } } as DatasetHistoryResponse;
