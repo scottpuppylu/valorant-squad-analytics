@@ -40,7 +40,7 @@ export interface WindowConfidence {
   temporal: number;
   /** Selected rounds whose KAST/Opening evidence is reconstructed (or legacy-complete). */
   evidence: number;
-  /** Geometric mean of the three; never multiplied into any score. */
+  /** sqrt(sample × temporal) × (0.5 + 0.5 × evidence); never multiplied into any score. */
   overall: number;
 }
 

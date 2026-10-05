@@ -32,7 +32,9 @@ function confidence(sample: WindowSample, observations: ScopeObservation[], boun
   const temporal = Math.min(sample.activeDays / bounds.targetActiveDays, 1) * freshness;
   const evidenceRounds = observations.filter((item) => item.evidenceComplete).reduce((sum, item) => sum + item.rounds, 0);
   const evidence = sample.rounds > 0 ? evidenceRounds / sample.rounds : 0;
-  return { sample: sampleScore, temporal, evidence, overall: Math.cbrt(sampleScore * temporal * evidence) };
+  // Basic stats stay valid without reconstructed events, so missing advanced evidence can at most
+  // halve window confidence instead of collapsing it to zero.
+  return { sample: sampleScore, temporal, evidence, overall: Math.sqrt(sampleScore * temporal) * (0.5 + 0.5 * evidence) };
 }
 
 /**

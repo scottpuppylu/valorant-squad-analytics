@@ -29,7 +29,7 @@ export function ScopeExplanation({ scope, players }: { scope?: ScopeSummary; pla
             <td>{byId.get(row.playerId)?.handle ?? '—'}</td>
             <td>{scopeStatusLabels[row.status]}</td>
             <td>{describeWindow(row.sample)}</td>
-            <td>{row.window ? formatPercent(row.window.confidence.overall, 0) : '—'}</td>
+            <td>{row.window ? `${formatPercent(row.window.confidence.overall, 0)}（樣本 ${formatPercent(row.window.confidence.sample, 0)}／時間 ${formatPercent(row.window.confidence.temporal, 0)}／進階證據 ${formatPercent(row.window.confidence.evidence, 0)}）` : '—'}</td>
             <td>{reasonList(row.reasons.filter((reason) => reason !== 'rank_evidence_unavailable' && reason !== 'season_evidence_unavailable'))}</td>
           </tr>)}</tbody></table>
       </div> : null}

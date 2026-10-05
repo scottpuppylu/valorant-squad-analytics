@@ -142,6 +142,9 @@ describe('adaptive-window-v1 required cases', () => {
     expect(partial.current.matches).toBe(complete.current.matches);
     expect(partial.confidence.evidence).toBe(0);
     expect(complete.confidence.evidence).toBe(1);
+    // Missing advanced evidence halves window confidence; it never collapses a real sample to zero.
+    expect(partial.confidence.overall).toBeCloseTo(complete.confidence.overall / 2, 10);
+    expect(partial.confidence.overall).toBeGreaterThan(0);
     expect(partial.currentEntries.every((entry) => entry.performance.kast === undefined)).toBe(true);
   });
 

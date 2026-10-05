@@ -158,8 +158,12 @@ then recorded (`season_crossed_in_baseline`).
 `temporal = min(activeDays/targetActiveDays,1) × freshness`, where freshness is 1 within
 `freshDays` of the anchor and falls linearly to 0 at `maxLookbackDays`;
 `evidence` = fraction of selected rounds with reconstructed KAST/Opening;
-`overall` = geometric mean. This window confidence is never multiplied into a score and is
-separate from the unchanged community-score confidence.
+`overall = sqrt(sample × temporal) × (0.5 + 0.5 × evidence)`. Basic stats remain valid
+without reconstructed events, so missing advanced evidence can at most halve window
+confidence. An earlier geometric mean was replaced before acceptance: production KAST/Opening
+evidence is partial, and it collapsed 16-match windows to 0 %. The UI shows all three components.
+This window confidence is never multiplied into a score and is separate from the unchanged
+community-score confidence.
 
 ### Volume is not performance
 
