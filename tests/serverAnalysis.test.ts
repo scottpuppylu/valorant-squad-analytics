@@ -188,6 +188,35 @@ describe('client/server parity while tracked history fits the snapshot', () => {
   }, 120_000);
 });
 
+describe('parity regressions found by production read-only acceptance', () => {
+  it('is independent of SQL row order and uses real evidence for unavailable windows', async () => {
+    const db = await database();
+    await seedPlayers(db, 5);
+    // Insert oldest-first (reverse of playedAt) so SQL row order differs from the snapshot order.
+    await seedMatches(db, [...variedSpecs(90)].reverse());
+    // Player 5 gets a thin, mostly non-Competitive recent history -> unavailable current window.
+    await seedMatches(db, Array.from({ length: 3 }, (_, i) => ({ n: 5000 + i, hoursAgo: 1 + i, seats: [{ player: 5 }], map: 'Summit', queue: i ? 'unrated' : 'competitive' })));
+    // Missing kill evidence on a third of matches -> partial/unavailable KAST/Opening event evidence.
+    await db.query("UPDATE source_matches SET kills_evidence_status='missing' WHERE right(public_id::text, 1) IN ('1','4','7','a')");
+    await db.query("UPDATE source_matches SET kills_evidence_status='missing' WHERE id = ANY($1::uuid[])", [[uuid(5, 5000), uuid(5, 5001), uuid(5, 5002)]]);
+    const { analytics } = await clientView(db);
+    const server = service(db);
+    for (const r of [request({ feature: 'actOverview', act: 'e11a5' }), request({ map: 'Summit' }), request({}), request({ feature: 'actOverview', act: 'e11a4', mode: 'Competitive' })]) {
+      const { payload } = await server.analyze(r);
+      const serverSel = selectionFromAnalysis(payload);
+      const client = selectPerformances(analytics.performanceEntries, filtersFor(r), { population: analytics.population });
+      const ids = (sel: typeof client) => [...sel.byPlayer].map(([p, e]) => [p, e.map((x) => x.match.id)]).sort();
+      expect(ids(serverSel), JSON.stringify(r)).toEqual(ids(client));
+      expect(scoreSummary(payload.dataset, serverSel), JSON.stringify(r)).toEqual(scoreSummary(payload.dataset, client));
+      const windows = (sel: typeof client) => [...sel.scope!.players.values()].map((p) => [p.playerId, p.status, p.reasons, p.window?.confidence ?? null]).sort();
+      expect(windows(serverSel), JSON.stringify(r)).toEqual(windows(client));
+    }
+    const current = (await server.analyze(request({}))).payload.scope!.players.find((p) => p.playerId === uuid(2, 5))!;
+    expect(current.status).toBe('unavailable');
+    expect(current.window!.confidence.evidence).toBeLessThan(1);
+  }, 120_000);
+});
+
 describe('analytics beyond the newest-300 transport snapshot', () => {
   it('reaches older durable evidence for currentStrength, recentForm, lifetime, Act, map, agent and pair baselines', async () => {
     const db = await database();

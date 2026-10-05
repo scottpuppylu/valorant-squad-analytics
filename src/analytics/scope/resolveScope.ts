@@ -100,7 +100,8 @@ export function resolveScopeSelection(contextual: PerformanceEntry[], request: S
     } else {
       status = coverageStatus(population, reasons);
       if (population.seasonStatus === 'partial') { reasons.add('season_evidence_partial'); status = 'partial'; }
-      for (const [playerId, entries] of grouped) record(playerId, entries.filter((entry) => entry.match.seasonKey === request.act), status);
+      // Deterministic order independent of input order (server and browser must agree).
+      for (const [playerId, entries] of grouped) record(playerId, [...entries].sort(legacyOrder).filter((entry) => entry.match.seasonKey === request.act), status);
     }
   } else if (request.choice === 'recent10' || request.choice === 'recent30') {
     feature = 'fixedRecent'; kind = 'RECENT';

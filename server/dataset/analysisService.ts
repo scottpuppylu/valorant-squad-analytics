@@ -182,6 +182,8 @@ function skeletonMatches(rows: ObservationRow[]): { matches: MatchRecord[]; inte
       performances: usable.map((row) => ({ playerId: row.player_public_id, agent: row.agent_name!, kills: 0, deaths: 0, assists: 0, acs: 0, adr: 0 })),
     });
   }
+  // Same order as the projection/snapshot so every downstream iteration order matches the browser.
+  matches.sort((a, b) => b.playedAt.localeCompare(a.playedAt) || a.id.localeCompare(b.id));
   return { matches, internalByPublic };
 }
 
@@ -256,6 +258,8 @@ export class ServerAnalysisService {
         const skeletonEntries = createPerformanceEntries(dataset(skeletons, skeletonPlayers));
         const first = selectPerformances(skeletonEntries, filters, { population, lifetimeFeature });
         const ids = [...new Set(first.entries.map((entry) => entry.match.id))];
+        // Every adaptive window (even an unavailable one) needs real evidence for its confidence.
+        for (const player of first.scope?.players.values() ?? []) for (const entry of player.window?.currentEntries ?? []) ids.push(entry.match.id);
         if (request.form) {
           const contextual = selectPerformances(skeletonEntries, { ...filters, period: 'all' }, { population });
           for (const entries of contextual.byPlayer.values()) {
