@@ -39,6 +39,9 @@ export class PostgresPlayerRepository implements PlayerRepository {
     const playerId = existing.rows[0]?.id ?? randomUUID();
     const publicId = existing.rows[0]?.public_id ?? randomUUID();
     if (existing.rows.length === 0) {
+      // TASK-IDENTITY-01: migration 0008's BEFORE INSERT trigger gives every new Riot account its OWN
+      // new member in the same statement (member id/public id = account ids, legacy_account name,
+      // primary). It is the single canonical creation path, so there is never automatic linking.
       await transaction.query(
         `INSERT INTO players (id, public_id, display_name, display_tag) VALUES ($1, $2, $3, $4)`,
         [playerId, publicId, input.displayName, input.displayTag],
@@ -49,6 +52,7 @@ export class PostgresPlayerRepository implements PlayerRepository {
         [randomUUID(), playerId, input.provider, input.affinity, input.identityLookupHmac],
       );
     } else {
+      // Riot rename/reconnect updates the ACCOUNT only; the member (community) name never changes here.
       await transaction.query('UPDATE players SET display_name = $2, display_tag = $3, updated_at = now() WHERE id = $1', [playerId, input.displayName, input.displayTag]);
     }
     const squadId = await ensureDefaultSquad(transaction);

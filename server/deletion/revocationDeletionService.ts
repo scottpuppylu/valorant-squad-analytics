@@ -283,6 +283,19 @@ export class RevocationDeletionService {
         `UPDATE players SET display_name='已刪除玩家', display_tag='deleted', default_emoji='👤',
            anonymized_at=$2, updated_at=$2 WHERE id=$1`, [job.player_id, this.now().toISOString()],
       );
+      // TASK-IDENTITY-01 (account-scoped deletion): a legacy member name derived from THIS account is
+      // personal data and is scrubbed; a member left with no live account is archived, never deleted.
+      // Other linked accounts, their consent, sync and matches are untouched.
+      await transaction.query(
+        `UPDATE members SET display_name='已刪除成員', default_emoji='👤', updated_at=$2
+         WHERE id=$1 AND display_name_source='legacy_account'`, [job.player_id, this.now().toISOString()],
+      );
+      await transaction.query(
+        `UPDATE members m SET archived_at=$2, updated_at=$2
+         WHERE m.id=(SELECT member_id FROM players WHERE id=$1) AND m.archived_at IS NULL
+           AND NOT EXISTS (SELECT 1 FROM players p WHERE p.member_id=m.id AND p.anonymized_at IS NULL)`,
+        [job.player_id, this.now().toISOString()],
+      );
       return this.updateJobIn(transaction, job.id, leaseToken,
         `consent_id=NULL, stage='finalize_job', stage_started_at=$3, updated_at=$3`, [this.now().toISOString()]);
     });
