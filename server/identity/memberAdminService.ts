@@ -1,7 +1,7 @@
 import type { SqlDatabase } from '../db/types.js';
 
 /**
- * TASK-IDENTITY-01 maintainer-only member administration (member-identity-v1).
+ * TASK-IDENTITY-01/01B maintainer-only member administration (member-identity-v2).
  * Used ONLY by scripts/member-admin.ts and tests: never imported by api/ or src/, never an HTTP
  * endpoint. Every statement is parameterized and keyed by PUBLIC ids. Output never contains
  * internal ids, PUUIDs, HMACs, credentials or secrets. Consent, provider identities, sync,
@@ -9,7 +9,7 @@ import type { SqlDatabase } from '../db/types.js';
  */
 export type MemberAdminErrorCode =
   | 'INVALID_NAME' | 'MEMBER_NOT_FOUND' | 'MEMBER_ARCHIVED' | 'ACCOUNT_NOT_FOUND' | 'ACCOUNT_ANONYMIZED'
-  | 'ALREADY_LINKED' | 'ACCOUNT_COAPPEARANCE_CONFLICT';
+  | 'ALREADY_LINKED' | 'ACCOUNT_COAPPEARANCE_CONFLICT' | 'INVALID_NICKNAME' | 'NAME_MAPPING_AMBIGUOUS';
 
 export class MemberAdminError extends Error {
   constructor(readonly code: MemberAdminErrorCode, message: string) {
@@ -21,6 +21,7 @@ export class MemberAdminError extends Error {
 export interface MemberListing {
   memberId: string;
   displayName: string;
+  nickname: string | null;
   nameSource: 'legacy_account' | 'community';
   archived: boolean;
   accounts: { accountId: string; riotId: string; primary: boolean; deleted: boolean }[];
@@ -39,23 +40,45 @@ export interface IdentityInvariants {
   accountsPerMember: Record<string, number>;
 }
 
-/** 1–32 visible characters after NFC + trim; no control/format characters. */
+const invisible = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+
+/** Primary community name: 1–32 visible characters after NFC + trim; no control/format characters. */
 export function validateMemberName(input: string): string {
   const name = input.normalize('NFC').trim();
-  if ([...name].length < 1 || [...name].length > 32 || /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u.test(name)) {
+  if ([...name].length < 1 || [...name].length > 32 || invisible.test(name)) {
     throw new MemberAdminError('INVALID_NAME', '成員名稱需為 1–32 個可見字元，且不可包含控制字元。');
   }
   return name;
 }
+
+/**
+ * TASK-IDENTITY-01B nickname of the PERSON: empty or whitespace-only → null (never ''); otherwise
+ * 1–32 visible characters with no control/format characters, newlines or tabs anywhere in the input.
+ */
+export function validateNickname(input: string | null | undefined): string | null {
+  if (input === null || input === undefined) return null;
+  if (invisible.test(input)) throw new MemberAdminError('INVALID_NICKNAME', '綽號不可包含控制字元、換行或定位字元。');
+  const nickname = input.normalize('NFC').trim();
+  if (nickname.length === 0) return null;
+  if ([...nickname].length > 32) throw new MemberAdminError('INVALID_NICKNAME', '綽號需為 1–32 個可見字元。');
+  return nickname;
+}
+
+export interface CommunityNameMapping { gameName: string; communityName: string }
+export interface CommunityNamePlanItem {
+  gameName: string; communityName: string; memberId: string; accountId: string;
+  currentName: string; currentSource: 'legacy_account' | 'community';
+}
+export interface CommunityNamePlan { ok: boolean; problems: string[]; liveMembers: number; liveAccounts: number; items: CommunityNamePlanItem[] }
 
 export class MemberAdminService {
   constructor(private readonly database: SqlDatabase, private readonly now = () => new Date()) {}
 
   async list(): Promise<MemberListing[]> {
     const result = await this.database.query<{
-      member_id: string; display_name: string; name_source: 'legacy_account' | 'community'; archived: boolean;
+      member_id: string; display_name: string; nickname: string | null; name_source: 'legacy_account' | 'community'; archived: boolean;
       account_id: string | null; riot_id: string | null; is_primary_account: boolean | null; deleted: boolean | null;
-    }>(`SELECT m.public_id::text AS member_id, m.display_name, m.display_name_source AS name_source,
+    }>(`SELECT m.public_id::text AS member_id, m.display_name, m.nickname, m.display_name_source AS name_source,
               (m.archived_at IS NOT NULL) AS archived, p.public_id::text AS account_id,
               p.display_name || '#' || p.display_tag AS riot_id, p.is_primary_account,
               (p.anonymized_at IS NOT NULL) AS deleted
@@ -63,7 +86,7 @@ export class MemberAdminService {
        ORDER BY m.archived_at NULLS FIRST, m.public_id, p.is_primary_account DESC, p.public_id`);
     const members = new Map<string, MemberListing>();
     for (const row of result.rows) {
-      const member = members.get(row.member_id) ?? { memberId: row.member_id, displayName: row.display_name, nameSource: row.name_source, archived: row.archived, accounts: [] };
+      const member = members.get(row.member_id) ?? { memberId: row.member_id, displayName: row.display_name, nickname: row.nickname, nameSource: row.name_source, archived: row.archived, accounts: [] };
       if (row.account_id) member.accounts.push({ accountId: row.account_id, riotId: row.deleted ? '(已刪除帳號)' : row.riot_id!, primary: row.is_primary_account === true, deleted: row.deleted === true });
       members.set(row.member_id, member);
     }
@@ -78,6 +101,76 @@ export class MemberAdminService {
        WHERE public_id=$1::uuid AND archived_at IS NULL`, [memberPublicId, name, this.now().toISOString()]);
     if (result.rowCount !== 1) throw await this.memberMissing(memberPublicId);
     return { memberId: memberPublicId, displayName: name, nameSource: 'community' };
+  }
+
+  /** TASK-IDENTITY-01B: sets (or, for empty input, clears) ONLY the member nickname. */
+  async setNickname(memberPublicId: string, nickname: string | null): Promise<{ memberId: string; nickname: string | null }> {
+    const value = validateNickname(nickname);
+    const result = await this.database.query(
+      'UPDATE members SET nickname=$2, updated_at=$3 WHERE public_id=$1::uuid AND archived_at IS NULL',
+      [memberPublicId, value, this.now().toISOString()]);
+    if (result.rowCount !== 1) throw await this.memberMissing(memberPublicId);
+    return { memberId: memberPublicId, nickname: value };
+  }
+
+  clearNickname(memberPublicId: string): Promise<{ memberId: string; nickname: string | null }> {
+    return this.setNickname(memberPublicId, null);
+  }
+
+  /**
+   * TASK-IDENTITY-01B read-only plan for an approved `Riot game name → community name` mapping.
+   * Exact equality after trimming surrounding whitespace only (Unicode preserved; never fuzzy, never
+   * by tag, stats or history). Every entry must resolve to exactly one live account, no account may
+   * be used twice, and the mapping must cover every live 1:1 member. Any problem → ok=false.
+   */
+  async planCommunityNames(mapping: CommunityNameMapping[]): Promise<CommunityNamePlan> {
+    const problems: string[] = [];
+    const rows = (await this.database.query<{
+      member_id: string; account_id: string; game_name: string; current_name: string;
+      current_source: 'legacy_account' | 'community'; member_accounts: number;
+    }>(`SELECT m.public_id::text AS member_id, p.public_id::text AS account_id, p.display_name AS game_name,
+              m.display_name AS current_name, m.display_name_source AS current_source,
+              count(*) OVER (PARTITION BY m.id)::int AS member_accounts
+       FROM players p JOIN members m ON m.id=p.member_id AND m.archived_at IS NULL
+       WHERE p.anonymized_at IS NULL ORDER BY p.public_id`)).rows;
+    const liveMembers = new Set(rows.map((row) => row.member_id)).size;
+    if (rows.some((row) => row.member_accounts !== 1)) problems.push('A live member does not have exactly one live account.');
+    if (mapping.length !== rows.length || liveMembers !== rows.length) {
+      problems.push(`Mapping has ${mapping.length} entries; there are ${rows.length} live accounts and ${liveMembers} live members.`);
+    }
+    const seen = new Set<string>();
+    const used = new Set<string>();
+    const items: CommunityNamePlanItem[] = [];
+    for (const entry of mapping) {
+      const gameName = entry.gameName.trim();
+      let communityName: string;
+      try { communityName = validateMemberName(entry.communityName); } catch { problems.push(`Invalid community name for "${gameName}".`); continue; }
+      if (seen.has(gameName)) { problems.push(`Duplicate mapping for "${gameName}".`); continue; }
+      seen.add(gameName);
+      const matches = rows.filter((row) => row.game_name === gameName);
+      if (matches.length !== 1) { problems.push(`"${gameName}" matches ${matches.length} live accounts.`); continue; }
+      const match = matches[0]!;
+      if (used.has(match.account_id)) { problems.push(`"${gameName}" resolves to an account that is already mapped.`); continue; }
+      used.add(match.account_id);
+      items.push({ gameName, communityName, memberId: match.member_id, accountId: match.account_id, currentName: match.current_name, currentSource: match.current_source });
+    }
+    return { ok: problems.length === 0 && items.length === mapping.length, problems, liveMembers, liveAccounts: rows.length, items };
+  }
+
+  /** Re-plans, refuses any ambiguity, then renames one by one and STOPS at the first failure (no rollback). */
+  async applyCommunityNames(mapping: CommunityNameMapping[]): Promise<{ applied: number; total: number; failed?: { gameName: string; communityName: string; code: string } }> {
+    const plan = await this.planCommunityNames(mapping);
+    if (!plan.ok) throw new MemberAdminError('NAME_MAPPING_AMBIGUOUS', plan.problems.join(' '));
+    let applied = 0;
+    for (const item of plan.items) {
+      try {
+        await this.renameMember(item.memberId, item.communityName);
+        applied += 1;
+      } catch (error) {
+        return { applied, total: plan.items.length, failed: { gameName: item.gameName, communityName: item.communityName, code: error instanceof MemberAdminError ? error.code : 'UNKNOWN' } };
+      }
+    }
+    return { applied, total: plan.items.length };
   }
 
   /**

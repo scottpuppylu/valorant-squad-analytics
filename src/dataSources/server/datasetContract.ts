@@ -26,13 +26,13 @@ export function isDatasetResponse(value: unknown): value is DatasetReadyResponse
   if (typeof value !== 'object' || value === null) return false;
   const candidate = value as Partial<DatasetReadyResponse>;
   return candidate.ok === true
-    && candidate.schemaVersion === 5
+    && candidate.schemaVersion === 6
     && (candidate.state === 'ready' || candidate.state === 'empty')
     && typeof candidate.snapshot?.version === 'string'
     && candidate.snapshot.projectionVersion === 'evidence-decoupled-projection-v1'
     && candidate.snapshot.generation === 'dataset-read-v4'
     && candidate.snapshot.source === 'durable-neon'
-    && candidate.snapshot.identityVersion === 'member-identity-v1'
+    && candidate.snapshot.identityVersion === 'member-identity-v2'
     && isRealDataset(candidate.dataset);
 }
 
@@ -52,10 +52,13 @@ export function isRealDataset(dataset: unknown): dataset is NormalizedAnalyticsD
       && validSynergyContract(match, new Set(candidate.players!.map((p) => p.id))));
 }
 
-/** member-identity-v1: every public player is a member with >=1 sanitized account and at most one primary. */
+/** member-identity-v2: every public player is a member with >=1 sanitized account and at most one primary. */
 function isMemberPlayer(player: unknown): boolean {
   if (!isRecord(player) || typeof player.id !== 'string' || !Array.isArray(player.accounts) || player.accounts.length === 0) return false;
   if (player.nameSource !== 'legacy_account' && player.nameSource !== 'community') return false;
+  // member-identity-v2: optional nickname of the person; absent when unset (never an empty string).
+  if (player.nickname !== undefined && (typeof player.nickname !== 'string' || player.nickname.length === 0
+    || player.nickname.length > 64 || player.nickname.trim() !== player.nickname)) return false;
   const allowed = new Set(['id', 'gameName', 'tag', 'isPrimary', 'label']);
   const accounts = player.accounts as unknown[];
   return accounts.every((account) => isRecord(account) && Object.keys(account).every((key) => allowed.has(key))
@@ -75,11 +78,11 @@ export function isDatasetHistoryResponse(value: unknown): value is DatasetHistor
   const page = candidate.page;
   const tracked = candidate.tracked;
   return candidate.ok === true
-    && candidate.schemaVersion === 5
+    && candidate.schemaVersion === 6
     && candidate.view === 'history'
     && candidate.historyVersion === 'dataset-history-v1'
     && candidate.projectionVersion === 'evidence-decoupled-projection-v1'
-    && candidate.identityVersion === 'member-identity-v1'
+    && candidate.identityVersion === 'member-identity-v2'
     && (candidate.state === 'ready' || candidate.state === 'empty')
     && isRecord(page) && count(page.limit) && page.limit >= 1 && page.limit <= 100
     && count(page.traversedMatchCount) && count(page.withheldMatchCount)
@@ -114,7 +117,7 @@ export function isDatasetAnalyticsContextResponse(value: unknown): value is Data
   const candidate = value as Partial<DatasetAnalyticsContextResponse>;
   const population = candidate.population;
   const evidence = candidate.evidence;
-  return candidate.ok === true && candidate.schemaVersion === 5 && candidate.view === 'analytics'
+  return candidate.ok === true && candidate.schemaVersion === 6 && candidate.view === 'analytics'
     && candidate.analyticsVersion === 'analytics-context-v1' && candidate.scopeRuleVersion === 'analysis-scope-v1'
     && candidate.featurePolicyVersion === 'feature-scope-policy-v2' && candidate.adaptiveWindowVersion === 'adaptive-window-v1'
     && isRecord(population) && count(population.trackedMatchCount) && typeof population.snapshotCoversTrackedHistory === 'boolean'

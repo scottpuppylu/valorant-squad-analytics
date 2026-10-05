@@ -1,9 +1,9 @@
 import type { NormalizedAnalyticsDataset } from '../../src/dataSources/types.js';
 import type { SqlExecutor } from '../db/types.js';
 
-export const datasetSchemaVersion = 5 as const;
+export const datasetSchemaVersion = 6 as const;
 /** TASK-IDENTITY-01: public `Player` = MEMBER (person) with 1..N sanitized accounts. */
-export const datasetIdentityVersion = 'member-identity-v1' as const;
+export const datasetIdentityVersion = 'member-identity-v2' as const;
 export const datasetProjectionVersion = 'evidence-decoupled-projection-v1' as const;
 export const datasetWindowSize = 300;
 
@@ -21,6 +21,8 @@ export interface DatasetPlayerRow extends Record<string, unknown> {
   member_display_name: string;
   member_name_source: 'legacy_account' | 'community';
   member_default_emoji: string;
+  /** TASK-IDENTITY-01B: optional second name of the person (presentation only). */
+  member_nickname?: string | null;
 }
 
 export interface DatasetPerformanceRow extends Record<string, unknown> {

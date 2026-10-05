@@ -1,3 +1,4 @@
+import { MemberNickname } from './MemberNickname';
 import { dimensions } from '../scoring/versions';
 import { scoreMetricIds } from '../i18n/zhTW';
 import type { PlayerAnalytics } from '../types/valorant';
@@ -26,6 +27,7 @@ export function CategoryLeaders({ analytics }: CategoryLeadersProps) {
                 <PlayerAvatar player={leader.player} />
                 <div>
                   <p className="text-base font-semibold text-white">{leader.player.handle}</p>
+                  <MemberNickname player={leader.player} className="block text-xs text-slate-400" />
                   <p className="mt-1 text-xs text-slate-500">{hint}</p>
                 </div>
               </div>

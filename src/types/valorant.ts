@@ -31,6 +31,8 @@ export interface Player {
   displayName: string;
   /** 'legacy_account' = migrated fallback from the account name; 'community' = maintainer-assigned. */
   nameSource?: 'legacy_account' | 'community';
+  /** TASK-IDENTITY-01B: optional second name / nickname of the PERSON. Presentation only — never an id. */
+  nickname?: string;
   /** Currently public accounts of this member (REAL); fictional accounts in Demo. */
   accounts?: PublicAccount[];
   role: PlayerRole;

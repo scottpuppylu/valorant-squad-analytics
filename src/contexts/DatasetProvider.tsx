@@ -84,7 +84,7 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
       // Prefetch the default 目前實力 population in parallel with the bootstrap snapshot.
       if (analysisLoader) void analysisLoader(defaultCurrentStrengthQuery).catch(() => undefined);
       const response = await client.load();
-      if (response.schemaVersion !== 5) throw new Error('Unsupported dataset schema.');
+      if (response.schemaVersion !== 6) throw new Error('Unsupported dataset schema.');
       if (response.state === 'disabled') {
         setState({ status: 'demo', source: 'DEMO', dataset: demo, message: '伺服器真實資料讀取目前刻意關閉；顯示虛構示範資料。' });
         return;

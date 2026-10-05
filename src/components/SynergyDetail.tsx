@@ -1,3 +1,4 @@
+import { MemberNickname } from './MemberNickname';
 import { StatusBadge } from './StatusBadge';
 import type { DuoSynergyResult, PairMember } from '../synergy/types';
 import { formatCount, formatPercent, formatRatio, formatScore } from '../utils/format';
@@ -9,7 +10,7 @@ const percent = (value?: number) => value === undefined ? '資料不足' : forma
 
 function MemberDetail({ member }: { member: PairMember }) {
   return <article className="surface-card min-w-0 p-5">
-    <h3 className="mb-3 flex items-center gap-2 text-white"><PlayerAvatar player={member.player} />{member.player.displayName}</h3>
+    <h3 className="mb-3 flex items-center gap-2 text-white"><PlayerAvatar player={member.player} />{member.player.displayName}<MemberNickname player={member.player} /></h3>
     <p className="mb-4 text-sm text-slate-400">共同場次常用：{member.agent ?? '無資料'}／{member.role ? zhTW.roles[member.role] : '無資料'}（僅描述組成）</p>
     <dl className="space-y-3 text-sm">
       <div><dt>共同出賽／各自其他場次</dt><dd>{member.paired.matches} 場／{member.baseline.matches} 場</dd></div>

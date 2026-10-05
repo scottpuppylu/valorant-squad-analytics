@@ -5,6 +5,7 @@ export const players: Player[] = [
     id: 'nova-hex',
     handle: 'NovaHex',
     nameSource: 'community',
+    nickname: 'Nova',
     accounts: [
       { id: '00000000-0000-4000-8000-00000000d001', gameName: 'NovaMain', tag: 'DEMO', isPrimary: true, label: '主帳' },
       { id: '00000000-0000-4000-8000-00000000da01', gameName: 'NovaAlt', tag: 'ALT', isPrimary: false, label: '小帳' },

@@ -5,7 +5,7 @@ import type { MatchRecord, Player, PublicAccount } from '../types/valorant';
  * (all eligible accounts merged at evidence grain before scoping/scoring); these helpers only
  * describe the accounts behind a member.
  */
-export const MEMBER_IDENTITY_VERSION = 'member-identity-v1' as const;
+export const MEMBER_IDENTITY_VERSION = 'member-identity-v2' as const;
 
 /** Primary first, then stable public id order. Single-account members get no 主帳/小帳 label. */
 export function memberAccounts(player: Player): Array<PublicAccount & { roleLabel?: string }> {

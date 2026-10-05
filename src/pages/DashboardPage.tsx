@@ -17,6 +17,7 @@ import { EmptyState } from '../components/EmptyState';
 import { ScopeExplanation } from '../components/ScopeExplanation';
 import { zhTW } from '../i18n/zhTW';
 import { formatPercent, formatRatio, formatScore } from '../utils/format';
+import { MemberNickname } from '../components/MemberNickname';
 
 const ScoreRadar = lazy(() => import('../components/ScoreRadar').then((module) => ({ default: module.ScoreRadar })));
 
@@ -71,6 +72,7 @@ export function DashboardPage() {
               <div>
               <p className="metric-label">{leader.scores.overall.value === undefined ? '綜合資料不足' : '目前綜合領先'}</p>
               <h2 className="mt-3 text-3xl font-semibold text-white">{leader.player.handle}</h2>
+              <MemberNickname player={leader.player} className="block text-sm text-slate-400" />
               <p className="mt-1 text-sm text-slate-400">{zhTW.roles[leader.player.role]} · {leader.player.tagline}</p>
               </div>
             </div>

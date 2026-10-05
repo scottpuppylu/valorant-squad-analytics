@@ -32,7 +32,7 @@ export type SerializedScope = Omit<ScopeSummary, 'players'> & { players: (Omit<P
 
 export interface DatasetAnalysisResponse {
   ok: true;
-  schemaVersion: 5;
+  schemaVersion: 6;
   view: 'analysis';
   analysisVersion: 'server-analysis-v1';
   scopeRuleVersion: 'analysis-scope-v1';
@@ -62,7 +62,7 @@ const ids = (value: unknown, known: Set<string>) => Array.isArray(value) && valu
 export function isDatasetAnalysisResponse(value: unknown): value is DatasetAnalysisResponse {
   if (!isRecord(value)) return false;
   const c = value as Partial<DatasetAnalysisResponse>;
-  if (!(c.ok === true && c.schemaVersion === 5 && c.view === 'analysis' && c.analysisVersion === 'server-analysis-v1'
+  if (!(c.ok === true && c.schemaVersion === 6 && c.view === 'analysis' && c.analysisVersion === 'server-analysis-v1'
     && c.scopeRuleVersion === 'analysis-scope-v1' && c.featurePolicyVersion === 'feature-scope-policy-v2'
     && c.adaptiveWindowVersion === 'adaptive-window-v1' && c.scoreVersion === 'community-score-v2'
     && isRecord(c.coverage) && c.coverage.lifetimeComplete === false && c.coverage.serverHistoryUsed === true

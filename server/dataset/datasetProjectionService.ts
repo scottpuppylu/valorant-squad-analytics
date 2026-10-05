@@ -184,6 +184,7 @@ export function membersFromRows(rows: DatasetPlayerRow[], agentsByAccount: Map<s
       handle: member.member_display_name,
       displayName: member.member_display_name,
       nameSource: member.member_name_source === 'community' ? 'community' as const : 'legacy_account' as const,
+      ...(member.member_nickname ? { nickname: member.member_nickname } : {}),
       accounts,
       role: primaryRoleForAgents(agents),
       agents,

@@ -25,6 +25,7 @@ import { useProgressIndex, useScopedAnalysis } from '../hooks/useScopedAnalysis'
 import { describeWindow, scopeReasonLabels } from '../analytics/presentation';
 import { zhTW } from '../i18n/zhTW';
 import { formatAcs, formatAdr, formatPercent, formatRatio, formatScore } from '../utils/format';
+import { MemberNickname } from '../components/MemberNickname';
 
 const ScoreRadar = lazy(() => import('../components/ScoreRadar').then((module) => ({ default: module.ScoreRadar })));
 
@@ -77,7 +78,7 @@ export function PlayerProfilePage() {
   return <div className="space-y-10">
     <Link to="/leaderboard" className="text-link">← {zhTW.common.backToLeaderboard}</Link>
     <section className="profile-hero surface-card" style={{ '--player-accent': player.accent } as React.CSSProperties}>
-      <div className="relative z-10"><div className="flex flex-wrap items-center gap-3"><span className="role-chip">{zhTW.roles[player.role]}</span>{player.agents.map((agent) => <span className="agent-chip" key={agent}>{agent}</span>)}</div><h1 className="mt-6 font-display text-5xl font-semibold tracking-tight text-white sm:text-7xl">{player.handle}</h1><p className="mt-3 text-lg text-slate-300">{player.tagline}</p></div>
+      <div className="relative z-10"><div className="flex flex-wrap items-center gap-3"><span className="role-chip">{zhTW.roles[player.role]}</span>{player.agents.map((agent) => <span className="agent-chip" key={agent}>{agent}</span>)}</div><h1 className="mt-6 font-display text-5xl font-semibold tracking-tight text-white sm:text-7xl">{player.handle}</h1><MemberNickname player={player} prefix className="mt-2 block text-base text-slate-300" /><p className="mt-3 text-lg text-slate-300">{player.tagline}</p></div>
       <div className="relative z-10">{analytics ? <><ScoreBadge value={analytics.scores.overall} label={zhTW.scores.overall} /><p className="mt-3 text-sm text-slate-300">樣本信心 {formatPercent(analytics.scores.confidence / 100)} · {analytics.stats.matches} 場</p></> : <span className="metric-label">目前條件無資料</span>}</div>
     </section>
 

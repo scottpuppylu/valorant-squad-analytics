@@ -1,3 +1,4 @@
+import { MemberNickname } from './MemberNickname';
 import { Link } from 'react-router-dom';
 import type { PlayerAnalytics } from '../types/valorant';
 import { zhTW } from '../i18n/zhTW';
@@ -25,6 +26,7 @@ export function PlayerCard({ analytics, rank }: PlayerCardProps) {
           <PlayerAvatar player={player} />
           <div className="min-w-0">
             <h3 className="truncate text-base font-semibold text-white">{player.handle}</h3>
+            <MemberNickname player={player} className="block truncate text-xs text-slate-400" />
             <p className="truncate text-xs text-slate-400">{zhTW.roles[player.role]} · {player.tagline}</p>
           </div>
         </div>
