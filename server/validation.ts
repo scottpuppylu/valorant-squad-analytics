@@ -69,11 +69,15 @@ function publicUuid(value: unknown, label: string): string {
   return value.toLowerCase();
 }
 
-export function parseSyncStartInput(value: unknown): { playerId: string; kind: SyncKind } {
+export function parseSyncStartInput(value: unknown): { playerId: string; kind: SyncKind; intent?: 'refresh_if_stale' } {
   const body = asRecord(value);
   const kind = body.kind === 'incremental' ? 'incremental' : body.kind === 'backfill' ? 'backfill' : body.kind === 'deep_backfill' ? 'deep_backfill' : undefined;
   if (!kind) throw new PublicApiError(400, 'BAD_REQUEST', '同步類型不正確。');
-  return { playerId: publicUuid(body.playerId, '玩家識別碼'), kind };
+  // TASK-DATA-FASTSYNC-01: the only accepted intent. Clients can never supply a cooldown/threshold.
+  if (body.intent !== undefined && (body.intent !== 'refresh_if_stale' || kind !== 'incremental')) {
+    throw new PublicApiError(400, 'BAD_REQUEST', '更新意圖不正確。');
+  }
+  return { playerId: publicUuid(body.playerId, '玩家識別碼'), kind, ...(body.intent === 'refresh_if_stale' ? { intent: 'refresh_if_stale' as const } : {}) };
 }
 
 export function parseSyncContinueInput(value: unknown): { runId: string } {

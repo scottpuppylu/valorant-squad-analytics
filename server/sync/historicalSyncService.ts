@@ -17,6 +17,7 @@ import type {
 import { PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
 import type { HistoricalDiscoveryProvider } from './historicalDiscoveryProvider.js';
 import { executeDeepHistoryChunk } from './deepHistoryChunk.js';
+import { decideRecentRefresh, RECENT_REFRESH_POLICY_VERSION, type RecentRefreshDecision, type RecentRefreshOutcome } from './recentRefresh.js';
 
 const DEFAULT_PAGE_SIZE = 3;
 const DEFAULT_HISTORY_HORIZON = 300;
@@ -156,6 +157,80 @@ export class HistoricalSyncService {
 
   async status(publicRunId: string): Promise<PublicSyncStatus> {
     return this.requireStatus(publicRunId);
+  }
+
+  /**
+   * TASK-DATA-FASTSYNC-01: opportunistic "refresh if stale". The server alone decides freshness
+   * (recent-refresh-v1). At most ONE bounded incremental chunk per call, through the same lease,
+   * consent, backoff and persistence path as start/continue. Never bypasses a backoff or lease.
+   */
+  async refreshIfStale(publicPlayerId: string): Promise<{ refresh: RecentRefreshOutcome; sync?: PublicSyncStatus }> {
+    const started = this.monotonicNow();
+    const result = await this.refreshOnce(publicPlayerId);
+    process.stdout.write(`${JSON.stringify({ event: 'recent_refresh', policy: RECENT_REFRESH_POLICY_VERSION,
+      decision: result.decision, refreshStatus: result.refresh.status, providerRequested: result.refresh.providerRequested,
+      newMatches: result.refresh.newMatches ?? 0, morePending: result.refresh.morePending === true,
+      durationMs: Math.round(this.monotonicNow() - started) })}\n`);
+    return { refresh: result.refresh, ...(result.sync ? { sync: result.sync } : {}) };
+  }
+
+  private async refreshOnce(publicPlayerId: string): Promise<{ decision: string; refresh: RecentRefreshOutcome; sync?: PublicSyncStatus }> {
+    const base = { policyVersion: RECENT_REFRESH_POLICY_VERSION, providerRequested: false } as const;
+    const subject = await this.store.findSubject(publicPlayerId);
+    if (!subject) return { decision: 'INELIGIBLE', refresh: { ...base, status: 'unavailable' } };
+    const decided = decideRecentRefresh(await this.store.recentRefreshState(subject), this.now());
+    const skipped = (decision: RecentRefreshDecision, lastSuccessAt?: string): RecentRefreshOutcome => {
+      if (decision.decision === 'FRESH') return { ...base, status: 'fresh', lastSuccessAt: decision.lastSuccessAt, nextEligibleAt: decision.nextEligibleAt };
+      if (decision.decision === 'BUSY') return { ...base, status: 'busy', lastSuccessAt, nextEligibleAt: decision.nextEligibleAt };
+      if (decision.decision === 'BACKOFF') return { ...base, status: 'backoff', lastSuccessAt, nextEligibleAt: decision.nextEligibleAt };
+      if (decision.decision === 'INELIGIBLE') return { ...base, status: 'unavailable' };
+      // Lost the race after a STALE/CONTINUE decision: another request owns this work.
+      return { ...base, status: 'busy', lastSuccessAt };
+    };
+    const lastSuccess = async () => (await this.store.recentRefreshState(subject)).cursor?.lastSuccessAt;
+    if (decided.decision !== 'STALE' && decided.decision !== 'CONTINUE_PENDING') {
+      return { decision: decided.decision, refresh: skipped(decided, decided.decision === 'FRESH' ? undefined : await lastSuccess()) };
+    }
+
+    let run: SyncRunRecord | undefined;
+    if (decided.decision === 'CONTINUE_PENDING' || decided.action === 'resume_failed') {
+      run = await this.store.findRun(decided.decision === 'CONTINUE_PENDING' ? decided.runId : decided.runId!);
+      if (!run) return { decision: decided.decision, refresh: { ...base, status: 'unavailable' } };
+    }
+    const at = this.now();
+    let lease: Awaited<ReturnType<PostgresSyncStore['acquireCursorLease']>>;
+    try {
+      lease = await this.store.acquireCursorLease(subject, 'incremental', at.toISOString(),
+        new Date(at.getTime() + LEASE_DURATION_MS).toISOString(), !run, false, decided.expectedVersion);
+    } catch (error) {
+      if (error instanceof PublicApiError && error.code === 'CONSENT_REVOKED') return { decision: decided.decision, refresh: { ...base, status: 'unavailable' } };
+      throw error;
+    }
+    if (!lease) {
+      // Re-evaluate from durable state: the winner may already have made it fresh.
+      const again = decideRecentRefresh(await this.store.recentRefreshState(subject), this.now());
+      return { decision: 'RACE_LOST', refresh: skipped(again, await lastSuccess()) };
+    }
+    const before = run ? await this.store.status(run.publicId) : undefined;
+    if (run) await this.store.markRunRunning(run.id);
+    else run = await this.store.createRun(subject, 'incremental', lease.cursor.nextStart, at.toISOString(), 'manual');
+    try {
+      const sync = await this.executeChunk(run, lease.cursor, lease.leaseToken, before ? 8 : 9);
+      const delta = (key: 'matchesPersisted' | 'overlapsUpdated') => sync.progress[key] - (before?.progress[key] ?? 0);
+      return { decision: decided.decision, sync, refresh: { ...base, providerRequested: true, status: 'refreshed',
+        lastSuccessAt: sync.coverage.lastSyncedAt, newMatches: Math.max(0, delta('matchesPersisted') - delta('overlapsUpdated')),
+        morePending: sync.status === 'paused' } };
+    } catch (error) {
+      if (!(error instanceof PublicApiError)) throw error;
+      if (error.code === 'CONSENT_REVOKED') return { decision: decided.decision, refresh: { ...base, status: 'unavailable' } };
+      const state = await this.store.recentRefreshState(subject);
+      const errorCategory = (['RATE_LIMITED', 'PROVIDER_TIMEOUT', 'PROVIDER_ERROR', 'MALFORMED_PROVIDER_RESPONSE', 'DATABASE_ERROR'] as const)
+        .find((code) => code === error.code) ?? 'PROVIDER_ERROR';
+      const nextAttemptAt = state.cursor?.nextAttemptAt;
+      return { decision: decided.decision, refresh: { ...base, providerRequested: true,
+        status: nextAttemptAt && Date.parse(nextAttemptAt) > this.now().getTime() ? 'backoff' : 'unavailable',
+        lastSuccessAt: state.cursor?.lastSuccessAt, nextEligibleAt: nextAttemptAt, errorCategory } };
+    }
   }
 
   private async requireStatus(publicRunId: string): Promise<PublicSyncStatus> {

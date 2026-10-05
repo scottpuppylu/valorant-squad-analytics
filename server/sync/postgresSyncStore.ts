@@ -15,6 +15,7 @@ import type {
 } from './types.js';
 import { PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
 import type { ScheduledJob, ScheduledCandidate } from './scheduledSyncService.js';
+import type { RecentRefreshState } from './recentRefresh.js';
 
 type SubjectRow = {
   player_id: string;
@@ -213,9 +214,50 @@ export class PostgresSyncStore {
     return result.rows[0]?.active === true;
   }
 
-  private async ensureCursor(transaction: SqlExecutor, subject: SyncSubject, kind: SyncKind): Promise<string> {
+  /**
+   * TASK-DATA-FASTSYNC-01: durable inputs for decideRecentRefresh in ONE query (eligibility, the
+   * incremental cursor and the latest incremental run). Server-internal; never returned as-is.
+   */
+  async recentRefreshState(subject: SyncSubject): Promise<RecentRefreshState> {
+    const result = await this.database.query<{
+      eligible: boolean; version: string | null; last_success_at: string | Date | null; last_error_at: string | Date | null;
+      next_attempt_at: string | Date | null; lease_expires_at: string | Date | null; lease_token: string | null;
+      run_public_id: string | null; run_status: SyncStatus | null;
+    }>(
+      `SELECT EXISTS(
+           SELECT 1 FROM consents c JOIN players p ON p.id=c.player_id
+           WHERE c.player_id=$1 AND c.status='active' AND c.consent_method=$3 AND c.privacy_version=$4
+             AND p.anonymized_at IS NULL
+             AND EXISTS(SELECT 1 FROM squad_memberships WHERE player_id=p.id AND status='active')
+             AND EXISTS(SELECT 1 FROM provider_identities WHERE player_id=p.id AND provider='HenrikDev')
+             AND NOT EXISTS(SELECT 1 FROM deletion_jobs WHERE player_id=p.id AND status<>'complete')) AS eligible,
+         (extract(epoch FROM sc.updated_at)*1000000)::bigint::text AS version,
+         sc.last_success_at, sc.last_error_at, sc.next_attempt_at, sc.lease_expires_at, sc.lease_token,
+         sr.public_id AS run_public_id, sr.status AS run_status
+       FROM (SELECT 1) one
+       LEFT JOIN sync_cursors sc ON sc.player_id=$1 AND sc.provider='HenrikDev' AND sc.affinity=$2
+         AND sc.queue_scope='*' AND sc.sync_kind='incremental'
+       LEFT JOIN LATERAL (SELECT public_id, status FROM sync_runs WHERE player_id=$1 AND provider='HenrikDev'
+         AND sync_kind='incremental' AND public_id IS NOT NULL ORDER BY started_at DESC LIMIT 1) sr ON true`,
+      [subject.playerId, subject.affinity, PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION],
+    );
+    const row = result.rows[0];
+    return {
+      eligible: row?.eligible === true,
+      ...(row?.version ? { cursor: {
+        version: row.version,
+        lastSuccessAt: iso(row.last_success_at),
+        lastErrorAt: iso(row.last_error_at),
+        nextAttemptAt: iso(row.next_attempt_at),
+        leaseExpiresAt: row.lease_token ? iso(row.lease_expires_at) : undefined,
+      } } : {}),
+      ...(row?.run_public_id && row.run_status ? { latestRun: { publicId: row.run_public_id, status: row.run_status } } : {}),
+    };
+  }
+
+  private async ensureCursorRow(transaction: SqlExecutor, subject: SyncSubject, kind: SyncKind): Promise<{ id: string; inserted: boolean }> {
     const id = randomUUID();
-    await transaction.query(
+    const insert = await transaction.query(
       `INSERT INTO sync_cursors (id, player_id, provider, affinity, queue_scope, sync_kind, history_rule_version)
        VALUES ($1,$2,'HenrikDev',$3,'*',$4,CASE WHEN $4='deep_backfill' THEN 'deep-history-v1' ELSE NULL END)
        ON CONFLICT (player_id, provider, affinity, queue_scope, sync_kind) DO NOTHING`,
@@ -227,7 +269,7 @@ export class PostgresSyncStore {
       [subject.playerId, subject.affinity, kind],
     );
     if (!result.rows[0]) throw new Error('Sync cursor could not be created.');
-    return result.rows[0].id;
+    return { id: result.rows[0].id, inserted: insert.rowCount === 1 && result.rows[0].id === id };
   }
 
   async acquireCursorLease(
@@ -237,6 +279,12 @@ export class PostgresSyncStore {
     leaseExpiresAt: string,
     resetCompletedIncremental = false,
     resetTerminalDeep = false,
+    /**
+     * TASK-DATA-FASTSYNC-01 race guard: the cursor version the freshness decision observed
+     * (null = no cursor existed). Re-checked under a row lock inside this transaction, so a
+     * concurrent refresh that already did (or is doing) work makes this acquisition fail.
+     */
+    expectedVersion?: string | null,
   ): Promise<{ cursor: SyncCursorRecord; leaseToken: string } | undefined> {
     return this.database.transaction(async (transaction) => {
       const consent = await transaction.query<{ id: string }>(
@@ -247,7 +295,15 @@ export class PostgresSyncStore {
       if (!consent.rows[0]) {
         throw new PublicApiError(409, 'CONSENT_REVOKED', '玩家同意目前不是有效狀態，未建立同步租約。');
       }
-      const cursorId = await this.ensureCursor(transaction, subject, kind);
+      const ensured = await this.ensureCursorRow(transaction, subject, kind);
+      const cursorId = ensured.id;
+      if (expectedVersion !== undefined) {
+        const current = await transaction.query<{ version: string }>(
+          `SELECT (extract(epoch FROM updated_at)*1000000)::bigint::text AS version
+           FROM sync_cursors WHERE id=$1 FOR UPDATE`, [cursorId]);
+        const unchanged = expectedVersion === null ? ensured.inserted : current.rows[0]?.version === expectedVersion;
+        if (!unchanged) return undefined;
+      }
       if (kind === 'deep_backfill' && resetTerminalDeep) {
         // Conditional reset under the cursor lease transaction: audit/data are preserved.
         await transaction.query(`UPDATE sync_cursors sc SET next_start=0, history_phase='live_v4',
