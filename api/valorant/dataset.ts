@@ -27,7 +27,10 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     }
     if (view === 'analysis') {
       const analysisRequest = parseAnalysisRequest(request.query);
-      response.status(200).json((await createServerAnalysisService().analyze(analysisRequest)).payload);
+      const { payload, metrics } = await createServerAnalysisService().analyze(analysisRequest);
+      // Phase durations only (no identifiers) for production latency diagnosis.
+      response.setHeader('Server-Timing', `phase1;dur=${metrics.phase1Ms}, resolve;dur=${metrics.resolveMs}, phase2;dur=${metrics.phase2Ms}, total;dur=${metrics.totalMs}`);
+      response.status(200).json(payload);
       return;
     }
     if (view === 'analytics') {
