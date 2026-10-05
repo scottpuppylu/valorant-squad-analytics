@@ -1,5 +1,9 @@
 # TASK-DATA-03B — Full-history runtime consumption
 
+**DATA-03B.1: COMPLETE / ACCEPTED.** The DATA-03B.2 definition and the "STAGED, server
+aggregated" direction below are superseded by the Context-Aware Analytics Scope Engine
+(docs/ANALYTICS_SCOPES.md).
+
 Governance: SDD STRICT. Started 2026-10-05 from HEAD
 `e8884d7cc5b21b946be920eaed3d8aec4387ad0b`; checkpoint tag
 `checkpoint-before-data-03b-full-history-runtime` pushed before implementation.
@@ -9,7 +13,7 @@ Governance: SDD STRICT. Started 2026-10-05 from HEAD
 | Task | Scope | Status |
 |---|---|---|
 | **DATA-03B.1** | Bounded keyset history runtime + browse-only consumption | **IMPLEMENTED** (deployment acceptance below) |
-| **DATA-03B.2** | All-history analytical aggregation / scalable scoring consumption | **NOT STARTED** |
+| **DATA-03B.2** | ~~All-history analytics~~, redefined 2026-10-05 as the Context-Aware Analytics Scope Engine ([ANALYTICS_SCOPES.md](ANALYTICS_SCOPES.md)); 2A COMPLETE, 2B NOT STARTED | see ANALYTICS_SCOPES.md |
 
 DATA-03B.1 makes every eligible durable match in Neon **browsable**. It does
 **not** make rankings, community-score-v2, benchmarks, profiles or Synergy

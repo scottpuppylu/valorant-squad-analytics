@@ -1,15 +1,31 @@
 # Development tasks
 
-## Current decision — TASK-DATA-03B (2026-10-05)
+## Current decision — TASK-DATA-03B.2 redefined (2026-10-05)
+
+Superseding human decision: DATA-03B.2 is the **Context-Aware Analytics Scope Engine**,
+not "all-history analytics". Different features use different windows; 300 is transport only.
+See [ANALYTICS_SCOPES.md](ANALYTICS_SCOPES.md).
+
+- **DATA-03B.1**: COMPLETE / ACCEPTED.
+- **DATA-03B.2A — scope engine + wiring: COMPLETE.** Registry, adaptive resolver,
+  Act/rank-optional evidence, `view=analytics` facts, score pages on 目前實力.
+- **DATA-03B.2B — server aggregate consumption: NOT STARTED** (not needed while tracked history
+  fits the snapshot; limits are reported as `transport_window_truncated`).
+- **TASK-DATA-SEASON-01** (persist season metadata) and **TASK-DATA-RANK-01** (rank ingestion):
+  NOT STARTED, separately gated.
+- **TASK-PROGRESS-01 — Adaptive Improvement Index**: RECOMMENDED, design only
+  ([PROGRESS_INDEX.md](PROGRESS_INDEX.md)); depends on DATA-03B.2A.
+- DATA-05A PRODUCTION ACTIVATED / ACCEPTED; DATA-04B DEFERRED; RELEASE-01 PAUSED; V1 NOT RELEASED.
+
+## Earlier decision — TASK-DATA-03B (2026-10-05)
 
 Split under SDD STRICT; see [TASK_DATA_03B_PLAN.md](TASK_DATA_03B_PLAN.md).
 
 - **DATA-03B.1 — full-history paginated runtime + browse consumption: IMPLEMENTED.**
   `GET /api/valorant/dataset?view=history` keyset pages over all eligible durable
   matches; Matches page loads older tracked matches on demand. Browse-only.
-- **DATA-03B.2 — all-history analytical aggregation: NOT STARTED.** Analytics
-  decision is STAGED: scores/benchmarks/profiles/Synergy keep the newest-300
-  snapshot until a server-aggregated design is explicitly authorized.
+- ~~DATA-03B.2 — all-history analytical aggregation~~ — superseded by the Context-Aware
+  Analytics Scope Engine above.
 - DATA-05A: PRODUCTION ACTIVATED / ACCEPTED, cron unchanged.
 - DATA-04B: DEFERRED. RELEASE-01: PAUSED; V1 NOT YET RELEASED.
 

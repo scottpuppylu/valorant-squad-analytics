@@ -1,6 +1,12 @@
 # V1 release preflight
 
-## Current release gate — DATA-03B (2026-10-05)
+## Current release gate — DATA-03B.2A (2026-10-05)
+
+DATA-03B.1 COMPLETE / ACCEPTED. DATA-03B.2 redefined as the Context-Aware Analytics Scope
+Engine; 2A COMPLETE, 2B NOT STARTED. Score pages default to 目前實力. Act and rank evidence are
+unavailable and labelled honestly. RELEASE-01 PAUSED; V1 NOT YET RELEASED; no tag.
+
+## Earlier release gate — DATA-03B (2026-10-05)
 
 DATA-03B.1 (paginated history runtime + browse consumption) is implemented;
 DATA-03B.2 (all-history analytics) NOT STARTED. Analytics remain newest-300.

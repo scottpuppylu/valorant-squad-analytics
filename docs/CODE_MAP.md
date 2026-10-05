@@ -1,5 +1,15 @@
 # Code map
 
+## DATA-03B.2A analytics scope engine
+
+- src/analytics/scope/: versions, types, policies (feature-scope-policy-v1 registry), season (public Act keys),
+  observations, adaptiveWindow (adaptive-window-v1), resolveScope (analysis-scope-v1, PAIR context).
+- src/analytics/filters.ts `selectPerformances` -> `resolveScopeSelection`; src/analytics/analysis.ts recent form via `recentForm` policy.
+- src/data/analytics.ts: population facts + `currentStrength` ranking population.
+- server/dataset/analyticsContext.ts + api/valorant/dataset.ts `view=analytics`.
+- src/components/ScopeExplanation.tsx (資料範圍 disclosure); AnalysisFilterBar scope/Act options.
+- tests/analyticsScope.test.ts, tests/analyticsContext.test.ts. Design: docs/ANALYTICS_SCOPES.md, docs/PROGRESS_INDEX.md.
+
 ## DATA-03B.1 full-history pages
 
 - api/valorant/dataset.ts: absent `view` → unchanged snapshot; `view=history` → keyset page (same function).

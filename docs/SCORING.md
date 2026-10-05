@@ -3,6 +3,20 @@
 Versions: `community-score-v2`, `community-benchmarks-v1`, `overall-profile-v1`.
 This is not Riot MMR, Elo, an official rank or a replacement for ranked matchmaking. Benchmark ranges are transparent product-design calibration, not global population percentiles. Scores are calculated in the frontend from sanitized selected evidence; never persisted in Neon. Migration: NONE.
 
+## Input populations (feature-scope-policy-v1)
+
+This engine's formulas, weights and gates are unchanged by TASK-DATA-03B.2A. Which matches
+feed them is decided by [ANALYTICS_SCOPES.md](ANALYTICS_SCOPES.md):
+- Default community ranking / Score / Overall / profile population: `currentStrength`, an
+  adaptive-window-v1 recent Competitive window. Players below its minimum are listed
+  separately, not ranked.
+- 全部已追蹤 / 指定 Act / 最近 N 場 / 自訂日期 are explicit alternatives.
+- Volume selects and qualifies samples and raises confidence; it never raises a score.
+- Recent form keeps `Overall(current) - Overall(baseline)` with ±2 thresholds and numeric Overall
+  in both. Its windows now come from the adaptive `recentForm` policy (non-overlapping,
+  Competitive, comparable baseline) instead of newest-5 / remainder. It is not an Improvement
+  Index (see PROGRESS_INDEX.md).
+
 ## Result and evidence contract
 
 Each ScoreResult has status available/partial/unavailable; value exists only if scoreable. It carries configured/available weights, their ratio, observed weighted evidence ratio, matches/rounds/relevant events, independent confidence, versions and an aggregate trace. Missing evidence never becomes a score of 0 or 50. Measured zero is different from missing: compact omitted counters may mean zero only with a complete reconstructed/derived domain status, per METRICS_RECONSTRUCTION.md.
@@ -84,7 +98,7 @@ Dimension evidenceCoverage is sum(available configured component weight * observ
 
 Overall rankings: available group, partial group, unavailable last without numbered rank; full-precision sorting within numeric groups. Other metrics sort numeric values then missing rows. Partial values show configured-weight coverage; trace shows observed coverage too. Eight-axis radar fixes domain 0–100 and draws only observed vertices and edges between adjacent observed vertices: Recharts' default null-to-center polygon is intentionally replaced by GapRadarShape. Missing vertices are gaps, not zero.
 
-Profile provides eight dimensions and reusable expandable 評分依據. Aggregate-only trace includes raw/normalized inputs, denominator, directions/endpoints, configured/used weights, status, coverage, samples and versions; no identifiers, timelines or coordinates. Recent form requires >=3 recent and >=3 baseline observations AND numeric gated Overall in both populations. Badges require numeric score and stated samples; HS badge is independent.
+Profile provides eight dimensions and reusable expandable 評分依據. Aggregate-only trace includes raw/normalized inputs, denominator, directions/endpoints, configured/used weights, status, coverage, samples and versions; no identifiers, timelines or coordinates. Recent form requires valid adaptive `recentForm` current and baseline windows (each >=3 Competitive matches; see ANALYTICS_SCOPES.md) AND numeric gated Overall in both populations. Badges require numeric score and stated samples; HS badge is independent.
 
 Demo advanced aggregates are deterministic fictional illustration, not live provider validation or real event reconstruction. Real missing evidence remains missing. Non-empty production scoring is NOT YET EXERCISED; production intentionally remains empty after the previously approved deletion. No player reconnect, no new migration and no provider call in this task.
 

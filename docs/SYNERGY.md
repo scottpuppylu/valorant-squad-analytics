@@ -5,6 +5,13 @@ This is **descriptive association**, not causal improvement, an objectively opti
 communication-quality proof, Riot MMR/Elo or a ninth individual dimension. The existing
 community-score-v2 / community-benchmarks-v1 / overall-profile-v1 engine is unchanged.
 
+## Scope (feature-scope-policy-v1 `synergy`, PAIR)
+
+The paired sample and both members' baselines share one explicit context selected through
+`analysis-scope-v1` (`matchesInPairContext`): 全部已追蹤 or 指定 Act (public `act` URL key, only
+when Act evidence exists, never guessed), plus date/map/mode. Synergy is not blindly lifetime.
+The duo-synergy-v1 formula, gates and confidence are unchanged; opponents remain excluded.
+
 ## Population and same-team contract
 
 Only current-policy public players with usable performances may enter pairs. First select an

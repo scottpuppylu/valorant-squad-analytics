@@ -2,6 +2,17 @@
 
 Status: **TASK-DATA-02 COMPLETE — SDD STRICT**; TASK-DATA-03B.1 history pages added 2026-10-05.
 
+## Analytics scope facts (TASK-DATA-03B.2A)
+
+`GET /api/valorant/dataset?view=analytics` returns aggregate `analytics-context-v1` facts:
+tracked count, whether the newest-300 snapshot covers all tracked history, Act/duration/queue/
+rank availability, and the policy summary. It uses 2 statements, counts only and no
+identifiers. The browser derives the population anchor/floor from the snapshot and uses these
+facts to label scopes truthfully. Snapshot/history matches carry an optional public `seasonKey`
+only when durable `season_short` evidence exists (never `season_id`; none today). The 300
+window is a transport optimization; which evidence each feature uses is decided in
+[ANALYTICS_SCOPES.md](ANALYTICS_SCOPES.md).
+
 ## Full-history pages (TASK-DATA-03B.1)
 
 `GET /api/valorant/dataset` without `view` is the unchanged schema 4 newest-300

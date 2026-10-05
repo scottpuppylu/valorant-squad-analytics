@@ -38,6 +38,20 @@
 
 ## Current stage
 
+- TASK-DATA-03B.2 (2026-10-05, SDD STRICT) is redefined as the **Context-Aware
+  Analytics Scope Engine**; the earlier "all-history analytics" definition is
+  superseded. DATA-03B.2A is COMPLETE: `analysis-scope-v1`, `feature-scope-policy-v1`
+  (single registry in `src/analytics/scope/policies.ts`), deterministic
+  `adaptive-window-v1`, and `view=analytics` aggregate facts. Pages never select windows
+  themselves: everything goes through `selectPerformances` -> `resolveScopeSelection`.
+  Score pages default to 目前實力 (adaptive, Competitive); maps/agents/matches default to
+  全部已追蹤. No fallback across horizons. Act evidence is UNAVAILABLE (season is never
+  persisted) and rank is UNAVAILABLE (never ingested). Do not guess Acts, hardcode season
+  dates, claim the current official Act, or invent rank. DATA-03B.2B (server aggregates),
+  TASK-DATA-SEASON-01, TASK-DATA-RANK-01 and TASK-PROGRESS-01 are NOT STARTED and need
+  explicit authorization. Score/Synergy formulas are unchanged. Read docs/ANALYTICS_SCOPES.md
+  before changing any analytical population. DATA-03B.1 COMPLETE / ACCEPTED.
+
 - TASK-DATA-03B.1 (2026-10-05, SDD STRICT): bounded keyset history runtime is
   implemented as `GET /api/valorant/dataset?view=history` (`dataset-history-v1`,
   same function — 12-function Hobby limit). Default schema 4 newest-300 snapshot is

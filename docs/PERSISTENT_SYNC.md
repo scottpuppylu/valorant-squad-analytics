@@ -12,6 +12,10 @@ remain authoritative. Raw DTOs and identifiers remain server-only/in-memory.
 `lifetimeComplete=false` always. Source exhaustion is not lifetime proof.
 Public schema 4/newest-300 and scoring/Synergy/reconstruction are unchanged.
 
+DATA-03B.2A (2026-10-05) adds the analytics scope engine and `view=analytics`
+facts without changing acquisition. Season metadata and rank observations are still not
+persisted (TASK-DATA-SEASON-01 / TASK-DATA-RANK-01, not started); cron unchanged.
+
 DATA-03B.1 (2026-10-05) makes all accumulated eligible history browsable through
 bounded keyset pages (`/api/valorant/dataset?view=history`) without pausing cron.
 Pages tolerate concurrent cron inserts without duplicates or loops (see
