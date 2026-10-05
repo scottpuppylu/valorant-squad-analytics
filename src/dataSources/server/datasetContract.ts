@@ -35,7 +35,7 @@ export function isDatasetResponse(value: unknown): value is DatasetReadyResponse
     && isRealDataset(candidate.dataset);
 }
 
-function isRealDataset(dataset: unknown): dataset is NormalizedAnalyticsDataset {
+export function isRealDataset(dataset: unknown): dataset is NormalizedAnalyticsDataset {
   if (!isRecord(dataset)) return false;
   const candidate = dataset as Partial<NormalizedAnalyticsDataset>;
   return candidate.mode === 'REAL'

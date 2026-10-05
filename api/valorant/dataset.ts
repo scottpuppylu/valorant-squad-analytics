@@ -1,5 +1,6 @@
 import type { ApiRequest, ApiResponse } from '../../server/contracts.js';
-import { createAnalyticsContextRepository, createDatasetProjectionService, datasetReadMode } from '../../server/dataset/runtime.js';
+import { createAnalyticsContextRepository, createDatasetProjectionService, createServerAnalysisService, datasetReadMode } from '../../server/dataset/runtime.js';
+import { parseAnalysisRequest } from '../../server/dataset/analysisService.js';
 import { buildAnalyticsContext } from '../../server/dataset/analyticsContext.js';
 import { parseDatasetView, parseHistoryRequest } from '../../server/dataset/historyCursor.js';
 import { datasetSchemaVersion } from '../../server/dataset/types.js';
@@ -11,6 +12,7 @@ import { clientKey } from '../../server/http.js';
  * Absent `view`: unchanged schema 4 newest-300 snapshot.
  * `view=history`: DATA-03B.1 bounded keyset page (browse only).
  * `view=analytics`: DATA-03B.2A aggregate population/evidence facts for scope labels.
+ * `view=analysis`: DATA-03B.2B server-resolved feature population over all durable history.
  * All served by this same function to stay within the 12-function Vercel Hobby limit.
  */
 export default async function handler(request: ApiRequest, response: ApiResponse) {
@@ -18,9 +20,14 @@ export default async function handler(request: ApiRequest, response: ApiResponse
   try {
     requireMethod(request, 'GET');
     const view = parseDatasetView(request.query);
-    enforceRateLimit(`dataset-${view === 'snapshot' ? 'read' : view}:${clientKey(request)}`, Date.now(), 30);
+    enforceRateLimit(`dataset-${view === 'snapshot' ? 'read' : view}:${clientKey(request)}`, Date.now(), view === 'analysis' ? 60 : 30);
     if (datasetReadMode() !== 'public') {
       response.status(200).json({ ok: true, schemaVersion: datasetSchemaVersion, state: 'disabled', source: 'REAL_SERVER' });
+      return;
+    }
+    if (view === 'analysis') {
+      const analysisRequest = parseAnalysisRequest(request.query);
+      response.status(200).json((await createServerAnalysisService().analyze(analysisRequest)).payload);
       return;
     }
     if (view === 'analytics') {

@@ -1,5 +1,5 @@
-import type { AdaptiveWindowResult, ScopeSummary } from './scope/types';
-import type { AgentName, GameMode, MapName, MatchPerformance, MatchRecord, Player, PlayerAnalytics, PlayerRole } from '../types/valorant';
+import type { AdaptiveWindowResult, ScopeSummary } from './scope/types.js';
+import type { AgentName, GameMode, MapName, MatchPerformance, MatchRecord, Player, PlayerAnalytics, PlayerRole } from '../types/valorant.js';
 
 /** 'all' = 全部已追蹤 (historical URL value); 'current' = adaptive 目前實力; 'act' = 指定 Act. */
 export type RecentWindow = 'current' | 'all' | 'act' | 'recent10' | 'recent30' | 'custom';

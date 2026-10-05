@@ -57,7 +57,7 @@ export function decodeHistoryCursor(cursor: string, hmacKey?: string): DatasetHi
   return { startedAtMicros: BigInt(decoded.t).toString(), publicMatchId: decoded.p };
 }
 
-export type DatasetView = 'snapshot' | 'history' | 'analytics';
+export type DatasetView = 'snapshot' | 'history' | 'analytics' | 'analysis';
 
 function single(value: string | string[] | undefined): string | undefined {
   if (Array.isArray(value)) throw new PublicApiError(400, 'BAD_REQUEST', '查詢參數格式不正確。');
@@ -70,6 +70,7 @@ export function parseDatasetView(query: Record<string, string | string[] | undef
   if (view === undefined) return 'snapshot';
   if (view === 'history') return 'history';
   if (view === 'analytics') return 'analytics';
+  if (view === 'analysis') return 'analysis';
   throw new PublicApiError(400, 'BAD_REQUEST', '不支援的資料檢視。');
 }
 

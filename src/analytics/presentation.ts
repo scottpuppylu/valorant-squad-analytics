@@ -66,6 +66,7 @@ export const scopeReasonLabels: Record<ScopeReason, string> = {
   no_matching_evidence: '沒有符合條件的對戰',
   season_crossed_in_baseline: '基準區間跨越 Act',
   stale_recent_evidence: '最近一場距今已有一段時間',
+  server_population_limit: '符合條件的已追蹤戰績超過伺服器單次分析上限，只使用最新部分',
 };
 
 /** e.g. "22 場 / 412 回合 / 18.4 小時 / 17 天". Display rounding only. */

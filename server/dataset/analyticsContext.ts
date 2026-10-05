@@ -33,7 +33,7 @@ export interface AnalyticsContextRows {
 }
 
 export class PostgresAnalyticsContextRepository {
-  constructor(private readonly database: SqlDatabase) {}
+  constructor(private readonly database: Pick<SqlDatabase, 'query'>) {}
 
   /** Two aggregate statements; no identifiers, no per-match rows. */
   async readContextRows(): Promise<AnalyticsContextRows> {

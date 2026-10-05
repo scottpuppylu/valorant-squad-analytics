@@ -22,7 +22,7 @@ import type {
 import { datasetHistoryVersion, datasetProjectionVersion, datasetSchemaVersion, datasetWindowSize } from './types.js';
 import { encodeHistoryCursor } from './historyCursor.js';
 
-type ProjectableRows = Pick<DatasetProjectionRows, 'players' | 'performances' | 'rounds' | 'roundParticipants' | 'events'>;
+export type ProjectableRows = Pick<DatasetProjectionRows, 'players' | 'performances' | 'rounds' | 'roundParticipants' | 'events'>;
 
 const accentPalette = ['#6ee7b7', '#67e8f9', '#c4b5fd', '#f9a8d4', '#fdba74', '#fde68a'];
 const playerEmojiSet = new Set<string>(playerEmojiOptions);
@@ -168,8 +168,12 @@ export class DatasetProjectionService {
   /** `cursorKey` is only for tests; production derives the cursor MAC from IDENTIFIER_HMAC_KEY. */
   constructor(private readonly repository: DatasetReadRepository, private readonly cursorKey?: string) {}
 
-  /** Shared per-match projection for the bounded snapshot and DATA-03B.1 history pages. */
-  private project(rows: ProjectableRows) {
+  /**
+   * Shared per-match projection for the snapshot, history pages and DATA-03B.2B server analysis.
+   * `playerAgents` (keyed by internal player id) lets server analysis derive player roles from all
+   * durable history instead of only the selected matches.
+   */
+  project(rows: ProjectableRows, playerAgents?: Map<string, Set<string>>) {
     const projectionStarted = performance.now();
     let metricReconstructionMs = 0;
     let eventCount = 0;
@@ -182,7 +186,7 @@ export class DatasetProjectionService {
       agentsByPlayer.set(row.internal_player_id, agents);
     }
     const players: Player[] = rows.players.map((row) => {
-      const agents = [...(agentsByPlayer.get(row.internal_player_id) ?? [])].sort();
+      const agents = [...((playerAgents ?? agentsByPlayer).get(row.internal_player_id) ?? [])].sort();
       return {
         id: row.public_id,
         handle: `${row.display_name}#${row.display_tag}`,

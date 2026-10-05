@@ -1,9 +1,9 @@
-import { agentRoles } from '../utils/agentRoles';
-import type { NormalizedAnalyticsDataset } from '../dataSources/types';
-import type { MatchRecord } from '../types/valorant';
-import type { AnalysisFilters, PerformanceEntry, SelectionResult } from './types';
-import { populationFromMatches, resolveScopeSelection } from './scope/resolveScope';
-import type { FeatureId, ScopePopulation } from './scope/types';
+import { agentRoles } from '../utils/agentRoles.js';
+import type { NormalizedAnalyticsDataset } from '../dataSources/types.js';
+import type { MatchRecord } from '../types/valorant.js';
+import type { AnalysisFilters, PerformanceEntry, SelectionResult } from './types.js';
+import { populationFromMatches, resolveScopeSelection } from './scope/resolveScope.js';
+import type { FeatureId, ScopePopulation } from './scope/types.js';
 
 export interface SelectionOptions {
   /** Analytics population facts; derived from the entries when omitted (coverage unverified). */

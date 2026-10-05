@@ -20,7 +20,7 @@ export type ScopeReason =
   | 'insufficient_sample' | 'insufficient_active_days' | 'insufficient_baseline'
   | 'queue_restricted_by_policy' | 'queue_excluded_by_policy' | 'transport_window_truncated'
   | 'population_coverage_unverified' | 'no_matching_evidence' | 'season_crossed_in_baseline'
-  | 'stale_recent_evidence';
+  | 'stale_recent_evidence' | 'server_population_limit';
 
 export interface WindowSample {
   matches: number;

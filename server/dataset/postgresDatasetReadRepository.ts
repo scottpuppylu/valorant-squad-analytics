@@ -15,7 +15,7 @@ import type {
 } from './types.js';
 import { PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
 
-const activePlayers = `
+export const activePlayers = `
   SELECT p.id, p.public_id, p.display_name, p.display_tag, p.default_emoji
   FROM players p
   WHERE p.anonymized_at IS NULL
@@ -106,9 +106,9 @@ const historyRange = `
       AND ($3::bigint IS NULL OR (sm.started_at, sm.public_id) < (${microsParameter(3)}, $4::uuid))
   )`;
 
-type Query = <Row extends Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<{ rows: Row[] }>;
+export type Query = <Row extends Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<{ rows: Row[] }>;
 
-function detailQueries(query: Query, cte: string, params: unknown[]) {
+export function detailQueries(query: Query, cte: string, params: unknown[]) {
   return [
     query<DatasetPerformanceRow>(`${cte}
         SELECT sm.id AS internal_match_id, sm.public_id AS public_match_id, sm.started_at, sm.map_name,
@@ -156,8 +156,19 @@ function detailQueries(query: Query, cte: string, params: unknown[]) {
   ] as const;
 }
 
-const playersQuery = `SELECT id AS internal_player_id, public_id, display_name, display_tag, default_emoji
+export const playersQuery = `SELECT id AS internal_player_id, public_id, display_name, display_tag, default_emoji
         FROM (${activePlayers}) active_player_rows ORDER BY public_id`;
+
+/** DATA-03B.2B phase 2: exactly the server-selected internal match ids (never exposed). */
+export const selectedMatches = `
+  WITH active_players AS (${activePlayers}),
+  eligible_matches AS (
+    SELECT DISTINCT sm.id, sm.started_at
+    FROM source_matches sm
+    JOIN match_participants mp ON mp.source_match_id=sm.id
+    JOIN active_players ap ON ap.id=mp.player_id
+    WHERE sm.id = ANY($1::uuid[])
+  )`;
 
 export class PostgresDatasetReadRepository implements DatasetReadRepository {
   constructor(private readonly database: SqlDatabase) {}
