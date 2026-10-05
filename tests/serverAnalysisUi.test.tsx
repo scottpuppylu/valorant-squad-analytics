@@ -92,6 +92,32 @@ describe('DATA-03B.2B production consumers', () => {
     expect(seen.filter((q) => q.feature === 'currentStrength')).toHaveLength(1);
   });
 
+  it('Profile shows the Progress Index from server windows, and an explicit error without fallback', async () => {
+    const full = realDemo();
+    const player = full.players[0]!;
+    window.location.hash = `#/players/${player.id}`;
+    await render({ load: async () => snapshotOf(full), loadAnalysis: async (query) => {
+      if (query.feature === 'improvementIndex') throw new Error('down');
+      return serverAnswer(full, query, []);
+    } });
+    await settle(() => container.textContent?.includes('進步指數暫時無法取得') ?? false);
+    const card = container.querySelector('[aria-label="進步指數"]')!;
+    expect(card.querySelector('[role=alert]')).not.toBeNull();
+    expect(card.textContent).toContain('不會改用最近 N 場、快照或全部已追蹤代替');
+  });
+
+  it('Demo Profile computes the Progress Index locally with an explanation and no API call', async () => {
+    const player = demoDataSource.snapshot().players[0]!;
+    window.location.hash = `#/players/${player.id}`;
+    await act(async () => { root.render(<DatasetProvider forceDemo><AvatarProvider><App /></AvatarProvider></DatasetProvider>); });
+    await settle(() => !!container.querySelector('[aria-label="進步指數"]'));
+    const card = container.querySelector('[aria-label="進步指數"]')!;
+    expect(card.textContent).toContain('為什麼是這個結果？');
+    expect(card.textContent).toContain('排位資料：尚未取得（不計分、不視為 0）');
+    expect(card.textContent).toMatch(/進步中|持平|下滑中|資料不足/u);
+    expect(card.textContent).not.toMatch(/NaN|Infinity/u);
+  });
+
   it('shows an explicit error and no substitute ranking when server analysis fails', async () => {
     const full = realDemo();
     window.location.hash = '#/leaderboard';
