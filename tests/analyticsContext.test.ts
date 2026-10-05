@@ -63,7 +63,7 @@ describe('view=analytics context facts (analytics-context-v1)', () => {
     expect(isDatasetAnalyticsContextResponse(payload)).toBe(true);
     expect(payload).toMatchObject({
       view: 'analytics', analyticsVersion: 'analytics-context-v1', scopeRuleVersion: 'analysis-scope-v1',
-      featurePolicyVersion: 'feature-scope-policy-v1', adaptiveWindowVersion: 'adaptive-window-v1',
+      featurePolicyVersion: 'feature-scope-policy-v2', adaptiveWindowVersion: 'adaptive-window-v1',
       population: { trackedMatchCount: 3, snapshotWindow: 300, snapshotCoversTrackedHistory: true, lifetimeComplete: false },
     });
     expect(payload.evidence.season).toMatchObject({ status: 'unavailable', matchesWithAct: 0, matchesWithoutAct: 3, currentActKnown: false, acts: [] });

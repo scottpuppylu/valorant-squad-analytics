@@ -201,7 +201,7 @@ describe('adaptive-window-v1 required cases', () => {
   });
 });
 
-describe('feature-scope-policy-v1', () => {
+describe('feature-scope-policy-v2', () => {
   const players = [player('p1'), player('p2')];
   const matches = [
     ...matchesFor('p1', [...spread(10, 9, { season: 'e9a3', map: 'Bind' }), ...spread(10, 9, { season: 'e9a2' }).map((s) => ({ ...s, daysAgo: s.daysAgo + 30 }))]),
@@ -214,7 +214,7 @@ describe('feature-scope-policy-v1', () => {
   it('declares every reviewed feature with versioned horizon, queue and fallback semantics', () => {
     expect(Object.keys(featureScopePolicies).sort()).toEqual(['actOverview', 'agentStats', 'currentStrength', 'fixedRecent', 'improvementIndex', 'lifetimeTotals', 'mapStats', 'matchHistory', 'recentForm', 'synergy', 'trends']);
     expect(policyFor('currentStrength')).toMatchObject({ horizon: 'ADAPTIVE', queues: ['Competitive'], crossSeason: false, weighting: 'uniform' });
-    expect(policyFor('improvementIndex').implementation).toBe('design_only');
+    expect(policyFor('improvementIndex').implementation).toBe('wired');
     expect(Object.values(featureScopePolicies).every((policy) => policy.fallback !== ('lifetime' as never))).toBe(true);
   });
 

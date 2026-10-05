@@ -16,7 +16,9 @@ import { calculateRecentForm } from '../src/analytics/analysis';
 import { selectPerformances } from '../src/analytics/filters';
 import { aggregateSelection } from '../src/analytics/rankings';
 import { buildSynergy, defaultSynergyFilters } from '../src/synergy/analytics';
-import { isDatasetAnalysisResponse, selectionFromAnalysis } from '../src/dataSources/server/analysisResult';
+import { isDatasetAnalysisResponse, progressFromAnalysis, selectionFromAnalysis } from '../src/dataSources/server/analysisResult';
+import { resolveProgressWindows } from '../src/analytics/progress/windows';
+import { computeImprovementIndex } from '../src/analytics/progress/improvementIndex';
 import type { NormalizedAnalyticsDataset } from '../src/dataSources/types';
 
 const squadId = '00000000-0000-4000-8000-000000000001';
@@ -212,6 +214,56 @@ describe('parity regressions found by production read-only acceptance', () => {
   }, 120_000);
 });
 
+describe('TASK-PROGRESS-01 improvementIndex via view=analysis', () => {
+  it('validates its own contract (player context only)', () => {
+    expect(parseAnalysisRequest({ feature: 'improvementIndex', player: uuid(2, 1) })).toMatchObject({ feature: 'improvementIndex', player: uuid(2, 1) });
+    for (const bad of [{ feature: 'improvementIndex', map: 'Bind' }, { feature: 'improvementIndex', mode: 'Unrated' }, { feature: 'improvementIndex', form: '1' },
+      { feature: 'improvementIndex', recent: '10' }, { feature: 'improvementIndex', role: 'Duelist' }, { feature: 'improvementIndex', act: 'e11a5' }]) {
+      expect(() => parseAnalysisRequest(bad as never)).toThrow(PublicApiError);
+    }
+  });
+
+  it('server windows and index equal local resolution while history fits the snapshot', async () => {
+    const db = await database();
+    await seedPlayers(db, 4);
+    await seedMatches(db, [...variedSpecs(160)].reverse());
+    const { analytics } = await clientView(db);
+    const { payload } = await service(db).analyze(request({ feature: 'improvementIndex' }));
+    expect(isDatasetAnalysisResponse(payload)).toBe(true);
+    expect(payload.improvementVersion).toBe('improvement-index-v1');
+    const server = progressFromAnalysis(payload);
+    const local = selectPerformances(analytics.performanceEntries, filtersFor(request({ feature: 'lifetimeTotals' })), { population: analytics.population });
+    expect(server.size).toBe(local.byPlayer.size);
+    for (const [playerId, entries] of local.byPlayer) {
+      const mine = resolveProgressWindows(entries, analytics.population);
+      const theirs = server.get(playerId)!;
+      expect(theirs.window.currentEntries.map((e) => e.match.id)).toEqual(mine.window.currentEntries.map((e) => e.match.id));
+      expect(theirs.window.baselineEntries.map((e) => e.match.id)).toEqual(mine.window.baselineEntries.map((e) => e.match.id));
+      expect(theirs.actPolicy).toBe(mine.actPolicy);
+      const player = entries[0]!.player;
+      expect(JSON.stringify(computeImprovementIndex(player, theirs))).toBe(JSON.stringify(computeImprovementIndex(player, mine)));
+    }
+    expect(payload.dataset.matches.length).toBeLessThanOrEqual(4 * (30 + 60));
+  }, 120_000);
+
+  it("reaches a low-volume player's baseline beyond the newest 300 and never exposes identifiers", async () => {
+    const db = await database();
+    await seedPlayers(db, 2);
+    const flood: Spec[] = Array.from({ length: 320 }, (_, i) => ({ n: i + 1, hoursAgo: i, seats: [{ player: 1 }] }));
+    const older: Spec[] = Array.from({ length: 30 }, (_, i) => ({ n: 3000 + i, hoursAgo: 400 + i * 24, seats: [{ player: 2 }], rounds: 3 }));
+    await seedMatches(db, [...flood, ...older]);
+    const { snapshot } = await clientView(db);
+    const { payload } = await service(db).analyze(request({ feature: 'improvementIndex' }));
+    const p2 = payload.progress!.find((item) => item.playerId === uuid(2, 2))!;
+    const snapshotIds = new Set(snapshot.dataset.matches.map((m) => m.id));
+    expect(p2.window.baselineMatchIds.length).toBeGreaterThan(0);
+    expect([...p2.window.currentMatchIds, ...p2.window.baselineMatchIds].every((id) => !snapshotIds.has(id))).toBe(true);
+    const text = JSON.stringify(payload);
+    expect(text).not.toContain(uuid(5, 3000));
+    expect(text.toLowerCase()).not.toMatch(/henrikdev|puuid|hmac|internal_|season_id/u);
+  }, 120_000);
+});
+
 describe('analytics beyond the newest-300 transport snapshot', () => {
   it('reaches older durable evidence for currentStrength, recentForm, lifetime, Act, map, agent and pair baselines', async () => {
     const db = await database();
@@ -316,6 +368,9 @@ describe('DATA-03B.2B bounded performance', () => {
     const pair = await server.analyze(request({ feature: 'synergy', act: 'e11a5' }));
     const lifetime = await server.analyze(request({ feature: 'lifetimeTotals' }));
     expect(lifetime.payload.status).toBe(count > 2000 ? 'partial' : 'available');
-    process.stdout.write(`SERVER_ANALYSIS ${count} ${JSON.stringify({ currentStrength: current.metrics, actBind: act.metrics, synergyAct: pair.metrics, lifetime: lifetime.metrics })}\n`);
+    const progress = await server.analyze(request({ feature: 'improvementIndex' }));
+    // Bounded by improvement windows (≤ 30 current + 60 baseline per player), never the 2000 population.
+    expect(progress.metrics.selectedMatches).toBeLessThanOrEqual(4 * (30 + 60));
+    process.stdout.write(`SERVER_ANALYSIS ${count} ${JSON.stringify({ currentStrength: current.metrics, actBind: act.metrics, synergyAct: pair.metrics, lifetime: lifetime.metrics, improvementIndex: progress.metrics })}\n`);
   }, 600_000);
 });

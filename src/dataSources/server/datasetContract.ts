@@ -100,7 +100,7 @@ export function isDatasetAnalyticsContextResponse(value: unknown): value is Data
   const evidence = candidate.evidence;
   return candidate.ok === true && candidate.schemaVersion === 4 && candidate.view === 'analytics'
     && candidate.analyticsVersion === 'analytics-context-v1' && candidate.scopeRuleVersion === 'analysis-scope-v1'
-    && candidate.featurePolicyVersion === 'feature-scope-policy-v1' && candidate.adaptiveWindowVersion === 'adaptive-window-v1'
+    && candidate.featurePolicyVersion === 'feature-scope-policy-v2' && candidate.adaptiveWindowVersion === 'adaptive-window-v1'
     && isRecord(population) && count(population.trackedMatchCount) && typeof population.snapshotCoversTrackedHistory === 'boolean'
     && population.lifetimeComplete === false
     && isRecord(evidence) && isRecord(evidence.season) && scopeStatuses.has(evidence.season.status)

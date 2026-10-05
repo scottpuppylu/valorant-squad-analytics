@@ -242,7 +242,7 @@ export interface DatasetAnalyticsContextResponse {
   view: 'analytics';
   analyticsVersion: 'analytics-context-v1';
   scopeRuleVersion: 'analysis-scope-v1';
-  featurePolicyVersion: 'feature-scope-policy-v1';
+  featurePolicyVersion: 'feature-scope-policy-v2';
   adaptiveWindowVersion: 'adaptive-window-v1';
   population: { trackedMatchCount: number; snapshotWindow: number; snapshotCoversTrackedHistory: boolean; lifetimeComplete: false };
   evidence: {

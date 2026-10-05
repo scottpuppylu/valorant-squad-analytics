@@ -67,6 +67,12 @@ export const scopeReasonLabels: Record<ScopeReason, string> = {
   season_crossed_in_baseline: '基準區間跨越 Act',
   stale_recent_evidence: '最近一場距今已有一段時間',
   server_population_limit: '符合條件的已追蹤戰績超過伺服器單次分析上限，只使用最新部分',
+  same_act_baseline: '同 Act 比較',
+  previous_act_fallback: '同 Act 基準不足，明示改用前一個 Act（可比性降低）',
+  act_evidence_unknown: 'Act 證據不完整，無法確認是否同 Act',
+  insufficient_dimension_overlap: '兩個區間共同可計分的表現維度不足',
+  outlier_sensitive: '變化主要來自少數場次，已依穩健性收斂',
+  trend_stability_unavailable: '無法評估趨勢穩定度',
 };
 
 /** e.g. "22 場 / 412 回合 / 18.4 小時 / 17 天". Display rounding only. */
@@ -74,3 +80,6 @@ export function describeWindow(sample: WindowSample): string {
   const days = sample.matches === 0 ? 0 : Math.max(1, Math.ceil(sample.spanDays));
   return `${formatCount(sample.matches)} 場 / ${formatCount(sample.rounds)} 回合 / ${(sample.minutes / 60).toFixed(1)} 小時 / ${formatCount(days)} 天`;
 }
+
+export const progressDirectionLabels = { improving: '進步中', stable: '持平（未顯示明確變化）', declining: '下滑中' } as const;
+export const actPolicyLabels = { same_act: '同 Act 比較', previous_act_fallback: '同 Act 基準不足，改用前一個 Act', act_unknown: 'Act 證據不完整' } as const;

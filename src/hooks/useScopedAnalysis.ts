@@ -2,10 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { selectPerformances } from '../analytics/filters';
 import type { AdaptiveWindowResult } from '../analytics/scope/types';
 import type { AnalysisFilters, SelectionResult } from '../analytics/types';
-import { analysisQueryFor, formWindowsFromAnalysis, isDatasetAnalysisResponse, selectionFromAnalysis, type AnalysisQuery, type DatasetAnalysisResponse, type LifetimeFeature } from '../dataSources/server/analysisResult';
+import { analysisQueryFor, formWindowsFromAnalysis, isDatasetAnalysisResponse, progressFromAnalysis, selectionFromAnalysis, type AnalysisQuery, type DatasetAnalysisResponse, type LifetimeFeature } from '../dataSources/server/analysisResult';
 export { analysisQueryFor, type LifetimeFeature };
 import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 import { useDataset } from './useDataset';
+import { computeImprovementIndex, type ImprovementResult } from '../analytics/progress/improvementIndex';
+import { resolveProgressWindows } from '../analytics/progress/windows';
+import type { Player } from '../types/valorant';
 
 export type ScopedAnalysisStatus = 'local' | 'loading' | 'ready' | 'stale' | 'error';
 
@@ -90,4 +93,39 @@ export function useSynergyDataset(context: SynergyContext): { status: ScopedAnal
   if (!loadAnalysis) return { status: 'local', source: 'snapshot', dataset };
   if (settled?.response && settled.key === key) return { status: 'ready', source: 'server', dataset: settled.response.dataset, trackedMatchCount: settled.response.coverage.trackedMatchCount };
   return { status: settled?.failed && settled.key === key ? 'error' : 'loading', source: 'server', dataset: { ...dataset, matches: [] } };
+}
+
+/**
+ * TASK-PROGRESS-01: improvement-index-v1 for one player. Windows come from the server over all durable
+ * history (or locally for Demo); the formula runs in the browser like every other score. A failed
+ * request is an explicit error — never a fallback to recent10/30, the snapshot or lifetime.
+ */
+export function useProgressIndex(player: Player | undefined): { status: ScopedAnalysisStatus; result?: ImprovementResult } {
+  const { analytics: { performanceEntries, population }, loadAnalysis, snapshot } = useDataset();
+  const playerId = player?.id;
+  const local = useMemo(() => {
+    if (!player || loadAnalysis) return undefined;
+    const entries = performanceEntries.filter((entry) => entry.playerId === player.id);
+    return computeImprovementIndex(player, resolveProgressWindows(entries, population));
+  }, [loadAnalysis, performanceEntries, player, population]);
+  const key = playerId ? JSON.stringify([playerId, snapshot?.version ?? null]) : undefined;
+  const [settled, setSettled] = useState<{ key: string; response?: DatasetAnalysisResponse; failed?: boolean } | undefined>();
+  useEffect(() => {
+    if (!loadAnalysis || !playerId || !key) return undefined;
+    const abort = new AbortController();
+    loadAnalysis({ feature: 'improvementIndex', player: playerId }, abort.signal).then((response) => {
+      if (abort.signal.aborted) return;
+      if (!isDatasetAnalysisResponse(response)) throw new Error('Unsupported analysis response.');
+      setSettled({ key, response });
+    }).catch(() => { if (!abort.signal.aborted) setSettled({ key, failed: true }); });
+    return () => abort.abort();
+  }, [key, loadAnalysis, playerId]);
+  const server = useMemo(() => {
+    if (!player || !settled?.response || settled.key !== key) return undefined;
+    const windows = progressFromAnalysis(settled.response).get(player.id);
+    return windows ? computeImprovementIndex(player, windows) : undefined;
+  }, [key, player, settled]);
+  if (!loadAnalysis) return { status: 'local', ...(local ? { result: local } : {}) };
+  if (settled?.response && settled.key === key) return { status: 'ready', ...(server ? { result: server } : {}) };
+  return { status: settled?.failed && settled.key === key ? 'error' : 'loading' };
 }

@@ -60,8 +60,14 @@ const recentFormWindow: WindowBounds = {
   minActiveDays: 2, targetActiveDays: 3, maxSpanDays: 21, maxLookbackDays: 60, freshDays: 14,
 };
 
+/** improvement-index-v1 current window: a recent Competitive regime of ~200 rounds (product calibration). */
+const improvementWindow: WindowBounds = {
+  minMatches: 5, minRounds: 100, targetMatches: 10, targetRounds: 200, maxMatches: 30,
+  minActiveDays: 2, targetActiveDays: 4, maxSpanDays: 45, maxLookbackDays: 90, freshDays: 14,
+};
+
 /**
- * feature-scope-policy-v1. The ONLY place that decides which evidence a feature uses.
+ * feature-scope-policy-v2 (v1 + wired improvementIndex; every other feature unchanged). The ONLY place that decides which evidence a feature uses.
  * Score formulas (community-score-v2, duo-synergy-v1) are unchanged; only populations are declared here.
  */
 export const featureScopePolicies: Record<FeatureId, FeatureScopePolicy> = {
@@ -92,10 +98,13 @@ export const featureScopePolicies: Record<FeatureId, FeatureScopePolicy> = {
   synergy: { feature: 'synergy', label: '搭檔分析', horizon: 'PAIR',
     why: '共同同隊樣本與各自其他場次基準使用同一個明示情境（全部已追蹤、指定 Act 或日期／地圖／模式），不盲目採用全部歷史。',
     queues: 'all', rankContext: 'unused', crossSeason: true, weighting: 'uniform', fallback: 'none', confidence: 'duo-synergy-v1 既有信心公式', implementation: 'wired' },
-  improvementIndex: { feature: 'improvementIndex', label: '進步指數', horizon: 'ADAPTIVE', why: 'TASK-PROGRESS-01 設計；尚未實作，不得顯示數值。',
-    queues: ['Competitive'], window: recentFormWindow,
-    baseline: { minMatches: 5, minRoundsRatio: 1, minRounds: 100, targetRounds: 240, maxMatches: 50, maxLookbackDays: 240, crossSeason: true },
-    rankContext: 'optional', crossSeason: false, weighting: 'uniform', fallback: 'extend_within_bounds', confidence: '見 PROGRESS_INDEX.md', implementation: 'design_only' },
+  improvementIndex: { feature: 'improvementIndex', label: '進步指數', horizon: 'ADAPTIVE',
+    why: '現況與嚴格更早、不重疊、樣本可比的基準比較；先找同 Act 基準，不足時才明示改用前一個 Act（improvement-index-v1）。',
+    queues: ['Competitive'], window: improvementWindow,
+    // Same-Act first. The progress module retries with crossSeason=true only as an explicit, disclosed fallback.
+    baseline: { minMatches: 5, minRoundsRatio: 0.8, minRounds: 100, targetRounds: 200, maxMatches: 60, maxLookbackDays: 180, crossSeason: false },
+    rankContext: 'optional', crossSeason: false, weighting: 'uniform', fallback: 'extend_within_bounds',
+    confidence: '樣本×時間×證據×可比性，與指數數值分開（見 PROGRESS_INDEX.md）', implementation: 'wired' },
 };
 
 export const featureScopePolicyVersion = FEATURE_SCOPE_POLICY_VERSION;

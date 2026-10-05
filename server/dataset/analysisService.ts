@@ -5,6 +5,7 @@ import type { AnalysisFilters } from '../../src/analytics/types.js';
 import { resolveAdaptiveWindow } from '../../src/analytics/scope/adaptiveWindow.js';
 import { policyFor } from '../../src/analytics/scope/policies.js';
 import { matchesInPairContext, populationFromMatches } from '../../src/analytics/scope/resolveScope.js';
+import { resolveProgressWindows } from '../../src/analytics/progress/windows.js';
 import { normalizeSeasonKey } from '../../src/analytics/scope/season.js';
 import type { AdaptiveWindowResult, ScopePopulation, ScopeSummary } from '../../src/analytics/scope/types.js';
 import { ADAPTIVE_WINDOW_VERSION, ANALYSIS_SCOPE_VERSION, FEATURE_SCOPE_POLICY_VERSION } from '../../src/analytics/scope/versions.js';
@@ -33,7 +34,7 @@ export const SERVER_ANALYSIS_VERSION = 'server-analysis-v1' as const;
 /** Hard bound on phase-2 matches for LIFETIME/ACT/PAIR populations; exceeding it is disclosed. */
 export const SERVER_POPULATION_LIMIT = 2000;
 
-export const analysisFeatures = ['currentStrength', 'lifetimeTotals', 'mapStats', 'agentStats', 'actOverview', 'fixedRecent', 'synergy'] as const;
+export const analysisFeatures = ['currentStrength', 'lifetimeTotals', 'mapStats', 'agentStats', 'actOverview', 'fixedRecent', 'synergy', 'improvementIndex'] as const;
 export type AnalysisFeature = (typeof analysisFeatures)[number];
 
 export interface AnalysisRequest {
@@ -88,7 +89,9 @@ export function parseAnalysisRequest(query: Record<string, string | string[] | u
   }
   if (player !== 'all' && !uuidPattern.test(player)) throw bad('玩家參數不正確。');
   if (!roles.has(role)) throw bad('角色參數不正確。');
-  if (form !== undefined && (form !== '1' || typed === 'synergy')) throw bad('近期狀態參數不正確。');
+  if (form !== undefined && (form !== '1' || typed === 'synergy' || typed === 'improvementIndex')) throw bad('近期狀態參數不正確。');
+  // improvement-index-v1 is per player under its own Competitive policy: only `player` context is allowed.
+  if (typed === 'improvementIndex' && ['map', 'agent', 'mode'].some((key) => context(single(query?.[key])) !== 'all' || role !== 'all')) throw bad('進步指數只接受玩家條件。');
   return {
     feature: typed,
     ...(recentRaw ? { recent: Number(recentRaw) as 10 | 30 } : {}),
@@ -255,7 +258,14 @@ export class ServerAnalysisService {
         const order = new Map(skeletons.map((match) => [match.id, match.playedAt]));
         return [...ids].sort((a, b) => (order.get(b) ?? '').localeCompare(order.get(a) ?? '') || b.localeCompare(a)).slice(0, SERVER_POPULATION_LIMIT);
       };
-      if (request.feature === 'synergy') {
+      if (request.feature === 'improvementIndex') {
+        // Bounded by policy: only each player's current + baseline windows reach phase 2.
+        const contextual = selectPerformances(createPerformanceEntries(dataset(skeletons, skeletonPlayers)), filters, { population });
+        for (const entries of contextual.byPlayer.values()) {
+          const { window } = resolveProgressWindows(entries, population);
+          for (const entry of [...window.currentEntries, ...window.baselineEntries]) selectedIds.add(entry.match.id);
+        }
+      } else if (request.feature === 'synergy') {
         selectedIds = new Set(limit(matchesInPairContext(skeletons, { map: request.map, gameMode: request.mode, ...(request.act ? { act: request.act } : {}), ...(request.from ? { from: request.from } : {}), ...(request.to ? { to: request.to } : {}) }).map((match) => match.id)));
       } else {
         const skeletonEntries = createPerformanceEntries(dataset(skeletons, skeletonPlayers));
@@ -290,7 +300,17 @@ export class ServerAnalysisService {
       let scope;
       let forms;
       const selection: Record<string, string[]> = {};
-      if (request.feature !== 'synergy') {
+      let progress;
+      if (request.feature === 'improvementIndex') {
+        const contextual = selectPerformances(createPerformanceEntries(dataset(merged, players)), filters, { population });
+        progress = [...contextual.byPlayer].map(([playerId, entries]) => {
+          const resolved = resolveProgressWindows(entries, population);
+          // Only entries whose evidence phase 2 loaded may be scored (never a skeleton).
+          const loaded = [...resolved.window.currentEntries, ...resolved.window.baselineEntries].every((entry) => full.has(entry.match.id));
+          if (resolved.window.currentEntries.length) selection[playerId] = resolved.window.currentEntries.map((entry) => entry.match.id).filter((id) => full.has(id));
+          return { playerId, actPolicy: resolved.actPolicy, window: serializeWindow(resolved.window), complete: loaded };
+        }).filter((item) => item.complete).map((item) => ({ playerId: item.playerId, actPolicy: item.actPolicy, window: item.window }));
+      } else if (request.feature !== 'synergy') {
         const entries = createPerformanceEntries(dataset(merged, players));
         const final = selectPerformances(entries, filters, { population, lifetimeFeature });
         for (const [playerId, playerEntries] of final.byPlayer) {
@@ -331,6 +351,7 @@ export class ServerAnalysisService {
         ...(scope ? { scope } : {}),
         selection,
         ...(forms ? { forms } : {}),
+        ...(progress ? { progress, improvementVersion: 'improvement-index-v1' as const } : {}),
         evidence: projected.availability,
         dataset: dataset(matches, players),
       };

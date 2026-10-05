@@ -39,7 +39,7 @@ function serverAnswer(full: NormalizedAnalyticsDataset, query: AnalysisQuery, se
   const population = populationFromMatches(full.matches, true);
   const selection = selectPerformances(createPerformanceEntries(full), filters, { population });
   const ids = new Set(selection.entries.map((e) => e.match.id));
-  return { ok: true, schemaVersion: 4, view: 'analysis', analysisVersion: 'server-analysis-v1', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v1',
+  return { ok: true, schemaVersion: 4, view: 'analysis', analysisVersion: 'server-analysis-v1', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v2',
     adaptiveWindowVersion: 'adaptive-window-v1', scoreVersion: 'community-score-v2', feature: query.feature, status: 'available', reasons: [],
     coverage: { trackedMatchCount: full.matches.length, populationComplete: true, serverHistoryUsed: true, transportSnapshotUsed: false, populationLimit: 2000, lifetimeComplete: false },
     population: { seasonKeys: [], seasonStatus: 'unavailable', rankStatus: 'unavailable' },

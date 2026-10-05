@@ -20,7 +20,9 @@ export type ScopeReason =
   | 'insufficient_sample' | 'insufficient_active_days' | 'insufficient_baseline'
   | 'queue_restricted_by_policy' | 'queue_excluded_by_policy' | 'transport_window_truncated'
   | 'population_coverage_unverified' | 'no_matching_evidence' | 'season_crossed_in_baseline'
-  | 'stale_recent_evidence' | 'server_population_limit';
+  | 'stale_recent_evidence' | 'server_population_limit'
+  | 'same_act_baseline' | 'previous_act_fallback' | 'act_evidence_unknown'
+  | 'insufficient_dimension_overlap' | 'outlier_sensitive' | 'trend_stability_unavailable';
 
 export interface WindowSample {
   matches: number;

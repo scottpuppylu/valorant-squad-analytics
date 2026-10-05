@@ -4,9 +4,10 @@ import type { AdaptiveWindowResult, FeatureId, PlayerScope, ScopeSummary, ScopeS
 import type { NormalizedAnalyticsDataset } from '../types';
 import type { DatasetEvidenceContract } from './contracts';
 import { isRealDataset } from './datasetContract';
+import type { ActPolicy, ProgressWindows } from '../../analytics/progress/windows';
 
 /** DATA-03B.2B `view=analysis` contract (`server-analysis-v1`). */
-export type AnalysisFeature = 'currentStrength' | 'lifetimeTotals' | 'mapStats' | 'agentStats' | 'actOverview' | 'fixedRecent' | 'synergy';
+export type AnalysisFeature = 'currentStrength' | 'lifetimeTotals' | 'mapStats' | 'agentStats' | 'actOverview' | 'fixedRecent' | 'synergy' | 'improvementIndex';
 
 export interface AnalysisQuery {
   feature: AnalysisFeature;
@@ -35,7 +36,7 @@ export interface DatasetAnalysisResponse {
   view: 'analysis';
   analysisVersion: 'server-analysis-v1';
   scopeRuleVersion: 'analysis-scope-v1';
-  featurePolicyVersion: 'feature-scope-policy-v1';
+  featurePolicyVersion: 'feature-scope-policy-v2';
   adaptiveWindowVersion: 'adaptive-window-v1';
   scoreVersion: 'community-score-v2';
   synergyVersion?: 'duo-synergy-v1';
@@ -47,6 +48,9 @@ export interface DatasetAnalysisResponse {
   scope?: SerializedScope;
   selection: Record<string, string[]>;
   forms?: { playerId: string; window: SerializedWindow }[];
+  /** TASK-PROGRESS-01: server-resolved improvement windows (current + strictly older baseline). */
+  progress?: { playerId: string; actPolicy: ActPolicy; window: SerializedWindow }[];
+  improvementVersion?: 'improvement-index-v1';
   evidence: DatasetEvidenceContract;
   dataset: NormalizedAnalyticsDataset;
 }
@@ -59,7 +63,7 @@ export function isDatasetAnalysisResponse(value: unknown): value is DatasetAnaly
   if (!isRecord(value)) return false;
   const c = value as Partial<DatasetAnalysisResponse>;
   if (!(c.ok === true && c.schemaVersion === 4 && c.view === 'analysis' && c.analysisVersion === 'server-analysis-v1'
-    && c.scopeRuleVersion === 'analysis-scope-v1' && c.featurePolicyVersion === 'feature-scope-policy-v1'
+    && c.scopeRuleVersion === 'analysis-scope-v1' && c.featurePolicyVersion === 'feature-scope-policy-v2'
     && c.adaptiveWindowVersion === 'adaptive-window-v1' && c.scoreVersion === 'community-score-v2'
     && isRecord(c.coverage) && c.coverage.lifetimeComplete === false && c.coverage.serverHistoryUsed === true
     && c.coverage.transportSnapshotUsed === false && isRecord(c.population) && Array.isArray(c.population.seasonKeys)
@@ -68,7 +72,10 @@ export function isDatasetAnalysisResponse(value: unknown): value is DatasetAnaly
   const playerIds = new Set(c.dataset!.players.map((player) => player.id));
   return Object.entries(c.selection).every(([playerId, list]) => playerIds.has(playerId) && ids(list, matchIds))
     && (c.forms === undefined || (Array.isArray(c.forms) && c.forms.every((form) => isRecord(form) && isRecord(form.window)
-      && ids(form.window.currentMatchIds, matchIds) && ids(form.window.baselineMatchIds, matchIds))));
+      && ids(form.window.currentMatchIds, matchIds) && ids(form.window.baselineMatchIds, matchIds))))
+    && (c.progress === undefined || (Array.isArray(c.progress) && c.progress.every((item) => isRecord(item) && playerIds.has(item.playerId)
+      && ['same_act', 'previous_act_fallback', 'act_unknown'].includes(item.actPolicy) && isRecord(item.window)
+      && ids(item.window.currentMatchIds, matchIds) && ids(item.window.baselineMatchIds, matchIds))));
 }
 
 function entryIndex(dataset: NormalizedAnalyticsDataset): Map<string, PerformanceEntry> {
@@ -98,6 +105,12 @@ export function selectionFromAnalysis(response: DatasetAnalysisResponse): Select
     }])),
   } : undefined;
   return { entries, byPlayer, ...(scope ? { scope } : {}) };
+}
+
+/** Server-resolved improvement windows, hydrated with the payload's full entries. */
+export function progressFromAnalysis(response: DatasetAnalysisResponse): Map<string, ProgressWindows> {
+  const index = entryIndex(response.dataset);
+  return new Map((response.progress ?? []).map((item) => [item.playerId, { actPolicy: item.actPolicy, window: hydrateWindow(item.window, item.playerId, index) }]));
 }
 
 /** Server-resolved recentForm windows, hydrated with the payload's full entries. */

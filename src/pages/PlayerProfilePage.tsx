@@ -17,8 +17,9 @@ import { SectionHeading } from '../components/SectionHeading';
 import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
 import { ScopeExplanation } from '../components/ScopeExplanation';
+import { ProgressIndexCard } from '../components/ProgressIndexCard';
 import { AnalysisStatusNotice } from '../components/AnalysisStatusNotice';
-import { useScopedAnalysis } from '../hooks/useScopedAnalysis';
+import { useProgressIndex, useScopedAnalysis } from '../hooks/useScopedAnalysis';
 import { describeWindow, scopeReasonLabels } from '../analytics/presentation';
 import { zhTW } from '../i18n/zhTW';
 import { formatAcs, formatAdr, formatPercent, formatRatio, formatScore } from '../utils/format';
@@ -42,6 +43,8 @@ export function PlayerProfilePage() {
   const player = activeDataset.players.find((candidate) => candidate.id === playerId);
   const profileFilters = useMemo(() => ({ ...filters, playerId: player?.id ?? '__missing__' }), [filters, player]);
   const analysis = useScopedAnalysis(profileFilters, { form: true });
+  // TASK-PROGRESS-01: independent of page filters (its own Competitive policy over all durable history).
+  const progress = useProgressIndex(player);
   const selection = analysis.selection;
   // Recent form selects its own adaptive current/baseline windows from the context without a horizon.
   const formEntries = useMemo(() => selectPerformances(performanceEntries, { ...filters, period: 'all', playerId: player?.id ?? '__missing__' }, { population }).byPlayer.get(player?.id ?? '') ?? [], [filters, performanceEntries, player, population]);
@@ -85,6 +88,7 @@ export function PlayerProfilePage() {
 
 
       <section className="profile-context-grid">
+        <ProgressIndexCard status={progress.status} result={progress.result} />
         <article className="surface-card context-card"><p className="metric-label">近期狀態</p><strong className={`form-indicator form-indicator--${form.status}`}>{formCopy[form.status][0]} {formCopy[form.status][1]}</strong><p>{form.delta === undefined ? `現況 ${form.recentMatches} 場／基準 ${form.baselineMatches} 場` : `${form.delta > 0 ? '+' : ''}${formatScore(form.delta)} 分 · 現況 ${form.recentMatches} 場對基準 ${form.baselineMatches} 場`}</p>{form.window ? <details className="mt-2 text-xs text-slate-400"><summary className="cursor-pointer">為什麼是這個區間？</summary><p>現況：{describeWindow(form.window.current)}</p>{form.window.baseline ? <p>基準：{describeWindow(form.window.baseline)}</p> : null}<p>區間信心：{formatPercent(form.window.confidence.overall, 0)} · 僅競技模式 · adaptive-window-v1</p><p>選擇原因：{form.window.reasons.map((reason) => scopeReasonLabels[reason]).join('、')}</p></details> : null}</article>
         <article className="surface-card context-card"><p className="metric-label">地圖輪廓</p><strong>{extremes.strongest ?? '樣本不足'}{extremes.weakest ? ` ／ ${extremes.weakest}` : ''}</strong><p>最強／較弱地圖；每張至少 2 次出賽才判定。</p></article>
         <article className="surface-card context-card"><p className="metric-label">最常使用特務</p><strong>{primaryAgent ?? '無資料'}</strong><p>{agents[0] ? `${agents[0].appearances} 次出賽，占目前條件 ${formatPercent(agents[0].appearances / analytics.stats.matches)}` : '目前條件無特務樣本'}</p></article>

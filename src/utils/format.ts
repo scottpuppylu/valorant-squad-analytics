@@ -51,3 +51,10 @@ export function formatDateTime(value?: string): string {
   if (!value || Number.isNaN(Date.parse(value))) return unavailable;
   return new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
+
+/** Signed display for the Progress Index (−100..+100); rounding is display-only. */
+export function formatSigned(value: number, decimals = 0): string {
+  if (!Number.isFinite(value)) return unavailable;
+  const rounded = value.toFixed(decimals);
+  return Number(rounded) > 0 ? `+${rounded}` : Number(rounded) === 0 ? (0).toFixed(decimals) : rounded;
+}
