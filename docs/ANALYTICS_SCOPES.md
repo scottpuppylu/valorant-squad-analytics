@@ -94,11 +94,15 @@ default for score pages is now 目前實力.
 
 | Evidence | Code path | Production (`view=analytics`, 2026-10-05) |
 |---|---|---|
-| `source_matches.season_id` / `season_short` | **Never normalized or written** by any import/sync path (columns exist since 0001) | recorded in TASK_DATA_03B_PLAN.md acceptance |
-| `started_at` | written | all eligible tracked matches |
-| `game_length_ms` | written | recorded at acceptance |
-| `queue_id` / `queue_name` | written; normalized by `normalizeGameMode` | Competitive separable |
-| `rank_observations` | `PostgresRankRepository.recordObservation` has **no callers**; only deletion touches the table | recorded at acceptance |
+| `source_matches.season_id` / `season_short` | **Never normalized or written** by any import/sync path (columns exist since 0001) | 0 / 56 with a public Act code (0 %), 0 with season_id only; status **unavailable** |
+| `started_at` | written | 56 / 56 tracked |
+| `game_length_ms` | written | 56 / 56 (100 %); status available |
+| `queue_id` / `queue_name` | written; normalized by `normalizeGameMode` | Competitive 37 (66 %), Unrated 10, Swiftplay 7, Gauntlet: Glitched 1, Team Deathmatch 1; Competitive reliably separable |
+| `rank_observations` | `PostgresRankRepository.recordObservation` has **no callers**; only deletion touches the table | 0 observations for visible players; status **unavailable** (`not_ingested`) |
+
+Production values: read-only `view=analytics`, 2026-10-05, aggregate counts only. Counts are
+dynamic under DATA-05A cron. Usable public performances exist for 4 of 9 public players, with
+12 / 16 / 16 / 3 Competitive matches.
 
 Act grouping is therefore **UNAVAILABLE** today. The engine and projection are ready: a
 durable `season_short` normalizes to a public key (`e9a3` → `E9:A3`, `v26a1` → `V26:A1`),
@@ -227,6 +231,38 @@ policy/scope/score version changes, and must never persist stale public visibili
 Ranges span an isolated run and a full-suite run. `view=analytics` uses 2 SQL statements and
 returns well under 2 KB. The browser never needs the full history payload. The snapshot
 remains 6 statements / ≤300 matches.
+
+## Deployment and production acceptance — 2026-10-05
+
+Commits e05f964 (engine), 670b185 (`view=analytics`), 55ba6fb (pages), efa14ed (docs),
+5168061 (window-confidence fix), then a copy/acceptance commit. GitHub CI and Pages passed;
+Vercel production served the new bundle. Function count is unchanged at 12. No migration,
+cron change, provider call, write, secret access or consent change.
+
+Read-only production checks (GET only):
+- `view=analytics`: 200, `no-store`, 1,890 bytes, all four versions, `trackedMatchCount` 56,
+  `snapshotCoversTrackedHistory` true, `lifetimeComplete` false, the audit values above, the
+  11-feature policy summary, and no UUID / 64-hex / provider / HMAC / secret pattern.
+- Unchanged snapshot: schema 4 ready, no `view` field, 9 players, 56 unique matches, no
+  `seasonKey` (truthful: no Act evidence). `view=history` still 56 / 56; `view=everything` 400.
+- Leaderboard defaults to 目前實力 (ADAPTIVE, Competitive, partial): 3 players ranked, 1
+  listed separately (3 Competitive matches / 63 rounds, below the minimum). Windows: 12 / 16 / 16
+  matches, 262–349 rounds, 7.5–10.2 h, 5–28 days. Window confidence 35–37 % with
+  advanced-evidence components 0–8 %, reflecting production's partial KAST/Opening evidence.
+- The first deployed formula (geometric mean) showed 0 % for those windows; the fix
+  (5168061) was deployed and re-verified before acceptance.
+- Dashboard ranked by 目前實力 with the separate list; Profile shows 近期狀態 樣本不足 with the
+  window rationale (Overall is not numeric in production). Synergy and the filter bar show
+  指定 Act as disabled 「目前沒有 Act 資料」. Maps shows 全部已追蹤 · 樣本充足. Matches offers no
+  adaptive scope (browse only). No NaN/Infinity.
+- GitHub Pages: Demo ranked by the same engine on fictional data, zero `/api` requests, no
+  console errors.
+- One stale browser tab that kept pre-deploy JavaScript requested a removed lazy chunk (404)
+  after the deploy. A reload fixed it. This is pre-existing SPA deployment behaviour,
+  unrelated to this change.
+
+Live concurrent cron/scope interaction is NOT VERIFIED in production (no cron write occurred
+during acceptance); determinism under new matches is covered by tests O / N.
 
 ## Follow-ups (not started, separately gated)
 

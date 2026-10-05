@@ -71,13 +71,13 @@ function HistoryScope({ history, snapshotCount }: { history: TrackedHistory; sna
   const tracked = history.tracked;
   return <section className="surface-card space-y-3 p-5" aria-label="戰績資料範圍">
     <dl className="grid gap-3 text-sm sm:grid-cols-3">
-      <div><dt className="metric-label">分析範圍</dt><dd>最新 {formatCount(snapshotCount)} 場<small className="block text-slate-500">排行榜、評分與搭檔分析只使用此範圍</small></dd></div>
+      <div><dt className="metric-label">分析範圍</dt><dd>最新 {formatCount(snapshotCount)} 場<small className="block text-slate-500">分析快照；各分析頁再依資料範圍政策選樣（例如目前實力）</small></dd></div>
       <div><dt className="metric-label">目前載入範圍</dt><dd>已載入 {formatCount(loaded)} 場<small className="block text-slate-500">最早已載入：{formatFullDate(history.oldestLoadedAt ?? tracked?.earliestTrackedAt)}</small></dd></div>
       <div><dt className="metric-label">已追蹤戰績</dt><dd>{tracked ? `${formatCount(tracked.trackedMatchCount)} 場` : '—'}<small className="block text-slate-500">最早已保存紀錄：{formatFullDate(tracked?.earliestTrackedAt)} · 最近同步時間：{formatDateTime(tracked?.lastSyncedAt)}</small></dd></div>
     </dl>
     <p className="text-sm" role="status">{history.status === 'loading' ? '正在載入較舊戰績…' : history.status === 'error' ? '較舊戰績暫時無法載入；目前顯示的資料不受影響。' : history.hasMore ? '仍有更舊資料可載入。' : '已載入全部已追蹤戰績。'}</p>
     {history.withheldMatchCount > 0 ? <p className="text-sm text-slate-500">有 {formatCount(history.withheldMatchCount)} 場已追蹤戰績因核心證據不完整而未顯示。</p> : null}
-    <p className="sample-warning">已追蹤戰績不是完整生涯紀錄；歷史資料持續補齊中。較舊戰績僅供瀏覽，不會改變分析範圍內的分數。</p>
+    <p className="sample-warning">已追蹤戰績不是完整生涯紀錄；歷史資料持續補齊中。較舊戰績僅供瀏覽，不會改變任何分析結果。</p>
     {history.hasMore || history.status === 'error' ? <button type="button" className="button-secondary" disabled={history.status === 'loading' || !history.nextCursor} onClick={history.loadMore}>載入較舊戰績</button> : null}
   </section>;
 }
