@@ -1,5 +1,14 @@
 # Code map
 
+## TASK-DATA-03B.2B server analytics
+
+- server/dataset/analysisService.ts: request parsing, phase-1 observation SQL, shared-engine resolution, phase-2 projection, response.
+- api/valorant/dataset.ts `view=analysis` (+ Server-Timing); postgresDatasetReadRepository exports `selectedMatches`/`detailQueries`.
+- src/dataSources/server/analysisResult.ts (contract, validator, selectionFromAnalysis, analysisQueryFor).
+- src/hooks/useScopedAnalysis.ts (`useScopedAnalysis`, `useSynergyDataset`); src/components/AnalysisStatusNotice.tsx;
+  DatasetProvider request cache + default prefetch.
+- tests/serverAnalysis.test.ts, tests/serverAnalysisUi.test.tsx. Design: docs/SERVER_ANALYTICS.md.
+
 ## TASK-DATA-SEASON-01 season evidence
 
 - server/evidence/seasonEvidence.ts: independent id/short validation; normalizeHenrikEvidence spreads it into DurableMatchEvidence.

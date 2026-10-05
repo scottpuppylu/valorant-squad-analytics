@@ -2,6 +2,13 @@
 
 Status: **TASK-DATA-02 COMPLETE — SDD STRICT**; TASK-DATA-03B.1 history pages added 2026-10-05.
 
+## Server analysis (TASK-DATA-03B.2B)
+
+`GET /api/valorant/dataset?view=analysis&feature=…` resolves a feature population over all
+eligible durable history and returns only the selected sanitized matches plus windows and
+metadata. The default snapshot (newest 300) is unchanged and is the bootstrap/rollback path,
+not the analytics boundary. See SERVER_ANALYTICS.md.
+
 ## Season evidence (TASK-DATA-SEASON-01)
 
 Snapshot and history matches carry `seasonKey` only when durable `season_short` normalizes to

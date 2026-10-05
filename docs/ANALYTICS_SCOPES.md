@@ -15,12 +15,19 @@ a transport / initial-snapshot optimization, never the universal analytical popu
 | A. What data do we have? | All durable tracked history in Neon (DATA-05A); browsable via `view=history` (DATA-03B.1). |
 | B. What data should this metric use? | `feature-scope-policy-v1` + `analysis-scope-v1` + `adaptive-window-v1` (this task). |
 
+## Update — TASK-DATA-03B.2B (2026-10-05)
+
+The same engine now runs server-side over all eligible durable history (`view=analysis`,
+[SERVER_ANALYTICS.md](SERVER_ANALYTICS.md)). Analytics pages use server populations;
+`transport_window_truncated` remains only for local (Demo/rollback) analysis. ACT selections now
+use the deterministic order of the other horizons (a parity fix; same members).
+
 ## Split
 
 | Task | Scope | Status |
 |---|---|---|
 | **DATA-03B.2A** | Scope engine, policy registry, adaptive resolver, Act/rank-optional evidence, `view=analytics` facts, page wiring | **COMPLETE** |
-| **DATA-03B.2B** | Server-side aggregate consumption when tracked history exceeds the snapshot | **NOT STARTED — not yet needed** |
+| **DATA-03B.2B** | Server-side context-aware analytics consumption | **COMPLETE / ACCEPTED** (SERVER_ANALYTICS.md) |
 
 DATA-03B.2B is not needed yet: production tracked history (56 matches) fits inside the
 newest-300 snapshot (`snapshotCoversTrackedHistory=true`), so every scope is computed over

@@ -1,6 +1,14 @@
 # Development tasks
 
-## Current decision — TASK-DATA-SEASON-01 (2026-10-05)
+## Current decision — TASK-DATA-03B.2B (2026-10-05)
+
+**COMPLETE / ACCEPTED.** Server-side context-aware analytics consumption; see
+[SERVER_ANALYTICS.md](SERVER_ANALYTICS.md). Analytics no longer depend on snapshot completeness.
+Staged: server view → fixture parity → production read-only parity (10/10) → consumer switch.
+Follow-up DATA-03B.2C (server aggregates/materialized facts beyond the 2000-match phase-2 bound):
+NOT STARTED, needs measured need. TASK-PROGRESS-01: RECOMMENDED NEXT, DESIGN ONLY / NOT STARTED.
+
+## Earlier decision — TASK-DATA-SEASON-01 (2026-10-05)
 
 **COMPLETE / ACCEPTED.** Persist and reconcile match Act/season evidence; see
 [SEASON_EVIDENCE.md](SEASON_EVIDENCE.md). No migration; production Act coverage 173/183 (94.5 %,
@@ -17,8 +25,7 @@ See [ANALYTICS_SCOPES.md](ANALYTICS_SCOPES.md).
 - **DATA-03B.1**: COMPLETE / ACCEPTED.
 - **DATA-03B.2A — scope engine + wiring: COMPLETE.** Registry, adaptive resolver,
   Act/rank-optional evidence, `view=analytics` facts, score pages on 目前實力.
-- **DATA-03B.2B — server aggregate consumption: NOT STARTED** (not needed while tracked history
-  fits the snapshot; limits are reported as `transport_window_truncated`).
+- **DATA-03B.2B — server aggregate consumption: COMPLETE / ACCEPTED** (2026-10-05, see above).
 - **TASK-DATA-SEASON-01** (persist season metadata): started 2026-10-05, see above.
   **TASK-DATA-RANK-01** (rank ingestion): NOT STARTED, separately gated.
 - **TASK-PROGRESS-01 — Adaptive Improvement Index**: RECOMMENDED, design only

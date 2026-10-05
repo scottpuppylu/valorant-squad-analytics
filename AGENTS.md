@@ -38,6 +38,16 @@
 
 ## Current stage
 
+- TASK-DATA-03B.2B COMPLETE / ACCEPTED (2026-10-05, SDD STRICT): analytics pages consume
+  `GET /api/valorant/dataset?view=analysis` (`server-analysis-v1`). Clients declare only a
+  feature plus context. The server runs the SAME src/ scope engine over ALL eligible durable
+  history (phase 1 lightweight observations, phase 2 full projection for selected matches only)
+  and the browser runs the unchanged scoring/Synergy code. The newest-300 snapshot stays the
+  bootstrap but is not an analytics boundary. Never let a failed analysis request substitute
+  another scope. LIFETIME/ACT/PAIR phase 2 is capped at 2000 with a disclosed reason. Read
+  docs/SERVER_ANALYTICS.md before changing analysis populations. TASK-PROGRESS-01 is DESIGN ONLY;
+  TASK-DATA-RANK-01 is NOT STARTED.
+
 - TASK-DATA-SEASON-01 COMPLETE / ACCEPTED (2026-10-05, SDD STRICT): match season evidence from Henrik v4
   `metadata.season` / Stored `meta.season` is normalized and persisted to existing
   `source_matches.season_id/season_short` (no migration). Missing/invalid never erases; a valid

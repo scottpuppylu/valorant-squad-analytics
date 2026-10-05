@@ -5,6 +5,9 @@ This is not Riot MMR, Elo, an official rank or a replacement for ranked matchmak
 
 ## Input populations (feature-scope-policy-v1)
 
+TASK-DATA-03B.2B: in production these populations are resolved by the server over all durable
+history (`view=analysis`); the browser runs this unchanged engine on them. No formula drift.
+
 This engine's formulas, weights and gates are unchanged by TASK-DATA-03B.2A. Which matches
 feed them is decided by [ANALYTICS_SCOPES.md](ANALYTICS_SCOPES.md):
 - Default community ranking / Score / Overall / profile population: `currentStrength`, an

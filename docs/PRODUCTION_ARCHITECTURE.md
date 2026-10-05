@@ -3,6 +3,7 @@
 ## Current acquisition direction — DATA-05A
 
 Tracker-style persistent Henrik accumulation is primary; Riot ticket is informational,
+TASK-DATA-03B.2B: analytics pages use `view=analysis` over all durable history (SERVER_ANALYTICS.md).
 TASK-DATA-SEASON-01 persists provider season evidence (SEASON_EVIDENCE.md).
 DATA-04B deferred. DATA-03B.1 (history pages via `/api/valorant/dataset?view=history`,
 same function to respect the 12-function Hobby limit) is accepted. DATA-03B.2A context-aware

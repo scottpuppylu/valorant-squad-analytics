@@ -1,6 +1,11 @@
 # V1 release preflight
 
-## Current release gate — TASK-DATA-SEASON-01 (2026-10-05)
+## Current release gate — TASK-DATA-03B.2B (2026-10-05)
+
+Server-side analytics consumption COMPLETE / ACCEPTED (SERVER_ANALYTICS.md). RELEASE-01 PAUSED;
+V1 NOT YET RELEASED; no tag.
+
+## Earlier release gate — TASK-DATA-SEASON-01 (2026-10-05)
 
 TASK-DATA-SEASON-01 COMPLETE / ACCEPTED: production Act coverage 94.5 % (E11:A5); see SEASON_EVIDENCE.md. RELEASE-01 PAUSED;
 V1 NOT YET RELEASED; no tag.

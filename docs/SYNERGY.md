@@ -7,6 +7,9 @@ community-score-v2 / community-benchmarks-v1 / overall-profile-v1 engine is unch
 
 ## Scope (feature-scope-policy-v1 `synergy`, PAIR)
 
+TASK-DATA-03B.2B: the PAIR population (shared appearances and both baselines) is resolved by the
+server over all durable history in one context, so pair baselines are never snapshot-truncated.
+
 The paired sample and both members' baselines share one explicit context selected through
 `analysis-scope-v1` (`matchesInPairContext`): 全部已追蹤 or 指定 Act (public `act` URL key, only
 when Act evidence exists, never guessed), plus date/map/mode. Synergy is not blindly lifetime.

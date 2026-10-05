@@ -1,6 +1,7 @@
 # TASK-DATA-03B — Full-history runtime consumption
 
-**DATA-03B.1: COMPLETE / ACCEPTED.** The DATA-03B.2 definition and the "STAGED, server
+**DATA-03B.1: COMPLETE / ACCEPTED. DATA-03B.2A and 2B: COMPLETE / ACCEPTED** (ANALYTICS_SCOPES.md,
+SERVER_ANALYTICS.md); history pages remain browse-only. The DATA-03B.2 definition and the "STAGED, server
 aggregated" direction below are superseded by the Context-Aware Analytics Scope Engine
 (docs/ANALYTICS_SCOPES.md).
 

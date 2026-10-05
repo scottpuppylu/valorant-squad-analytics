@@ -12,6 +12,9 @@ remain authoritative. Raw DTOs and identifiers remain server-only/in-memory.
 `lifetimeComplete=false` always. Source exhaustion is not lifetime proof.
 Public schema 4/newest-300 and scoring/Synergy/reconstruction are unchanged.
 
+TASK-DATA-03B.2B (2026-10-05): analytics read all accumulated durable history server-side; cron
+unchanged. Concurrent cron writes cannot loop or double count analysis requests (SERVER_ANALYTICS.md).
+
 TASK-DATA-SEASON-01 (2026-10-05): every cron/manual upsert now persists v4 season metadata
 (never erasing known values), and deep stored-index pages fill season for already durable,
 participant, consented matches. No new route or cadence change. See SEASON_EVIDENCE.md.
