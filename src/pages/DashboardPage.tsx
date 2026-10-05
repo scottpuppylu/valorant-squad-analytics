@@ -1,4 +1,9 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useMemo, useState } from 'react';
+import { defaultAnalysisFilters } from '../analytics/filters';
+import { aggregateSelection } from '../analytics/rankings';
+import { compareScoreResults } from '../scoring/calculateScores';
+import { AnalysisStatusNotice } from '../components/AnalysisStatusNotice';
+import { useScopedAnalysis } from '../hooks/useScopedAnalysis';
 import { Link } from 'react-router-dom';
 import { CategoryLeaders } from '../components/CategoryLeaders';
 import { MetricInfo } from '../components/MetricInfo';
@@ -16,8 +21,13 @@ import { formatPercent, formatRatio, formatScore } from '../utils/format';
 const ScoreRadar = lazy(() => import('../components/ScoreRadar').then((module) => ({ default: module.ScoreRadar })));
 
 export function DashboardPage() {
-  const { analytics: { activeDataset, currentStrength } } = useDataset();
-  // Community ranking population = feature currentStrength (adaptive-window-v1, Competitive only).
+  const { analytics: { activeDataset } } = useDataset();
+  // Community ranking population = feature currentStrength, resolved by the server over all durable
+  // history (DATA-03B.2B) or locally for Demo; adaptive-window-v1, Competitive only.
+  const currentFilters = useMemo(() => ({ ...defaultAnalysisFilters, period: 'current' as const }), []);
+  const analysis = useScopedAnalysis(currentFilters);
+  const currentStrength = useMemo(() => ({ selection: analysis.selection, analytics: aggregateSelection(analysis.selection)
+    .sort((a, b) => compareScoreResults(a.scores.overall, b.scores.overall) || a.player.handle.localeCompare(b.player.handle)) }), [analysis.selection]);
   const playerAnalytics = currentStrength.analytics;
   const [selectedPlayerId, setSelectedPlayerId] = useState(playerAnalytics[0]?.player.id ?? '');
   const selected = playerAnalytics.find(({ player }) => player.id === selectedPlayerId) ?? playerAnalytics[0];
@@ -26,6 +36,9 @@ export function DashboardPage() {
   const withoutWindow = [...(currentStrength.selection.scope?.players.values() ?? [])].filter((item) => item.status === 'unavailable')
     .map((item) => activeDataset.players.find((player) => player.id === item.playerId)?.handle).filter(Boolean);
 
+  if (analysis.status === 'loading' || analysis.status === 'error') {
+    return <div className="space-y-6"><AnalysisStatusNotice analysis={analysis} /></div>;
+  }
   if (!leader || !selected) {
     return <div className="space-y-6">
       <EmptyState page title="目前實力資料不足" description="沒有玩家達到「目前實力」的最低樣本（近期 5 場競技、100 回合、2 個活躍日）。不會改用其他範圍補值；可在戰力排名切換「全部已追蹤」。" actions={<Link className="button-primary" to="/leaderboard?period=all">查看全部已追蹤</Link>} />
@@ -81,7 +94,7 @@ export function DashboardPage() {
           {playerAnalytics.map((analytics, index) => <PlayerCard key={analytics.player.id} analytics={analytics} rank={index + 1} />)}
         </div>
         {withoutWindow.length ? <p className="sample-warning mt-4">目前實力樣本不足而另列：{withoutWindow.join('、')}</p> : null}
-        <div className="mt-4"><ScopeExplanation scope={currentStrength.selection.scope} players={activeDataset.players} /></div>
+        <div className="mt-4"><ScopeExplanation scope={currentStrength.selection.scope} players={activeDataset.players} source={analysis.source} trackedMatchCount={analysis.trackedMatchCount} /></div>
       </section>
 
       <section><SectionHeading title="各維度領先" /><CategoryLeaders analytics={playerAnalytics} /></section>

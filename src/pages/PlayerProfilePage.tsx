@@ -5,7 +5,7 @@ import { scoreMetricIds } from '../i18n/zhTW';
 import { ScoreExplanation } from '../components/ScoreExplanation';
 import { lazy, Suspense, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { calculateRecentForm, groupByAgent, groupByMap, mapExtremes, mostUsedAgent } from '../analytics/analysis';
+import { calculateRecentForm, recentFormFromWindow, groupByAgent, groupByMap, mapExtremes, mostUsedAgent } from '../analytics/analysis';
 import { selectPerformances } from '../analytics/filters';
 import { aggregateSelection } from '../analytics/rankings';
 import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
@@ -17,6 +17,8 @@ import { SectionHeading } from '../components/SectionHeading';
 import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
 import { ScopeExplanation } from '../components/ScopeExplanation';
+import { AnalysisStatusNotice } from '../components/AnalysisStatusNotice';
+import { useScopedAnalysis } from '../hooks/useScopedAnalysis';
 import { describeWindow, scopeReasonLabels } from '../analytics/presentation';
 import { zhTW } from '../i18n/zhTW';
 import { formatAcs, formatAdr, formatPercent, formatRatio, formatScore } from '../utils/format';
@@ -38,7 +40,9 @@ export function PlayerProfilePage() {
   const { playerId } = useParams();
   const { filters, update, reset } = useAnalysisFilters('current');
   const player = activeDataset.players.find((candidate) => candidate.id === playerId);
-  const selection = useMemo(() => selectPerformances(performanceEntries, { ...filters, playerId: player?.id ?? '__missing__' }, { population }), [filters, performanceEntries, player, population]);
+  const profileFilters = useMemo(() => ({ ...filters, playerId: player?.id ?? '__missing__' }), [filters, player]);
+  const analysis = useScopedAnalysis(profileFilters, { form: true });
+  const selection = analysis.selection;
   // Recent form selects its own adaptive current/baseline windows from the context without a horizon.
   const formEntries = useMemo(() => selectPerformances(performanceEntries, { ...filters, period: 'all', playerId: player?.id ?? '__missing__' }, { population }).byPlayer.get(player?.id ?? '') ?? [], [filters, performanceEntries, player, population]);
   const analytics = useMemo(() => aggregateSelection(selection)[0], [selection]);
@@ -52,7 +56,8 @@ export function PlayerProfilePage() {
   const agents = groupByAgent(entries);
   const extremes = mapExtremes(player, entries);
   const primaryAgent = mostUsedAgent(entries);
-  const form = calculateRecentForm(player, formEntries, population);
+  const serverForm = analysis.formWindows?.get(player.id);
+  const form = serverForm ? recentFormFromWindow(player, serverForm) : calculateRecentForm(player, formEntries, population);
   const statCards: Array<[string, string, string]> = analytics ? [
     ['acs', 'ACS', formatAcs(analytics.stats.acs)],
     ['adr', 'ADR', formatAdr(analytics.stats.adr)],
@@ -73,7 +78,8 @@ export function PlayerProfilePage() {
 
     <EmojiAvatarPicker key={player.id} player={player} />
     <AnalysisFilterBar filters={filters} onChange={update} onReset={reset} players={activeDataset.players} maps={availableMaps} agents={availableAgents} gameModes={availableGameModes} includePlayer={false} seasonKeys={population.seasonKeys} />
-    <ScopeExplanation scope={selection.scope} players={activeDataset.players} />
+    <AnalysisStatusNotice analysis={analysis} />
+    <ScopeExplanation scope={selection.scope} players={activeDataset.players} source={analysis.source} trackedMatchCount={analysis.trackedMatchCount} />
 
     {!analytics ? <EmptyState title="目前條件下沒有出賽資料" description="請調整日期、地圖或特務條件。" actions={<button className="button-secondary" onClick={reset} type="button">重設條件</button>} /> : <>
 

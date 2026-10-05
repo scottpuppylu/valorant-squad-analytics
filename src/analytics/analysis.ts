@@ -9,7 +9,7 @@ import type { BadgeAward, GroupSummary, PerformanceEntry, RecentForm, SelectionR
 import { resolveAdaptiveWindow } from './scope/adaptiveWindow';
 import { policyFor } from './scope/policies';
 import { populationFromMatches } from './scope/resolveScope';
-import type { ScopePopulation } from './scope/types';
+import type { AdaptiveWindowResult, ScopePopulation } from './scope/types';
 import { aggregateSelection } from './rankings';
 
 function summarize(id: string, label: string, entries: PerformanceEntry[]): GroupSummary {
@@ -75,6 +75,11 @@ export function calculateRecentForm(player: Player, entries: PerformanceEntry[],
   const window = resolveAdaptiveWindow(entries, policyFor('recentForm'), {
     population: population ?? populationFromMatches(entries.map((entry) => entry.match), 'unverified'),
   });
+  return recentFormFromWindow(player, window);
+}
+
+/** Formula half of recent form; the window may come from the browser or from server analysis. */
+export function recentFormFromWindow(player: Player, window: AdaptiveWindowResult): RecentForm {
   const recentMatches = window.current.matches;
   const baselineMatches = window.baseline?.matches ?? 0;
   if (window.status === 'unavailable') return { status: 'insufficient', recentMatches, baselineMatches, window };
@@ -112,7 +117,7 @@ export function resolveWinners(values: Array<{ playerId: string; value: number }
  * `formSelection` must hold each player's context-filtered entries without a time horizon so the
  * recentForm policy chooses its own windows (defaults to `selection` for compatibility).
  */
-export function computeBadges(selection: SelectionResult, minMatches = 5, minRounds = 100, formSelection: SelectionResult = selection, population?: ScopePopulation): BadgeAward[] {
+export function computeBadges(selection: SelectionResult, minMatches = 5, minRounds = 100, formSelection: SelectionResult = selection, population?: ScopePopulation, formWindows?: Map<string, AdaptiveWindowResult>): BadgeAward[] {
   const eligible = aggregateSelection(selection).filter(({ stats }) => stats.matches >= minMatches && stats.rounds >= minRounds);
   const specifications = [
     ...dimensions.map((key) => [key, zhTW.scores[key]+'領先', '🏅', key, (a: PlayerAnalytics) => a.scores[key].value ?? Number.NaN] as const),
@@ -136,7 +141,8 @@ export function computeBadges(selection: SelectionResult, minMatches = 5, minRou
 
   const formWinner = resolveWinners([...formSelection.byPlayer.values()].flatMap((entries) => {
     const player = entries[0]?.player;
-    const form = player ? calculateRecentForm(player, entries, population) : undefined;
+    const window = player ? formWindows?.get(player.id) : undefined;
+    const form = player ? (window ? recentFormFromWindow(player, window) : calculateRecentForm(player, entries, population)) : undefined;
     return form?.delta === undefined ? [] : [{ playerId: player!.id, value: form.delta }];
   }));
   if (formWinner) awards.push({ id: 'form', label: '近期進步最多', emoji: '📈', metricBasis: '自適應現況區間 Overall − 不重疊基準區間 Overall（僅競技模式，adaptive-window-v1）', minMatches: 6, minRounds: 0, ...formWinner, tieRule: '最高變化 0.1 分以內並列' });

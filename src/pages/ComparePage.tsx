@@ -2,7 +2,6 @@ import { CompareTables } from '../components/CompareTables';
 import { EmptyState } from '../components/EmptyState';
 import { lazy, Suspense, useMemo } from 'react';
 import { comparePlayers, groupByAgent, groupByMap } from '../analytics/analysis';
-import { selectPerformances } from '../analytics/filters';
 import { aggregateSelection } from '../analytics/rankings';
 import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
 import { PlayerAvatar } from '../components/PlayerAvatar';
@@ -10,6 +9,8 @@ import { SectionHeading } from '../components/SectionHeading';
 import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
 import { ScopeExplanation } from '../components/ScopeExplanation';
+import { AnalysisStatusNotice } from '../components/AnalysisStatusNotice';
+import { useScopedAnalysis } from '../hooks/useScopedAnalysis';
 import { zhTW } from '../i18n/zhTW';
 import type { PlayerAnalytics } from '../types/valorant';
 
@@ -26,11 +27,13 @@ function relativeAreas(analytics: PlayerAnalytics) {
 }
 
 export function ComparePage() {
-  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries, population } } = useDataset();
+  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, population } } = useDataset();
   const { filters, update, reset, params, setParams } = useAnalysisFilters('current');
   const requested = (params.get('players')?.split(',').filter(Boolean) ?? activeDataset.players.slice(0, 2).map((player) => player.id)).slice(0, 4);
   const selectedIds = [...new Set(requested)].filter((id) => activeDataset.players.some((player) => player.id === id));
-  const selection = useMemo(() => selectPerformances(performanceEntries, { ...filters, playerId: 'all' }, { population }), [filters, performanceEntries, population]);
+  const compareFilters = useMemo(() => ({ ...filters, playerId: 'all' }), [filters]);
+  const analysis = useScopedAnalysis(compareFilters);
+  const selection = analysis.selection;
   const analytics = useMemo(() => {
     try { return comparePlayers(aggregateSelection(selection), selectedIds); } catch { return []; }
   }, [selectedIds, selection]);
@@ -46,7 +49,8 @@ export function ComparePage() {
     <header className="page-heading"><div><p className="metric-label">並排分析</p><h1>玩家比較</h1><p>選擇 2 到 4 位玩家，在相同條件與證據感知計分模型下比較。</p></div></header>
     <section className="surface-card player-selector" aria-label="選擇比較玩家"><p>選擇玩家（{selectedIds.length}/4）</p><div>{activeDataset.players.map((player) => <label key={player.id}><input type="checkbox" checked={selectedIds.includes(player.id)} disabled={!selectedIds.includes(player.id) && selectedIds.length >= 4} onChange={() => togglePlayer(player.id)} /><PlayerAvatar player={player} /><span>{player.handle}</span></label>)}</div></section>
     <AnalysisFilterBar filters={filters} onChange={update} onReset={reset} players={activeDataset.players} maps={availableMaps} agents={availableAgents} gameModes={availableGameModes} includePlayer={false} seasonKeys={population.seasonKeys} />
-    <ScopeExplanation scope={selection.scope} players={activeDataset.players} />
+    <AnalysisStatusNotice analysis={analysis} />
+    <ScopeExplanation scope={selection.scope} players={activeDataset.players} source={analysis.source} trackedMatchCount={analysis.trackedMatchCount} />
     {selectedIds.length < 2 ? <EmptyState title="請至少選擇 2 位玩家" description="勾選上方玩家，在相同條件下並排比較；最多可選 4 位。" /> : analytics.length < 2 ? <EmptyState title="選取條件下沒有足夠的玩家資料" description="請放寬篩選，或選擇有出賽樣本的玩家。" actions={<button type="button" className="button-secondary" onClick={reset}>重設條件</button>} /> : <>
       <section className="surface-card p-4 sm:p-6"><SectionHeading title="分類分數雷達圖" description="同一篩選人口下的證據感知分數；文字摘要已包含在圖表標籤中。" /><Suspense fallback={<div className="empty-panel">圖表載入中…</div>}><ComparisonRadar analytics={analytics} /></Suspense></section>
       <CompareTables analytics={analytics} />

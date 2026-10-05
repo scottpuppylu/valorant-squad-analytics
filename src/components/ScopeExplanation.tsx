@@ -8,7 +8,7 @@ import { formatPercent } from '../utils/format';
 const reasonList = (reasons: ScopeReason[]) => reasons.map((reason) => scopeReasonLabels[reason]).join('、');
 
 /** Compact "what scope does this number represent" disclosure; details stay collapsed. */
-export function ScopeExplanation({ scope, players }: { scope?: ScopeSummary; players: Player[] }) {
+export function ScopeExplanation({ scope, players, source, trackedMatchCount }: { scope?: ScopeSummary; players: Player[]; source?: 'server' | 'snapshot'; trackedMatchCount?: number }) {
   if (!scope) return null;
   const policy = policyFor(scope.feature);
   const byId = new Map(players.map((player) => [player.id, player]));
@@ -21,6 +21,7 @@ export function ScopeExplanation({ scope, players }: { scope?: ScopeSummary; pla
     </summary>
     <div className="mt-3 space-y-2 text-slate-300">
       <p>{policy.why}</p>
+      {source === 'server' ? <p className="text-slate-400">由伺服器依完整已追蹤歷史{trackedMatchCount === undefined ? '' : `（${trackedMatchCount} 場）`}選樣，不受瀏覽器 300 場快照限制。</p> : null}
       <p className="text-slate-400">全部選取樣本：{describeWindow(scope.sample)}。版本：{scope.scopeRuleVersion} · {scope.featurePolicyVersion}{scope.kind === 'ADAPTIVE' ? ' · adaptive-window-v1' : ''}。不會改用其他範圍補值。</p>
       {scope.reasons.length ? <p className="text-slate-400">說明：{reasonList(scope.reasons)}</p> : null}
       {scope.kind === 'ADAPTIVE' && rows.length ? <div className="table-scroll" tabIndex={0} role="region" aria-label="每位玩家的觀察區間">

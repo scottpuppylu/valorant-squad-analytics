@@ -20,6 +20,8 @@ export interface DatasetContextValue {
   loadHistory?: NonNullable<DatasetApiClient['loadHistory']>;
   /** DATA-03B.2A aggregate facts for the current REAL snapshot, when loaded. */
   analyticsContext?: DatasetAnalyticsContextResponse;
+  /** DATA-03B.2B server analysis loader; present only for PUBLIC REAL. */
+  loadAnalysis?: NonNullable<DatasetApiClient['loadAnalysis']>;
   refresh(): Promise<void>;
 }
 
