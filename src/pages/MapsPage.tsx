@@ -9,6 +9,7 @@ import { SectionHeading } from '../components/SectionHeading';
 import { ScoreProfileTable } from '../components/ScoreProfileTable';
 import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
+import { ScopeExplanation } from '../components/ScopeExplanation';
 import { zhTW } from '../i18n/zhTW';
 import { dimensions as scoreDimensions } from '../scoring/versions';
 import { formatAcs, formatAdr, formatPercent, formatRatio } from '../utils/format';
@@ -27,20 +28,21 @@ function topCategory(entries: PerformanceEntry[]): string {
 }
 
 export function MapsPage() {
-  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } } = useDataset();
+  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries, population } } = useDataset();
   const { filters, update, reset } = useAnalysisFilters();
   const baseFilters = useMemo(() => ({ ...filters, map: 'all' as const }), [filters]);
-  const baseSelection = useMemo(() => selectPerformances(performanceEntries, baseFilters), [baseFilters, performanceEntries]);
+  const baseSelection = useMemo(() => selectPerformances(performanceEntries, baseFilters, { population, lifetimeFeature: 'mapStats' }), [baseFilters, performanceEntries, population]);
   const summaries = useMemo(() => groupByMap(baseSelection.entries), [baseSelection.entries]);
   const selectedMap = (filters.map === 'all' ? (summaries[0]?.id ?? availableMaps[0]) : filters.map) as typeof filters.map;
   const selectedFilters = useMemo(() => ({ ...filters, map: selectedMap }), [filters, selectedMap]);
-  const selected = useMemo(() => selectPerformances(performanceEntries, selectedFilters), [performanceEntries, selectedFilters]);
+  const selected = useMemo(() => selectPerformances(performanceEntries, selectedFilters, { population, lifetimeFeature: 'mapStats' }), [performanceEntries, population, selectedFilters]);
   const rows = useMemo(() => rankPlayers(selected, filters, 'overall'), [filters, selected]);
   const agents = useMemo(() => groupByAgent(selected.entries), [selected.entries]);
   const selectedSummary = summaries.find((summary) => summary.id === selectedMap);
 
   return <div className="space-y-9"><header className="page-heading"><div><p className="metric-label">地圖切分</p><h1>地圖分析</h1><p>比較各地圖的出賽樣本與表現；場次差異不代表地圖造成結果。</p></div></header>
-    <AnalysisFilterBar filters={filters} onChange={update} onReset={reset} players={activeDataset.players} maps={availableMaps} agents={availableAgents} gameModes={availableGameModes} />
+    <AnalysisFilterBar filters={filters} onChange={update} onReset={reset} players={activeDataset.players} maps={availableMaps} agents={availableAgents} gameModes={availableGameModes} seasonKeys={population.seasonKeys} />
+    <ScopeExplanation scope={baseSelection.scope} players={activeDataset.players} />
     <section><SectionHeading title="地圖總覽" description="每張卡片保留場次與回合分母；最高分類是該地圖玩家平均最高的目前分數面向。" /><div className="summary-grid">{summaries.map((summary) => { const entries = baseSelection.entries.filter((entry) => entry.match.map === summary.id); return <button type="button" className={`surface-card summary-card ${summary.id === selectedMap ? 'summary-card--active' : ''}`} key={summary.id} onClick={() => update({ map: summary.id as typeof filters.map })}><strong>{summary.label}</strong><span>{summary.matches} 場 · {summary.rounds} 玩家回合</span><dl><div><dt>勝率</dt><dd>{formatPercent(summary.winRate)}</dd></div><div><dt>ACS</dt><dd>{formatAcs(summary.acs)}</dd></div><div><dt>KAST</dt><dd>{(summary.kast === undefined ? '—' : formatPercent(summary.kast))}</dd></div><div><dt>最高分類</dt><dd>{topCategory(entries)}</dd></div></dl></button>; })}</div></section>
     <section><SectionHeading title={`${selectedMap ?? '地圖'}玩家排名`} description={selectedSummary ? `${selectedSummary.matches} 場對戰、${selectedSummary.rounds} 玩家回合；勝 ${selectedSummary.wins} 次出賽、負 ${selectedSummary.appearances - selectedSummary.wins} 次出賽。` : '無符合條件的地圖資料。'} /><PlayerRankingTable rows={rows} metric="overall" /></section>
     <section><SectionHeading title="分數與原始指標輪廓" description="所有分類分數都由版本化產品計分介面重算，沒有在地圖頁複製公式。" /><ScoreProfileTable rows={rows} /></section>

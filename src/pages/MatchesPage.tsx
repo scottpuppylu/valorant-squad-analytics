@@ -12,7 +12,7 @@ import { formatAcs, formatAdr, formatCount, formatDateTime, formatFullDate, form
 const pageSize = 8;
 
 export function MatchesPage() {
-  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries }, loadHistory, snapshot } = useDataset();
+  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries, population }, loadHistory, snapshot } = useDataset();
   const history = useTrackedHistory({ loadHistory, snapshotMatches: activeDataset.matches, snapshotVersion: snapshot?.version });
   // DATA-03B.1: older tracked matches are browse-only; analytics keep the bounded snapshot.
   const browseDataset = useMemo(() => (history.matches.length === 0 ? activeDataset : {
@@ -27,7 +27,8 @@ export function MatchesPage() {
     gameModes: [...new Set(browseDataset.matches.map((match) => match.gameMode))].sort(),
   }), [activeDataset, availableAgents, availableGameModes, availableMaps, browseDataset]);
   const { filters, update, reset, params, setParams } = useAnalysisFilters();
-  const selection = useMemo(() => selectPerformances(browseEntries, filters), [filters, browseEntries]);
+  // Browse-only: population facts come from the analytics snapshot, never from loaded history pages.
+  const selection = useMemo(() => selectPerformances(browseEntries, filters.period === 'current' ? { ...filters, period: 'all' } : filters, { population, lifetimeFeature: 'matchHistory' }), [filters, browseEntries, population]);
   const matches = useMemo(() => matchesForSelection(browseDataset.matches, selection), [browseDataset.matches, selection]);
   const requestedPage = Math.max(1, Number(params.get('page')) || 1);
   const pageCount = Math.max(1, Math.ceil(matches.length / pageSize));
@@ -48,7 +49,7 @@ export function MatchesPage() {
   return <div className="space-y-9">
     <header className="page-heading"><div><p className="metric-label">出賽紀錄</p><h1>對戰紀錄</h1><p>依日期、地圖、模式與玩家篩選；展開後只呈現資料集確實擁有的玩家表現。</p></div><div className="data-pill"><span /> {matches.length} 場符合</div></header>
     {history.status === 'unavailable' ? null : <HistoryScope history={history} snapshotCount={activeDataset.matches.length} />}
-    <AnalysisFilterBar filters={filters} onChange={changeFilters} onReset={reset} players={browseDataset.players} maps={browseOptions.maps} agents={browseOptions.agents} gameModes={browseOptions.gameModes} includeSamples={false} />
+    <AnalysisFilterBar filters={filters} onChange={changeFilters} onReset={reset} players={browseDataset.players} maps={browseOptions.maps} agents={browseOptions.agents} gameModes={browseOptions.gameModes} includeSamples={false} periods={['all', 'act', 'recent10', 'recent30', 'custom']} seasonKeys={population.seasonKeys} />
     {visible.length === 0 ? <div className="empty-panel surface-card">無符合條件的對戰。請調整篩選器。</div> : <section className="match-history" aria-label="對戰清單">
       {visible.map((match) => <details className="surface-card match-detail" key={match.id}>
         <summary>

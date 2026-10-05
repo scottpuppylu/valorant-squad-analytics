@@ -10,21 +10,25 @@ import { PlayerRankingTable } from '../components/PlayerRankingTable';
 import { SectionHeading } from '../components/SectionHeading';
 import { useDataset } from '../hooks/useDataset';
 import { useAnalysisFilters } from '../hooks/useAnalysisFilters';
+import { ScopeExplanation } from '../components/ScopeExplanation';
 
 const metrics = Object.keys(rankingMetricLabels) as RankingMetric[];
 
 export function LeaderboardPage() {
-  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries } } = useDataset();
-  const { filters, update, reset, params, setParams } = useAnalysisFilters();
+  const { analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, performanceEntries, population } } = useDataset();
+  const { filters, update, reset, params, setParams } = useAnalysisFilters('current');
   const requestedMetric = params.get('metric') as RankingMetric | null;
   const metric = requestedMetric && metrics.includes(requestedMetric) ? requestedMetric : 'overall';
   const requestedDirection = params.get('direction');
   const defaultDirection: SortDirection = lowerIsBetterMetrics.has(metric) ? 'asc' : 'desc';
   const direction: SortDirection = requestedDirection === 'asc' || requestedDirection === 'desc' ? requestedDirection : defaultDirection;
-  const selection = useMemo(() => selectPerformances(performanceEntries, filters), [filters, performanceEntries]);
+  const selection = useMemo(() => selectPerformances(performanceEntries, filters, { population }), [filters, performanceEntries, population]);
+  // Recent-form badge chooses its own adaptive windows from context-filtered entries (no horizon).
+  const formSelection = useMemo(() => selectPerformances(performanceEntries, { ...filters, period: 'all' }, { population }), [filters, performanceEntries, population]);
   const rows = useMemo(() => rankPlayers(selection, filters, metric, direction), [direction, filters, metric, selection]);
-  const insufficient = useMemo(() => insufficientPlayers(selection, filters), [filters, selection]);
-  const badges = useMemo(() => computeBadges(selection, Math.max(filters.minMatches, 5), Math.max(filters.minRounds, 100)), [filters.minMatches, filters.minRounds, selection]);
+  const insufficient = useMemo(() => [...new Set([...insufficientPlayers(selection, filters),
+    ...[...(selection.scope?.players.values() ?? [])].filter((item) => item.status === 'unavailable').map((item) => item.playerId)])], [filters, selection]);
+  const badges = useMemo(() => computeBadges(selection, Math.max(filters.minMatches, 5), Math.max(filters.minRounds, 100), formSelection, population), [filters.minMatches, filters.minRounds, formSelection, population, selection]);
 
   function setQuery(key: string, value: string, removeWhen?: string) {
     const next = new URLSearchParams(params);
@@ -38,11 +42,12 @@ export function LeaderboardPage() {
       <label><span>排名指標</span><select aria-label="排名指標" value={metric} onChange={(event) => { const nextMetric = event.target.value as RankingMetric; const next = new URLSearchParams(params); next.set('metric', nextMetric); next.delete('direction'); setParams(next, { replace: true }); }}>{metrics.map((key) => <option value={key} key={key}>{rankingMetricLabels[key]}</option>)}</select></label>
       <label><span>排序方向</span><select aria-label="排序方向" value={direction} onChange={(event) => setQuery('direction', event.target.value, defaultDirection)}><option value="desc">由高到低</option><option value="asc">由低到高</option></select></label>
     </div>
-    <AnalysisFilterBar filters={filters} onChange={update} onReset={reset} players={activeDataset.players} maps={availableMaps} agents={availableAgents} gameModes={availableGameModes} />
+    <AnalysisFilterBar filters={filters} onChange={update} onReset={reset} players={activeDataset.players} maps={availableMaps} agents={availableAgents} gameModes={availableGameModes} seasonKeys={population.seasonKeys} />
+    <ScopeExplanation scope={selection.scope} players={activeDataset.players} />
     <section><SectionHeading title={`依「${rankingMetricLabels[metric]}」${direction === 'desc' ? '由高到低' : '由低到高'}`} description={`目前條件：${activeFilterSummary(filters).join(' · ') || '全部資料'}。分類分數仍是版本化產品模型。`} />
       <PlayerRankingTable rows={rows} metric={metric} />
       {selection.entries.length === 0 ? <p className="sample-warning">無符合條件的資料。</p> : null}
-      {insufficient.length > 0 ? <p className="sample-warning">樣本不足而未列入排名：{insufficient.map((id) => activeDataset.players.find((player) => player.id === id)?.handle ?? id).join('、')}</p> : null}
+      {insufficient.length > 0 ? <p className="sample-warning">樣本不足或不在此資料範圍而未列入排名：{insufficient.map((id) => activeDataset.players.find((player) => player.id === id)?.handle ?? id).join('、')}</p> : null}
     </section>
     <section><SectionHeading eyebrow="依目前選取資料計算" title="玩家徽章" description="徽章使用相同篩選人口與明示門檻；差距 0.1 以內並列，不代表官方榮譽。" /><BadgeGrid badges={badges} players={activeDataset.players} /></section>
   </div>;

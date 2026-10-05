@@ -8,20 +8,22 @@ import { StatusBadge } from '../components/StatusBadge';
 import { useDataset } from '../hooks/useDataset';
 import { buildSynergy, canonicalPair, defaultSynergyFilters } from '../synergy/analytics';
 import { formatPercent, formatScore } from '../utils/format';
+import { seasonLabel } from '../analytics/scope/season';
 
 const dateValue = (value: string | null) => value && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) ? value : '';
 
 export function SynergyPage() {
-  const { dataset } = useDataset();
+  const { dataset, analytics: { population } } = useDataset();
   const [params, setParams] = useSearchParams();
   const maps = [...new Set(dataset.matches.map((m) => m.map))].sort();
   const modes = [...new Set(dataset.matches.map((m) => m.gameMode))].sort();
   const map = maps.includes(params.get('map') ?? '') ? params.get('map')! : 'all';
   const gameMode = modes.includes(params.get('mode') ?? '') ? params.get('mode')! : 'all';
   const from = dateValue(params.get('from')); const to = dateValue(params.get('to'));
+  const act = population.seasonKeys.includes(params.get('act') ?? '') ? params.get('act')! : '';
   const minimum = Number(params.get('min') ?? 0);
   const minimumShared = Number.isSafeInteger(minimum) && minimum >= 0 && minimum <= 300 ? minimum : 0;
-  const results = useMemo(() => buildSynergy(dataset, { ...defaultSynergyFilters, map, gameMode, from, to }), [dataset,map,gameMode,from,to]);
+  const results = useMemo(() => buildSynergy(dataset, { ...defaultSynergyFilters, map, gameMode, from, to, ...(act ? { act } : {}) }), [dataset,map,gameMode,from,to,act]);
   const shortlist = results.filter((r) => r.sharedSample.matches >= minimumShared);
   const validId = (id: string | null) => typeof id === 'string' && dataset.players.some((p) => p.id === id) ? id : undefined;
   const a = validId(params.get('a')) ?? shortlist[0]?.pair.playerAId ?? dataset.players[0]?.id;
@@ -30,7 +32,7 @@ export function SynergyPage() {
   const selected = a && b ? lookup.get(canonicalPair(a,b).key) : undefined;
   function update(values: Record<string, string>) {
     const next = new URLSearchParams();
-    for (const [key,value] of Object.entries({ a: a ?? '', b: b ?? '', map, mode: gameMode, from, to, min: String(minimumShared), ...values })) {
+    for (const [key,value] of Object.entries({ a: a ?? '', b: b ?? '', act, map, mode: gameMode, from, to, min: String(minimumShared), ...values })) {
       if (value !== '' && value !== 'all') next.set(key,value);
     }
     setParams(next, { replace: true });
@@ -48,6 +50,7 @@ export function SynergyPage() {
       <section className="surface-card grid min-w-0 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4" aria-label="搭檔篩選">
         <label>玩家 A<select aria-label="玩家 A" className={inputClass} value={a} onChange={(e) => update({a:e.target.value,b:e.target.value === b ? dataset.players.find((p) => p.id !== e.target.value)!.id : b!})}>{dataset.players.map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
         <label>玩家 B<select aria-label="玩家 B" className={inputClass} value={b} onChange={(e) => update({b:e.target.value})}>{dataset.players.filter((p) => p.id !== a).map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
+        <label>資料範圍<select aria-label="資料範圍" className={inputClass} value={act} onChange={(e) => update({act:e.target.value})}><option value="">全部已追蹤</option>{population.seasonKeys.length === 0 ? <option value="" disabled>指定 Act（目前沒有 Act 資料）</option> : population.seasonKeys.map((key) => <option key={key} value={key}>{seasonLabel(key)}</option>)}</select></label>
         <label>地圖<select aria-label="地圖" className={inputClass} value={map} onChange={(e) => update({map:e.target.value})}><option value="all">全部地圖</option>{maps.map((m) => <option key={m}>{m}</option>)}</select></label>
         <label>模式<select aria-label="模式" className={inputClass} value={gameMode} onChange={(e) => update({mode:e.target.value})}><option value="all">全部模式</option>{modes.map((m) => <option key={m}>{m}</option>)}</select></label>
         <label>開始日期<input aria-label="開始日期" className={inputClass} type="date" value={from} onChange={(e) => update({from:e.target.value})} /></label>
@@ -55,7 +58,7 @@ export function SynergyPage() {
         <label>排行最少共同場次<input aria-label="排行最少共同場次" className={inputClass} type="number" min="0" max="300" value={minimumShared} onChange={(e) => update({min:e.target.value})} /></label>
         <button className="button-secondary self-end" type="button" onClick={() => setParams({})}>重設條件</button>
       </section>
-      <p className="text-sm text-slate-400">日期、地圖與模式同時套用共同場次及雙方基準；不使用全域特務／角色或最近 N 場篩選，避免拆散配對。</p>
+      <p className="text-sm text-slate-400">資料範圍（全部已追蹤或指定 Act）、日期、地圖與模式同時套用共同場次及雙方基準（analysis-scope-v1 搭檔情境）；不使用全域特務／角色或最近 N 場篩選，避免拆散配對。</p>
       {selected ? <SynergyDetail result={selected} /> : <div id="pair-detail"><EmptyState title="沒有共同同隊樣本" description="請選擇其他搭檔，或放寬日期、地圖與模式條件。" actions={<button type="button" className="button-secondary" onClick={() => setParams({})}>重設條件</button>} /></div>}
       <section><h2 className="mb-4 text-xl text-white">目前樣本搭檔關聯</h2><div className="grid gap-3 md:grid-cols-2">
         {shortlist.map((r) => <button key={r.pair.key} type="button" onClick={() => choose(r.pair.playerAId,r.pair.playerBId)} className="surface-card min-w-0 p-4 text-left">

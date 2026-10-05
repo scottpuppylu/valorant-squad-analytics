@@ -8,10 +8,14 @@ function positiveNumber(value: string | null): number {
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
 }
 
-function filtersFromParams(params: URLSearchParams): AnalysisFilters {
+const periods: AnalysisFilters['period'][] = ['current', 'all', 'act', 'recent10', 'recent30', 'custom'];
+
+function filtersFromParams(params: URLSearchParams, defaultPeriod: AnalysisFilters['period']): AnalysisFilters {
+  const requested = params.get('period') as AnalysisFilters['period'] | null;
   return {
     playerId: params.get('player') || 'all',
-    period: (['all', 'recent10', 'recent30', 'custom'].includes(params.get('period') ?? '') ? params.get('period') : 'all') as AnalysisFilters['period'],
+    period: requested && periods.includes(requested) ? requested : defaultPeriod,
+    act: params.get('act') || undefined,
     dateFrom: params.get('from') || undefined,
     dateTo: params.get('to') || undefined,
     map: (params.get('map') || 'all') as AnalysisFilters['map'],
@@ -23,18 +27,23 @@ function filtersFromParams(params: URLSearchParams): AnalysisFilters {
   };
 }
 
-export function useAnalysisFilters() {
+/**
+ * `defaultPeriod` is the page's default analysis scope (feature-scope-policy-v1): score/ranking pages
+ * use 'current' (目前實力); lifetime pages (maps, agents, match history) use 'all' (全部已追蹤).
+ */
+export function useAnalysisFilters(defaultPeriod: AnalysisFilters['period'] = 'all') {
   const [params, setParams] = useSearchParams();
   const paramsRef = useRef(params);
   useEffect(() => { paramsRef.current = params; }, [params]);
-  const filters = useMemo<AnalysisFilters>(() => filtersFromParams(params), [params]);
+  const filters = useMemo<AnalysisFilters>(() => filtersFromParams(params, defaultPeriod), [defaultPeriod, params]);
 
   function update(patch: Partial<AnalysisFilters>) {
     const nextParams = new URLSearchParams(paramsRef.current);
     nextParams.delete('page');
     const values: Array<[keyof AnalysisFilters, string, string | number | undefined, string | number]> = [
       ['playerId', 'player', patch.playerId, defaultAnalysisFilters.playerId],
-      ['period', 'period', patch.period, defaultAnalysisFilters.period],
+      ['period', 'period', patch.period, defaultPeriod],
+      ['act', 'act', patch.act, ''],
       ['dateFrom', 'from', patch.dateFrom, ''],
       ['dateTo', 'to', patch.dateTo, ''],
       ['map', 'map', patch.map, defaultAnalysisFilters.map],
@@ -53,6 +62,7 @@ export function useAnalysisFilters() {
       nextParams.delete('from');
       nextParams.delete('to');
     }
+    if ('period' in patch && patch.period !== 'act') nextParams.delete('act');
     paramsRef.current = nextParams;
     setParams(nextParams, { replace: true });
   }

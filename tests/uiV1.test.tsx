@@ -102,7 +102,8 @@ describe('V1 presentation and accessibility', () => {
     expect(detail.compareDocumentPosition(matrix)&Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect((matrix as HTMLDetailsElement).open).toBe(false);
     expect(matrix.querySelector('summary')?.textContent).toBe('查看完整矩陣');
-    expect(host.querySelectorAll('label select')).toHaveLength(4);
+    // Player A/B, 資料範圍 (全部已追蹤／指定 Act), map, mode.
+    expect(host.querySelectorAll('label select')).toHaveLength(5);
   });
   it('dictionary group buttons retain search and evidence availability labels',async()=>{
     await render(<DictionaryPage/>);

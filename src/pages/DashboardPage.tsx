@@ -8,17 +8,30 @@ import { RecentPerformance } from '../components/RecentPerformance';
 import { ScoreBadge } from '../components/ScoreBadge';
 import { SectionHeading } from '../components/SectionHeading';
 import { useDataset } from '../hooks/useDataset';
+import { EmptyState } from '../components/EmptyState';
+import { ScopeExplanation } from '../components/ScopeExplanation';
 import { zhTW } from '../i18n/zhTW';
 import { formatPercent, formatRatio, formatScore } from '../utils/format';
 
 const ScoreRadar = lazy(() => import('../components/ScoreRadar').then((module) => ({ default: module.ScoreRadar })));
 
 export function DashboardPage() {
-  const { analytics: { activeDataset, playerAnalytics } } = useDataset();
-  const [selectedPlayerId, setSelectedPlayerId] = useState(playerAnalytics[0]!.player.id);
-  const selected = playerAnalytics.find(({ player }) => player.id === selectedPlayerId) ?? playerAnalytics[0]!;
-  const leader = playerAnalytics[0]!;
+  const { analytics: { activeDataset, currentStrength } } = useDataset();
+  // Community ranking population = feature currentStrength (adaptive-window-v1, Competitive only).
+  const playerAnalytics = currentStrength.analytics;
+  const [selectedPlayerId, setSelectedPlayerId] = useState(playerAnalytics[0]?.player.id ?? '');
+  const selected = playerAnalytics.find(({ player }) => player.id === selectedPlayerId) ?? playerAnalytics[0];
+  const leader = playerAnalytics[0];
   const teamWinRate = activeDataset.matches.filter((match) => match.won).length / activeDataset.matches.length;
+  const withoutWindow = [...(currentStrength.selection.scope?.players.values() ?? [])].filter((item) => item.status === 'unavailable')
+    .map((item) => activeDataset.players.find((player) => player.id === item.playerId)?.handle).filter(Boolean);
+
+  if (!leader || !selected) {
+    return <div className="space-y-6">
+      <EmptyState page title="目前實力資料不足" description="沒有玩家達到「目前實力」的最低樣本（近期 5 場競技、100 回合、2 個活躍日）。不會改用其他範圍補值；可在戰力排名切換「全部已追蹤」。" actions={<Link className="button-primary" to="/leaderboard?period=all">查看全部已追蹤</Link>} />
+      <ScopeExplanation scope={currentStrength.selection.scope} players={activeDataset.players} />
+    </div>;
+  }
 
   return (
     <div className="space-y-14">
@@ -61,12 +74,14 @@ export function DashboardPage() {
         <SectionHeading
           eyebrow="綜合排名"
           title="小隊快照"
-          description="綜合表現依八個貢獻維度與證據覆蓋率計算；樣本信心獨立呈現，永遠不會提高表現分數。"
+          description="依「目前實力」範圍（近期競技、自適應觀察區間）排序；樣本信心獨立呈現，永遠不會提高表現分數。"
           action={<Link className="text-link" to="/leaderboard">完整排名 →</Link>}
         />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {playerAnalytics.map((analytics, index) => <PlayerCard key={analytics.player.id} analytics={analytics} rank={index + 1} />)}
         </div>
+        {withoutWindow.length ? <p className="sample-warning mt-4">目前實力樣本不足而另列：{withoutWindow.join('、')}</p> : null}
+        <div className="mt-4"><ScopeExplanation scope={currentStrength.selection.scope} players={activeDataset.players} /></div>
       </section>
 
       <section><SectionHeading title="各維度領先" /><CategoryLeaders analytics={playerAnalytics} /></section>

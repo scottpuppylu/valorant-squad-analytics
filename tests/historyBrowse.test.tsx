@@ -129,6 +129,31 @@ describe('DATA-03B.1 browse-only history consumer', () => {
     expect(container.textContent).toContain(`已載入 ${matches.length} 場`);
   });
 
+  it('analytics routes are identical before and after loading older history pages (DATA-03B.2A)', async () => {
+    const { players, matches } = realMatches();
+    const client: DatasetApiClient = {
+      load: async () => snapshot(players, matches.slice(0, 20)),
+      loadHistory: async () => page(players, matches.slice(20), false, matches.length, matches.at(-1)!.playedAt),
+    };
+    window.location.hash = '#/leaderboard';
+    await renderWith(client);
+    await settle(() => container.textContent?.includes('資料範圍：目前實力') ?? false);
+    const ranking = () => container.querySelector('table')?.textContent ?? '';
+    const before = ranking();
+    expect(before.length).toBeGreaterThan(0);
+    expect(container.textContent).toContain('資料範圍：目前實力');
+    const go = async (path: string) => {
+      const link = [...container.querySelectorAll('a')].find((anchor) => anchor.getAttribute('href') === `#${path}`)!;
+      await act(async () => { link.click(); });
+    };
+    await go('/matches');
+    await settle(() => container.textContent?.includes('已載入全部已追蹤戰績') ?? false);
+    expect((container.textContent ?? '').match(/已載入 \d+ 場/u)?.[0]).toBe(`已載入 ${matches.length} 場`);
+    await go('/leaderboard');
+    await settle(() => container.textContent?.includes('資料範圍：目前實力') ?? false);
+    expect(ranking()).toBe(before);
+  });
+
   it('never requests history in Demo mode', async () => {
     let historyCalls = 0;
     window.location.hash = '#/matches';
