@@ -1,4 +1,5 @@
 import type { MatchImportInput, ValorantAffinity } from '../contracts.js';
+import { logDatabaseFailure, type DatabaseFailureStage } from './databaseFailureStage.js';
 import { PublicApiError } from '../errors.js';
 import type { HistoricalMatchProvider } from '../henrikDataProvider.js';
 import { lookupHmac, sourceMatchHmac } from '../identityProtection.js';
@@ -247,6 +248,8 @@ export class HistoricalSyncService {
   ): Promise<PublicSyncStatus> {
     const invocationStarted = this.monotonicNow();
     let databaseStage = false;
+    /** database-failure-stage-v1 label for the DB stage this function itself owns (log only). */
+    let failureStage: DatabaseFailureStage | undefined;
     let released = false;
     let cursorCommitted = false;
     const deepMetrics: SyncChunkMetrics | undefined = run.kind === 'deep_backfill' ? {
@@ -287,6 +290,7 @@ export class HistoricalSyncService {
         chunk.metrics.totalMs = Math.round(this.monotonicNow() - invocationStarted);
         chunk.metrics.sqlQueryCount += initialSqlQueryCount + 5;
         databaseStage = true;
+        failureStage = chunk.paginationPause ? 'pagination_pause_commit' : 'cursor_success_commit';
         if (chunk.paginationPause) {
           const repeats = cursor.incompleteReason === 'pagination_repeat' ? cursor.retryCount : 0;
           await this.store.recordFailure({ cursorId: cursor.id, leaseToken, runId: run.id,
@@ -335,6 +339,7 @@ export class HistoricalSyncService {
       let pageCoverage: { from?: string; to?: string } = {};
 
       databaseStage = true;
+      failureStage = 'persist_sync_page';
       if (!repeatedPage && rawIds.length > 0) {
         const write = await this.durable.persistSyncPage(input, payload, run.subject.playerId, this.now().toISOString());
         databaseStage = false;
@@ -376,6 +381,7 @@ export class HistoricalSyncService {
       const totalMs = Math.round(this.monotonicNow() - invocationStarted);
       sqlQueryCount += 5;
       databaseStage = true;
+      failureStage = 'cursor_success_commit';
       await this.store.recordSuccess({
         cursorId: cursor.id,
         leaseToken,
@@ -429,6 +435,7 @@ export class HistoricalSyncService {
       }
       if (cursorCommitted) throw new PublicApiError(503, 'DATABASE_ERROR', '同步已安全提交，但狀態暫時無法讀取。');
       const category = classifyFailure(error, databaseStage);
+      if (databaseStage && failureStage) logDatabaseFailure(failureStage, run.kind, cursor.deep?.historyPhase, error);
       const status = retryStatus(category);
       const retryable = status === 'paused';
       const retrySeconds = Math.min(60 * 2 ** cursor.retryCount, 900);
@@ -445,8 +452,9 @@ export class HistoricalSyncService {
           metrics: deepMetrics,
         });
         released = true;
-      } catch {
+      } catch (failureError) {
         databaseStage = true;
+        logDatabaseFailure('failure_commit', run.kind, cursor.deep?.historyPhase, failureError);
       }
       throw publicFailure(databaseStage ? 'DATABASE_ERROR' : category);
     } finally {

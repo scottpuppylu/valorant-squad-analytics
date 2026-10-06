@@ -1,4 +1,5 @@
 import type { ConnectionInput, MatchImportInput } from '../contracts.js';
+import { ConsentingParticipantAbsentError } from './errors.js';
 import type { SqlDatabase, SqlExecutor } from '../db/types.js';
 import { normalizeHenrikEvidence } from '../evidence/normalizeHenrikEvidence.js';
 import { providerIdentityHmac } from '../identityProtection.js';
@@ -192,7 +193,7 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
     let sqlQueryCount = 0;
     for (const match of evidence) {
       if (!match.participants.some((participant) => participant.providerIdentityHmac)) {
-        throw new Error('Consenting participant is absent from provider evidence.');
+        throw new ConsentingParticipantAbsentError();
       }
       const transactionStarted = performance.now();
       await this.database.transaction(async (transaction) => {

@@ -5,6 +5,7 @@ import type { DurableEvidenceService } from '../persistence/durableEvidenceServi
 import type { HistoricalDiscoveryProvider } from './historicalDiscoveryProvider.js';
 import type { PostgresSyncStore } from './postgresSyncStore.js';
 import { normalizeSeasonEvidence } from '../evidence/seasonEvidence.js';
+import { logDatabaseFailure } from './databaseFailureStage.js';
 import type { DeepCursorState, SyncChunkMetrics, SyncCursorRecord, SyncRunRecord, SyncTerminationReason } from './types.js';
 
 type RecordValue = Record<string, unknown>;
@@ -83,6 +84,7 @@ export async function executeDeepHistoryChunk(options: {
     try { written = await durable.persistSyncPage(input, payload, run.subject.playerId, now().toISOString()); }
     catch (error) {
       if (error instanceof PublicApiError && error.code === 'CONSENT_REVOKED') throw error;
+      logDatabaseFailure('persist_sync_page', run.kind, deep.historyPhase, error);
       throw new PublicApiError(503, 'DATABASE_ERROR', '歷史資料尚未完整提交，保留原進度。');
     }
     if (written.matchWrites !== expected.length || written.matchLookupHmacs.some((value, index) => value !== expected[index])) throw malformed();
@@ -170,7 +172,7 @@ export async function executeDeepHistoryChunk(options: {
   });
   if (seasonFills.length) {
     try { metrics.storedSeasonUpdates = (metrics.storedSeasonUpdates ?? 0) + await store.fillKnownMatchSeasons(run.subject.playerId, seasonFills); }
-    catch { throw new PublicApiError(503, 'DATABASE_ERROR', '歷史資料尚未完整提交，保留原進度。'); }
+    catch (error) { logDatabaseFailure('season_fill', run.kind, deep.historyPhase, error); throw new PublicApiError(503, 'DATABASE_ERROR', '歷史資料尚未完整提交，保留原進度。'); }
     metrics.sqlQueryCount += 1;
   }
   let detailUsed = false;
