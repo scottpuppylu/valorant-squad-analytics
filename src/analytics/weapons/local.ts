@@ -1,4 +1,5 @@
 import { selectPerformances, defaultAnalysisFilters } from '../filters';
+import { isAbsoluteStrengthMode, requestedModeAllowed } from '../modeEligibility.js';
 import type { PerformanceEntry } from '../types';
 import type { ScopePopulation } from '../scope/types';
 import type { NormalizedAnalyticsDataset } from '../../dataSources/types';
@@ -56,9 +57,11 @@ export function localWeaponAnalytics(dataset: NormalizedAnalyticsDataset, entrie
   const reasons: string[] = [];
   let facts = demoWeaponFacts(dataset).filter((fact) => {
     const match = dataset.matches.find((item) => item.id === fact.matchId);
-    return (query.mode === 'all' || match?.gameMode === query.mode) && (query.map === 'all' || fact.map === query.map) && (query.agent === 'all' || fact.agent === query.agent)
+    // weapon-analytics-v2: the same mode-eligibility-policy-v1 rule as the server (Competitive only).
+    return match !== undefined && isAbsoluteStrengthMode(match.gameMode) && (query.mode === 'all' || match.gameMode === query.mode) && (query.map === 'all' || fact.map === query.map) && (query.agent === 'all' || fact.agent === query.agent)
       && (query.scope !== 'act' || fact.act === query.act);
   });
+  if (!requestedModeAllowed('ABSOLUTE_STRENGTH', query.mode)) reasons.push('queue_excluded_by_policy');
   if (query.scope === 'act' && facts.length === 0) reasons.push('act_not_observed');
   if (query.scope === 'current') {
     const selection = selectPerformances(entries, { ...defaultAnalysisFilters, period: 'current', map: query.map, agent: query.agent, gameMode: query.mode }, { population });

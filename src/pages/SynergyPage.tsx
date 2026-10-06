@@ -8,6 +8,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { useDataset } from '../hooks/useDataset';
 import { useSynergyResults } from '../hooks/useScopedAnalysis';
 import { canonicalPair } from '../synergy/analytics';
+import { isAbsoluteStrengthMode } from '../analytics/modeEligibility';
 import { formatPercent, formatScore } from '../utils/format';
 import { actOptionLabel, compareSeasonKeysDesc } from '../analytics/scope/season';
 
@@ -15,10 +16,15 @@ const dateValue = (value: string | null) => value && /^\d{4}-\d{2}-\d{2}$/.test(
 
 export function SynergyPage() {
   // TASK-DATA-03B.2C: map/mode options come from all tracked facts (view=analytics), never the transport snapshot.
-  const { dataset: snapshotDataset, analytics: { population, availableMaps: maps, availableGameModes: modes }, analyticsContext } = useDataset();
+  const { dataset: snapshotDataset, analytics: { population, availableMaps: maps, availableGameModes }, analyticsContext } = useDataset();
+  // duo-synergy-v1 compares Overall across different matches → Competitive only (mode-eligibility-policy-v1).
+  const modes = availableGameModes.filter(isAbsoluteStrengthMode);
   const [params, setParams] = useSearchParams();
   const map = maps.includes(params.get('map') ?? '') ? params.get('map')! : 'all';
   const gameMode = modes.includes(params.get('mode') ?? '') ? params.get('mode')! : 'all';
+  // Legacy ?mode=Unrated/Swiftplay/…: never computed; the page discloses that Synergy uses 排位 only.
+  const requestedMode = params.get('mode');
+  const ineligibleMode = requestedMode !== null && requestedMode !== 'all' && !isAbsoluteStrengthMode(requestedMode);
   const from = dateValue(params.get('from')); const to = dateValue(params.get('to'));
   const act = population.seasonKeys.includes(params.get('act') ?? '') ? params.get('act')! : '';
   // No artificial ceiling: any non-negative safe integer (values above the tracked population simply match no pair).
@@ -55,18 +61,19 @@ export function SynergyPage() {
       <section className="surface-card grid min-w-0 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4" aria-label="搭檔篩選">
         <label>玩家 A<select aria-label="玩家 A" className={inputClass} value={a} onChange={(e) => update({a:e.target.value,b:e.target.value === b ? dataset.players.find((p) => p.id !== e.target.value)!.id : b!})}>{dataset.players.map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
         <label>玩家 B<select aria-label="玩家 B" className={inputClass} value={b} onChange={(e) => update({b:e.target.value})}>{dataset.players.filter((p) => p.id !== a).map((p) => <option key={p.id} value={p.id}>{p.displayName}</option>)}</select></label>
-        <label>資料範圍<select aria-label="資料範圍" className={inputClass} value={act} onChange={(e) => update({act:e.target.value})}><option value="">全部已追蹤</option>{population.seasonKeys.length === 0 ? <option value="" disabled>指定 Act（目前沒有 Act 資料）</option> : [...population.seasonKeys].sort(compareSeasonKeysDesc).map((key, index) => <option key={key} value={key}>指定 Act：{actOptionLabel(key, index)}</option>)}</select></label>
+        <label>資料範圍<select aria-label="資料範圍" className={inputClass} value={act} onChange={(e) => update({act:e.target.value})}><option value="">全部已追蹤排位</option>{population.seasonKeys.length === 0 ? <option value="" disabled>指定 Act（目前沒有 Act 資料）</option> : [...population.seasonKeys].sort(compareSeasonKeysDesc).map((key, index) => <option key={key} value={key}>指定 Act：{actOptionLabel(key, index)}</option>)}</select></label>
         <label>地圖<select aria-label="地圖" className={inputClass} value={map} onChange={(e) => update({map:e.target.value})}><option value="all">全部地圖</option>{maps.map((m) => <option key={m}>{m}</option>)}</select></label>
-        <label>模式<select aria-label="模式" className={inputClass} value={gameMode} onChange={(e) => update({mode:e.target.value})}><option value="all">全部模式</option>{modes.map((m) => <option key={m}>{m}</option>)}</select></label>
+        <label>模式<select aria-label="模式" className={inputClass} value={gameMode} onChange={(e) => update({mode:e.target.value})}><option value="all">排位（搭檔分析固定）</option>{modes.map((m) => <option key={m}>{m}</option>)}</select></label>
         <label>開始日期<input aria-label="開始日期" className={inputClass} type="date" value={from} onChange={(e) => update({from:e.target.value})} /></label>
         <label>結束日期<input aria-label="結束日期" className={inputClass} type="date" value={to} onChange={(e) => update({to:e.target.value})} /></label>
         <label>排行最少共同場次<input aria-label="排行最少共同場次" className={inputClass} type="number" min="0" step="1" {...(trackedMatches ? { max: String(trackedMatches) } : {})} value={minimumShared} onChange={(e) => update({min:e.target.value})} /></label>
         <button className="button-secondary self-end" type="button" onClick={() => setParams({})}>重設條件</button>
       </section>
-      <p className="text-sm text-slate-400">資料範圍（全部已追蹤或指定 Act）、日期、地圖與模式同時套用共同場次及雙方基準（analysis-scope-v1 搭檔情境）；不使用全域特務／角色或最近 N 場篩選，避免拆散配對。</p>
+      {ineligibleMode ? <p className="sample-warning" role="alert">搭檔分析僅使用排位模式；網址指定的「{requestedMode}」不納入（一般模式僅保留給未來的同場相對比較）。</p> : null}
+      <p className="text-sm text-slate-400">資料範圍（全部已追蹤排位或指定 Act）、日期、地圖與模式同時套用共同場次及雙方基準（analysis-scope-v1 搭檔情境）；不使用全域特務／角色或最近 N 場篩選，避免拆散配對。</p>
       {pairPopulation.status === 'loading' ? <p className="sample-warning" role="status">正在以伺服器完整已追蹤歷史計算共同場次與雙方基準…</p>
         : pairPopulation.status === 'error' ? <p className="sample-warning" role="alert">伺服器搭檔分析暫時無法取得；為避免改用其他資料範圍，此處不顯示替代結果。</p>
-        : <p className="text-sm text-slate-400">{pairPopulation.source === 'server' ? `共同場次與雙方基準由伺服器依全部已追蹤戰績（${pairPopulation.trackedMatchCount ?? '—'} 場）計算；此情境共 ${pairPopulation.populationMatches ?? '—'} 場。歷史資料持續補齊中。` : '示範資料：在瀏覽器內以固定虛構資料計算。'}</p>}
+        : <p className="text-sm text-slate-400">{pairPopulation.source === 'server' ? `共同場次與雙方基準由伺服器依全部已追蹤排位戰績計算（已追蹤總數 ${pairPopulation.trackedMatchCount ?? '—'} 場）計算；此情境共 ${pairPopulation.populationMatches ?? '—'} 場。歷史資料持續補齊中。` : '示範資料：在瀏覽器內以固定虛構資料計算。'}</p>}
       {pairPopulation.status === 'loading' || pairPopulation.status === 'error' ? null : selected ? <SynergyDetail result={selected} /> : <div id="pair-detail"><EmptyState title="沒有共同同隊樣本" description="請選擇其他搭檔，或放寬日期、地圖與模式條件。" actions={<button type="button" className="button-secondary" onClick={() => setParams({})}>重設條件</button>} /></div>}
       <section><h2 className="mb-4 text-xl text-white">目前樣本搭檔關聯</h2><div className="grid gap-3 md:grid-cols-2">
         {shortlist.map((r) => <button key={r.pair.key} type="button" onClick={() => choose(r.pair.playerAId,r.pair.playerBId)} className="surface-card min-w-0 p-4 text-left">

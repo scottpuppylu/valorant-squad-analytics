@@ -90,7 +90,7 @@ export function WeaponExplanation() {
 }
 
 export function WeaponsPage() {
-  const { dataset, analytics: { activeDataset, availableAgents, availableGameModes, availableMaps, population } } = useDataset();
+  const { dataset, analytics: { activeDataset, availableAgents, availableMaps, population } } = useDataset();
   const [params, setParams] = useSearchParams();
   const players = activeDataset.players;
   const player = params.get('player') && players.some((p) => p.id === params.get('player')) ? params.get('player')! : players[0]?.id;
@@ -113,14 +113,14 @@ export function WeaponsPage() {
   const name = (key?: string) => member?.weapons.find((w) => w.weaponKey === key)?.weaponName;
   const memberPlayer = players.find((p) => p.id === player)!;
   return <div className="space-y-8">
-    <SectionHeading eyebrow="weapon-analytics-v1" title="武器分析" description={`${dataset.isDemo ? '虛構示範資料。' : '依已保存的已追蹤戰績彙整；'}成員層級（小帳合併），不是完整生涯，也不影響戰力分數。`} />
+    <SectionHeading eyebrow="weapon-analytics-v2" title="武器分析" description={`${dataset.isDemo ? '虛構示範資料。' : '依已保存的已追蹤戰績彙整；'}成員層級（小帳合併），不是完整生涯，也不影響戰力分數。`} />
     <section className="surface-card grid gap-3 p-4 sm:grid-cols-3 lg:grid-cols-6" aria-label="武器分析條件">
       <label>成員<select aria-label="成員" className={inputClass} value={player} onChange={(e) => update({ player: e.target.value, weapon: undefined })}>{players.map((p) => <option key={p.id} value={p.id}>{p.handle}</option>)}</select></label>
       <label>範圍<select aria-label="範圍" className={inputClass} value={scope} onChange={(e) => update({ scope: e.target.value, act: undefined })}>{(['all', 'current', 'act'] as const).map((value) => <option key={value} value={value} disabled={value === 'act' && acts.length === 0}>{weaponScopeLabels[value]}</option>)}</select></label>
       {scope === 'act' ? <label>Act<select aria-label="Act" className={inputClass} value={act} onChange={(e) => update({ act: e.target.value })}>{acts.map((key, index) => <option key={key} value={key}>{actOptionLabel(key, index)}</option>)}</select></label> : null}
       <label>地圖<select aria-label="地圖" className={inputClass} value={map} onChange={(e) => update({ map: e.target.value === 'all' ? undefined : e.target.value })}><option value="all">全部地圖</option>{availableMaps.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
       <label>特務<select aria-label="特務" className={inputClass} value={agent} onChange={(e) => update({ agent: e.target.value === 'all' ? undefined : e.target.value })}><option value="all">全部特務</option>{availableAgents.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-      <label>模式<select aria-label="模式" className={inputClass} value={mode} onChange={(e) => update({ mode: e.target.value === 'Competitive' ? undefined : e.target.value })}><option value="Competitive">競技（預設）</option><option value="all">全部模式</option>{availableGameModes.filter((value) => value !== 'Competitive').map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+      <label>模式<select aria-label="模式" className={inputClass} value={mode} onChange={(e) => update({ mode: e.target.value === 'Competitive' ? undefined : e.target.value })}><option value="Competitive">排位（武器戰力分析固定）</option>{mode !== 'Competitive' ? <option value={mode} disabled>{mode === 'all' ? '全部模式' : mode}（僅限排位）</option> : null}</select></label>
     </section>
     {status === 'loading' ? <LoadingPanel title="正在由伺服器彙整武器證據" /> : null}
     {status === 'error' || status === 'unavailable' ? <EmptyState title="武器分析暫時無法取得" description="不會改用快照、其他範圍或示範資料代替。請稍後再試。" /> : null}

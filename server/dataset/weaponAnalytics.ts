@@ -4,6 +4,7 @@ import { activePlayers } from './postgresDatasetReadRepository.js';
 import type { ServerAnalysisService } from './analysisService.js';
 import { datasetSchemaVersion } from './types.js';
 import { normalizeSeasonKey } from '../../src/analytics/scope/season.js';
+import { isAbsoluteStrengthMode, requestedModeAllowed } from '../../src/analytics/modeEligibility.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
 import {
   buildWeaponAnalytics, type EvidenceState, type KillAggRow, type RoundAggRow, type WeaponAggregates, type WeaponDimension,
@@ -150,8 +151,14 @@ export class WeaponAnalyticsService {
         ? this.analysis.analyze({ feature: 'currentStrength', map: request.map, agent: request.agent, mode: request.mode, role: 'all', player: 'all', form: false })
         : Promise.resolve(undefined),
     ]);
-    const queueKeys = request.mode === 'all' ? null : [...new Set(values.rows.filter((row) => normalizeGameMode(row.queue_id, row.queue_name) === request.mode)
-      .map((row) => `${row.queue_id ?? ''}|${row.queue_name ?? ''}`))];
+    // weapon-analytics-v2 / mode-eligibility-policy-v1: weapon STRENGTH evidence is Competitive only for
+    // ALL / ACT / CURRENT. 'all' = every eligible mode; an explicit ineligible mode computes nothing.
+    const modeExcluded = !requestedModeAllowed('ABSOLUTE_STRENGTH', request.mode);
+    if (modeExcluded) reasons.push('queue_excluded_by_policy');
+    const queueKeys = modeExcluded ? [] : [...new Set(values.rows.filter((row) => {
+      const mode = normalizeGameMode(row.queue_id, row.queue_name);
+      return isAbsoluteStrengthMode(mode) && (request.mode === 'all' || mode === request.mode);
+    }).map((row) => `${row.queue_id ?? ''}|${row.queue_name ?? ''}`))];
     const seasons = request.scope === 'act' ? [...new Set(values.rows.map((row) => row.season_short).filter((raw): raw is string => normalizeSeasonKey(raw) === request.act))] : null;
     if (seasons && seasons.length === 0) reasons.push('act_not_observed');
     let pairs: string[] | null = null;
@@ -190,7 +197,7 @@ export class WeaponAnalyticsService {
       memberIds, ...(request.player !== 'all' && memberVisible ? { memberId: request.player } : {}),
       scope: { mode: request.scope, status, reasons: [...new Set(reasons)].sort(), ...(request.act ? { act: request.act } : {}), context: { map: request.map, agent: request.agent, mode: request.mode } },
     });
-    const payload = { ok: true as const, schemaVersion: datasetSchemaVersion, view: 'analysis' as const, feature: 'weaponAnalytics' as const, ...result };
+    const payload = { ok: true as const, schemaVersion: datasetSchemaVersion, view: 'analysis' as const, feature: 'weaponAnalytics' as const, modeEligibilityPolicyVersion: 'mode-eligibility-policy-v1' as const, ...result };
     return { payload, metrics: { sqlQueryCount, totalMs: Math.round(performance.now() - started), currentAnalysis: Boolean(current) } };
   }
 }

@@ -24,7 +24,7 @@ export function WeaponSummaryCard({ player }: { player: Player }) {
           使用占比 {weapon.observedWeaponRoundShare === undefined ? '—' : formatPercent(weapon.observedWeaponRoundShare)} · 武器擊殺 {formatCount(weapon.weaponKills)}
         </li>)}
       </ul> : <p className="mt-2 text-sm text-slate-400">目前沒有可用的武器證據（缺少證據不等於 0）。</p>}
-      <p className="mt-2 text-xs text-slate-400">全部已追蹤 · 競技 · 回合武器證據 {member.coverage.roundWeapon.coverage === undefined ? '—' : formatPercent(member.coverage.roundWeapon.coverage)}（{weaponEvidenceLabels[member.coverage.roundWeapon.status]}）· 非完整生涯</p>
+      <p className="mt-2 text-xs text-slate-400">全部已追蹤排位 · 回合武器證據 {member.coverage.roundWeapon.coverage === undefined ? '—' : formatPercent(member.coverage.roundWeapon.coverage)}（{weaponEvidenceLabels[member.coverage.roundWeapon.status]}）· 非完整生涯</p>
     </> : null}
   </section>;
 }

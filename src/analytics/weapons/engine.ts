@@ -11,7 +11,11 @@ import { catalogEntry, firearmCategories, normalizeWeaponName, shortHash, usable
  * Shared by the server (SQL aggregate rows) and the Demo (fact rows) so both produce one contract.
  * Server-safe module.
  */
-export const WEAPON_ANALYTICS_VERSION = 'weapon-analytics-v1' as const;
+/**
+ * v2 (TASK-DATA-MODE-POLICY-01): POPULATION contract only — ALL / ACT / CURRENT weapon evidence is
+ * Competitive only (mode-eligibility-policy-v1). Every formula, threshold and the catalog are unchanged.
+ */
+export const WEAPON_ANALYTICS_VERSION = 'weapon-analytics-v2' as const;
 
 export type WeaponScopeMode = 'all' | 'current' | 'act';
 export type WeaponDimension = 'total' | 'map' | 'agent' | 'act' | 'account';
