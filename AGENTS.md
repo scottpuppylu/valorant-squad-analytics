@@ -67,6 +67,8 @@
 | TASK-SCORING-RANK-01 | NOT STARTED |
 | TASK-DATA-PERFORMANCE-SCORE-01 official Performance Score evidence | AUDIT COMPLETE / PHASE B BLOCKED (2026-10-06): provider field NOT VERIFIED (outcome D); `stats.score` = legacy combat-score total → ACS_SAFE; nothing ingested — see docs/PERFORMANCE_SCORE.md |
 | TASK-SCORING-SHARED-MATCH-01 shared-match relative rating (Competitive + Unrated, within-match) | NOT STARTED |
+| TASK-DATA-BULK-01C Phase-2 DATABASE_ERROR diagnosis | DIAGNOSIS BLOCKED BY OBSERVABILITY (2026-10-06): root cause NOT VERIFIED; narrowed to 3 identical-signature candidates (incl. a deterministic Riot-ID-rename identity path); database-failure-stage-v1 READY; controlled reproduction NOT AUTHORIZED — see docs/BULK_DATABASE_ERROR_DIAGNOSIS.md |
+| TASK-DATA-03B.2D full-tracked analysis latency | NOT STARTED |
 | TASK-DATA-MODE-POLICY-01 mode eligibility | COMPLETE / ACCEPTED (2026-10-06): mode-eligibility-policy-v1; strength analytics Competitive only; Unrated = future same-match only; other modes browse-only; feature-scope-policy-v3, weapon-analytics-v2; formulas unchanged — see docs/MODE_ELIGIBILITY.md |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
@@ -77,6 +79,12 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-DATA-BULK-01C (2026-10-06): rules.
+  - DATABASE_ERROR from sync is NOT necessarily a database fault. `persistSyncPage` failures, including
+    `ConsentingParticipantAbsentError`, are relabelled, and the page commits per match.
+  - Read `sync_database_failure` logs (database-failure-stage-v1, labels only) before diagnosing.
+  - Never retry the failed run, reset its cursor or resume bulk without explicit authorization.
 
 - TASK-DATA-MODE-POLICY-01 (2026-10-06, SDD STRICT): rules.
   - Queue rules live ONLY in `src/analytics/modeEligibility.ts` (mode-eligibility-policy-v1).

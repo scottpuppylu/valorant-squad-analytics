@@ -4,7 +4,22 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-MODE-POLICY-01 (2026-10-06)
+## Current decision — TASK-DATA-BULK-01C (2026-10-06)
+
+**DIAGNOSIS BLOCKED BY OBSERVABILITY / ROOT CAUSE NOT VERIFIED.**
+- The failure (滑板車, live_v4) happened after a successful provider request and after 2 of the page's matches committed;
+  `recordFailure` committed, the lease was released and the cursor did not advance.
+- Three candidates match the durable signature exactly:
+  - C1a: the 3rd match lacks the consenting participant (Riot ID changed); deterministic and mislabelled DATABASE_ERROR;
+  - C1b: the 3rd per-match transaction failed in the DB;
+  - C2: a short final page whose cursor commit failed.
+- `database-failure-stage-v1` (sanitized log) is implemented and ready for reproduction. Controlled reproduction is NOT
+  AUTHORIZED / NOT RUN.
+- Phase-2 "pagination repetition 0" is corrected to 1.
+- A minor un-awaited status-read defect was recorded. Bulk stays STOPPED / BLOCKED; TASK-DATA-03B.2D is NOT STARTED.
+- See [BULK_DATABASE_ERROR_DIAGNOSIS.md](BULK_DATABASE_ERROR_DIAGNOSIS.md).
+
+## Earlier decision — TASK-DATA-MODE-POLICY-01 (2026-10-06)
 
 **COMPLETE / ACCEPTED.**
 - `mode-eligibility-policy-v1`: absolute strength analytics are **Competitive only**.

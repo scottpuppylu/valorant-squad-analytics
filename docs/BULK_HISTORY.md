@@ -286,7 +286,7 @@ Server totals:
 | Consent | 0 |
 | Malformed | 0 |
 | HTTP 500 | 0 |
-| Pagination repetition | 0 |
+| Pagination repetition | **1** (corrected by TASK-DATA-BULK-01C: one pagination-repeat pause for 滑板車 at 10:44:32Z, 5-min backoff) |
 | SYNC_BACKOFF | 0 |
 | Network / unexpected | 0 |
 
@@ -315,6 +315,8 @@ Server totals:
   5.5 s at 332 (≈ 13 ms per added match, linear).
 - Extrapolated, the 60 s function limit is reached near **~4,000–4,500 tracked matches**. That is a real ceiling for
   全部已追蹤, which must not be papered over.
+
+> **TASK-DATA-BULK-01C:** the failure is narrowed to three candidates with an identical signature: a 3rd-match consenting participant absent (Riot ID change), a per-match DB failure, or a short final page whose cursor commit failed. The root cause is NOT VERIFIED. The cursor is preserved, the lease released, 2 page matches committed, and replay is idempotent. `database-failure-stage-v1` telemetry is deployed and ready for a separately authorized controlled reproduction. See [BULK_DATABASE_ERROR_DIAGNOSIS.md](BULK_DATABASE_ERROR_DIAGNOSIS.md).
 
 **Next bulk decision: D — investigate the database error and chunk/analysis latency before the next crawl.** Prerequisites:
 1. A separate task to diagnose the 滑板車 `DATABASE_ERROR` safely (it needs an authorized read path; no repair or

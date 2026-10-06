@@ -1,5 +1,7 @@
 # Durable historical synchronization
 
+> **TASK-DATA-BULK-01C:** `persistSyncPage` commits **one transaction per match** (the page is not atomic; replay is idempotent). Any non-consent error inside it, including `ConsentingParticipantAbsentError` when an older match carries a different Riot ID, is reported as DATABASE_ERROR. `database-failure-stage-v1` logs the sanitized stage and error kind. See [BULK_DATABASE_ERROR_DIAGNOSIS.md](BULK_DATABASE_ERROR_DIAGNOSIS.md).
+
 > **TASK-DATA-BULK-01 (`bulk-history-v1`):** the local `npm run history:bulk` controller only invokes the existing
 > start/continue/status routes. Chunk semantics, page size 3, leases, backoff and consent are unchanged. See [BULK_HISTORY.md](BULK_HISTORY.md).
 

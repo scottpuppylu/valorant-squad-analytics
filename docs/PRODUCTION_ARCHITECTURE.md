@@ -10,6 +10,7 @@ TASK-IDENTITY-01: members (people) above Riot accounts; public schema 5 `member-
 TASK-IDENTITY-01B: community name + optional nickname, schema 6 `member-identity-v2`; all name edits are operator-only (no public edit endpoint). The 9 approved names were applied once by data migration 0010 via `db:migrate:vercel` (secret never retrieved).
 TASK-WEAPON-01: `view=analysis&feature=weaponAnalytics` (WEAPON_ANALYTICS.md) — aggregate SQL over all eligible weapon evidence; still 12 functions; no migration.
 TASK-WEAPON-01.1: `weapon-catalog-v2` (Warden → Rifle); classification only.
+TASK-DATA-BULK-01C: sanitized `sync_database_failure` server logs (database-failure-stage-v1; labels only; no API change). Phase-2 root cause NOT VERIFIED; see BULK_DATABASE_ERROR_DIAGNOSIS.md.
 TASK-DATA-MODE-POLICY-01: strength analytics are Competitive only (mode-eligibility-policy-v1, feature-scope-policy-v3, weapon-analytics-v2), enforced server-side and identically in Demo. Storage and acquisition are unchanged, there is no migration, and functions stay at 12. See MODE_ELIGIBILITY.md.
 TASK-DATA-PERFORMANCE-SCORE-01: provider audit gains a shape-only `performance-score` mode in the same function; it remains disabled in Production. HENRIK_API_KEY is Production-only, so no live audit ran. See PERFORMANCE_SCORE.md.
 TASK-DATA-03B.2C: no website match-count ceiling. The 300 snapshot is transport-only, and `server-analysis-v2` aggregates full populations in chunks. Still 12 functions, no migration; see FULL_TRACKED_ANALYTICS.md.
