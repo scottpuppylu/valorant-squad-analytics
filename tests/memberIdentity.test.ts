@@ -19,7 +19,7 @@ import { aggregateSelection } from '../src/analytics/rankings';
 import { buildSynergy, defaultSynergyFilters } from '../src/synergy/analytics';
 import { computeImprovementIndex } from '../src/analytics/progress/improvementIndex';
 import { resolveProgressWindows } from '../src/analytics/progress/windows';
-import { isDatasetAnalysisResponse, progressFromAnalysis, selectionFromAnalysis } from '../src/dataSources/server/analysisResult';
+import { isDatasetAnalysisResponse, progressFromAnalysis } from '../src/dataSources/server/analysisResult';
 import { isDatasetResponse } from '../src/dataSources/server/datasetContract';
 import { accountMatchCounts, memberAccounts } from '../src/analytics/identity';
 import type { NormalizedAnalyticsDataset } from '../src/dataSources/types';
@@ -259,8 +259,8 @@ describe('maintainer linking and primary management', () => {
     const logs = write.mock.calls.map((call) => String(call[0])).join('');
     expect(logs).toContain('"event":"member_identity_conflict"');
     expect(logs).not.toContain(uuid(2, 1));
-    const { payload } = await new ServerAnalysisService(db, new DatasetProjectionService(new PostgresDatasetReadRepository(db))).analyze(request({ feature: 'lifetimeTotals' }));
-    expect(payload.dataset.matches.map((m) => m.id)).toEqual([uuid(6, 2)]);
+    const { selection } = await new ServerAnalysisService(db, new DatasetProjectionService(new PostgresDatasetReadRepository(db))).analyze(request({ feature: 'lifetimeTotals' }));
+    expect([...new Set(Object.values(selection).flat())]).toEqual([uuid(6, 2)]);
     expect((await new MemberAdminService(db).invariants()).sameMatchMemberCollisions).toBe(1);
   });
 });
@@ -323,13 +323,16 @@ describe('member-level analytics = score(union of account evidence)', () => {
     const { multi, unioned } = await pair();
     const service = (db: SqlDatabase) => new ServerAnalysisService(db, new DatasetProjectionService(new PostgresDatasetReadRepository(db)));
     for (const r of [...analysisFeatures, request({ player: uuid(2, 1) }), request({ feature: 'synergy' })]) {
-      const left = (await service(multi).analyze(r)).payload;
-      const right = (await service(unioned).analyze(r)).payload;
+      const leftResult = await service(multi).analyze(r);
+      const rightResult = await service(unioned).analyze(r);
+      const left = leftResult.payload;
+      const right = rightResult.payload;
       expect(isDatasetAnalysisResponse(left), JSON.stringify(r)).toBe(true);
-      const ids = (payload: typeof left) => Object.fromEntries([...selectionFromAnalysis(payload).byPlayer].map(([p, e]) => [p, e.map((x) => x.match.id)]));
-      expect(ids(left), JSON.stringify(r)).toEqual(ids(right));
+      expect(leftResult.selection, JSON.stringify(r)).toEqual(rightResult.selection);
       expect(stripAccounts(left.dataset), JSON.stringify(r)).toEqual(stripAccounts(right.dataset));
       const noAccounts = (value: unknown) => JSON.parse(JSON.stringify(value, (key, item) => (key === 'accountId' || key === 'accounts' ? undefined : item)));
+      expect(noAccounts(left.summary ?? null), JSON.stringify(r)).toEqual(noAccounts(right.summary ?? null));
+      expect(noAccounts(left.synergy ?? null), JSON.stringify(r)).toEqual(noAccounts(right.synergy ?? null));
       if (r.feature === 'improvementIndex') expect(noAccounts([...progressFromAnalysis(left)])).toEqual(noAccounts([...progressFromAnalysis(right)]));
       expect(filtersFor(r).playerId).toBe(r.player ?? 'all');
     }

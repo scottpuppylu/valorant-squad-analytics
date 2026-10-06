@@ -357,9 +357,12 @@ describe('opportunistic recent refresh (durable, race-safe)', () => {
     const newest = after.dataset.matches.reduce((a, b) => (a.playedAt > b.playedAt ? a : b));
     expect(before.dataset.matches.some((m) => m.id === newest.id)).toBe(false);
     for (const feature of ['lifetimeTotals', 'currentStrength', 'improvementIndex'] as const) {
-      const { payload } = await analysis.analyze(parseAnalysisRequest({ view: 'analysis', feature }));
+      const { payload, selection } = await analysis.analyze(parseAnalysisRequest({ view: 'analysis', feature }));
       if (!('dataset' in payload) || !payload.dataset) throw new Error(`no dataset for ${feature}`);
-      expect(payload.dataset.matches.map((m) => m.id)).toContain(newest.id);
+      // server-analysis-v2 ships bounded windows only; the population membership is the internal selection.
+      // (an unavailable adaptive window still ships its evaluated window matches, as in v1)
+      const ids = [...payload.dataset.matches.map((m) => m.id), ...Object.values(selection).flat()];
+      expect(ids, feature).toContain(newest.id);
     }
   });
 

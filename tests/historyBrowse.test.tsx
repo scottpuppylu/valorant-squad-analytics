@@ -93,7 +93,9 @@ describe('DATA-03B.1 browse-only history consumer', () => {
     const text = () => container.textContent ?? '';
     expect(calls[0]).toEqual({ before: inSnapshot.at(-1)!.id, limit: 50 });
     expect(text()).toContain('分析範圍');
-    expect(text()).toContain(`最新 ${inSnapshot.length} 場`);
+    // The transport snapshot size is never presented as the analysis range (TASK-DATA-03B.2C).
+    expect(text()).toContain('分析範圍全部已追蹤');
+    expect(text()).not.toContain(`最新 ${inSnapshot.length} 場`);
     expect(text()).toContain(`已載入 ${inSnapshot.length + 3} 場`);
     expect(text()).toContain(`${matches.length} 場`);
     expect(text()).toContain('已追蹤戰績');

@@ -15,6 +15,7 @@ import { buildAnalytics } from '../src/data/analytics';
 import { calculateRecentForm } from '../src/analytics/analysis';
 import { selectPerformances } from '../src/analytics/filters';
 import { aggregateSelection } from '../src/analytics/rankings';
+import { summarizeSelection, type SelectionSummary } from '../src/analytics/summary';
 import { buildSynergy, defaultSynergyFilters } from '../src/synergy/analytics';
 import { isDatasetAnalysisResponse, progressFromAnalysis, selectionFromAnalysis } from '../src/dataSources/server/analysisResult';
 import { resolveProgressWindows } from '../src/analytics/progress/windows';
@@ -124,9 +125,14 @@ async function clientView(db: SqlDatabase) {
 
 const service = (db: SqlDatabase) => new ServerAnalysisService(db, new DatasetProjectionService(new PostgresDatasetReadRepository(db)));
 const lifetimeFeature = (r: AnalysisRequest) => (r.feature === 'mapStats' || r.feature === 'agentStats' ? r.feature : 'lifetimeTotals');
-const scoreSummary = (_dataset: NormalizedAnalyticsDataset, selection: ReturnType<typeof selectPerformances>) =>
-  aggregateSelection(selection).map((a) => [a.player.id, a.stats.matches, a.stats.rounds, a.stats.acs, a.scores.overall.value ?? null, a.scores.overall.status, a.scores.confidence])
+const scoreRows = (analytics: ReturnType<typeof aggregateSelection>) =>
+  analytics.map((a) => [a.player.id, a.stats.matches, a.stats.rounds, a.stats.acs, a.scores.overall.value ?? null, a.scores.overall.status, a.scores.confidence])
     .sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+const scoreSummary = (_dataset: NormalizedAnalyticsDataset, selection: ReturnType<typeof selectPerformances>) => scoreRows(aggregateSelection(selection));
+const summaryScores = (summary: SelectionSummary | undefined) => scoreRows(summary!.analytics);
+/** The SelectionResult a v1 client rebuilt from the payload (entries sorted playedAt desc, playerId). */
+const asV1Client = (selection: ReturnType<typeof selectPerformances>) => ({ ...selection, entries: [...selection.byPlayer.values()].flat()
+  .sort((a, b) => b.match.playedAt.localeCompare(a.match.playedAt) || a.playerId.localeCompare(b.playerId)) });
 
 describe('DATA-03B.2B request contract', () => {
   it('accepts only declared features and context; the registry decides the population', () => {
@@ -160,13 +166,15 @@ describe('client/server parity while tracked history fits the snapshot', () => {
       request({ player: uuid(2, 2) }),
     ];
     for (const r of requests) {
-      const { payload } = await server.analyze(r);
-      expect(isDatasetAnalysisResponse(payload)).toBe(true);
+      const { payload, selection: serverIds } = await server.analyze(r);
+      expect(isDatasetAnalysisResponse(JSON.parse(JSON.stringify(payload)))).toBe(true);
       const client = selectPerformances(analytics.performanceEntries, filtersFor(r), { population: analytics.population, lifetimeFeature: lifetimeFeature(r) });
       const serverSelection = selectionFromAnalysis(payload);
       const ids = (s: typeof client) => Object.fromEntries([...s.byPlayer].map(([p, e]) => [p, e.map((x) => x.match.id)]));
-      expect(ids(serverSelection), JSON.stringify(r)).toEqual(ids(client));
-      expect(scoreSummary(payload.dataset, serverSelection), JSON.stringify(r)).toEqual(scoreSummary(snapshot.dataset, client));
+      expect(serverIds, JSON.stringify(r)).toEqual(ids(client));
+      expect(summaryScores(payload.summary), JSON.stringify(r)).toEqual(scoreSummary(snapshot.dataset, client));
+      // Exactness: the server summary equals the summary of the selection a v1 client rebuilt locally.
+      expect(JSON.parse(JSON.stringify(payload.summary)), JSON.stringify(r)).toEqual(JSON.parse(JSON.stringify(summarizeSelection(asV1Client(client)))));
       const strip = (scope: NonNullable<typeof client.scope>) => ({ ...scope, players: [...scope.players.values()].map(({ window, ...p }) => ({ ...p, ...(window ? { confidence: window.confidence, status: window.status } : {}) })).sort((x, y) => x.playerId.localeCompare(y.playerId)) });
       const serverScope = serverSelection.scope!;
       expect(strip(serverScope), JSON.stringify(r)).toEqual(strip(client.scope!));
@@ -181,7 +189,9 @@ describe('client/server parity while tracked history fits the snapshot', () => {
     }
     const pair = await server.analyze(request({ feature: 'synergy', act: 'e11a5' }));
     const strip = (results: ReturnType<typeof buildSynergy>) => results.map((r) => [r.pair.key, r.status, r.value ?? null, r.sharedSample.matches, [r.playerA.baseline.matches, r.playerB.baseline.matches]]);
-    expect(strip(buildSynergy(pair.payload.dataset, { ...defaultSynergyFilters, act: 'e11a5' }))).toEqual(strip(buildSynergy(snapshot.dataset, { ...defaultSynergyFilters, act: 'e11a5' })));
+    expect(strip(pair.payload.synergy!)).toEqual(strip(buildSynergy(snapshot.dataset, { ...defaultSynergyFilters, act: 'e11a5' })));
+    expect(JSON.parse(JSON.stringify(pair.payload.synergy))).toEqual(JSON.parse(JSON.stringify(buildSynergy(snapshot.dataset, { ...defaultSynergyFilters, act: 'e11a5' }))));
+    expect(pair.payload.dataset.matches).toHaveLength(0);
   }, 120_000);
 });
 
@@ -199,12 +209,12 @@ describe('parity regressions found by production read-only acceptance', () => {
     const { analytics } = await clientView(db);
     const server = service(db);
     for (const r of [request({ feature: 'actOverview', act: 'e11a5' }), request({ map: 'Summit' }), request({}), request({ feature: 'actOverview', act: 'e11a4', mode: 'Competitive' })]) {
-      const { payload } = await server.analyze(r);
+      const { payload, selection: serverIds } = await server.analyze(r);
       const serverSel = selectionFromAnalysis(payload);
       const client = selectPerformances(analytics.performanceEntries, filtersFor(r), { population: analytics.population });
       const ids = (sel: typeof client) => [...sel.byPlayer].map(([p, e]) => [p, e.map((x) => x.match.id)]).sort();
-      expect(ids(serverSel), JSON.stringify(r)).toEqual(ids(client));
-      expect(scoreSummary(payload.dataset, serverSel), JSON.stringify(r)).toEqual(scoreSummary(payload.dataset, client));
+      expect(Object.entries(serverIds).sort(), JSON.stringify(r)).toEqual(ids(client));
+      expect(summaryScores(payload.summary), JSON.stringify(r)).toEqual(scoreSummary(payload.dataset, client));
       const windows = (sel: typeof client) => [...sel.scope!.players.values()].map((p) => [p.playerId, p.status, p.reasons, p.window?.confidence ?? null]).sort();
       expect(windows(serverSel), JSON.stringify(r)).toEqual(windows(client));
     }
@@ -285,7 +295,7 @@ describe('analytics beyond the newest-300 transport snapshot', () => {
     expect(p2.status).not.toBe('unavailable');
     expect(p2.reasons).not.toContain('transport_window_truncated');
     const snapshotIds = new Set(snapshot.dataset.matches.map((m) => m.id));
-    expect(current.payload.selection[uuid(2, 2)]!.every((id) => !snapshotIds.has(id))).toBe(true);
+    expect(current.selection[uuid(2, 2)]!.every((id) => !snapshotIds.has(id))).toBe(true);
     const clientP2 = selectPerformances(analytics.performanceEntries, filtersFor(request({})), { population: analytics.population }).scope!.players.get(uuid(2, 2));
     expect(clientP2?.sample.matches ?? 0).toBe(0);
     const form = current.payload.forms!.find((f) => f.playerId === uuid(2, 2))!;
@@ -294,16 +304,21 @@ describe('analytics beyond the newest-300 transport snapshot', () => {
     expect(current.payload.dataset.matches.length).toBeLessThanOrEqual(3 * (50 + 30 + 10));
 
     const lifetime = await server.analyze(request({ feature: 'lifetimeTotals' }));
-    expect(new Set(Object.values(lifetime.payload.selection).flat()).size).toBe(380);
+    expect(new Set(Object.values(lifetime.selection).flat()).size).toBe(380);
+    expect(lifetime.payload.coverage).toMatchObject({ populationMatches: 380, populationComplete: true, populationLimit: null });
+    expect(lifetime.payload.dataset.matches).toHaveLength(0);
+    expect(lifetime.payload.summary!.analytics.find((a) => a.player.id === uuid(2, 2))!.stats.matches).toBe(40);
     const act = await server.analyze(request({ feature: 'actOverview', act: 'e11a4' }));
-    expect(new Set(Object.values(act.payload.selection).flat()).size).toBe(25);
-    expect(act.payload.dataset.matches.every((m) => m.seasonKey === 'e11a4')).toBe(true);
+    expect(new Set(Object.values(act.selection).flat()).size).toBe(25);
+    expect(act.payload.coverage.populationMatches).toBe(25);
     const map = await server.analyze(request({ feature: 'mapStats', map: 'Bind' }));
-    expect(new Set(Object.values(map.payload.selection).flat()).size).toBe(30);
+    expect(new Set(Object.values(map.selection).flat()).size).toBe(30);
+    expect(map.payload.summary!.groups.maps.map((m) => [m.id, m.matches])).toEqual([['Bind', 30]]);
     const agent = await server.analyze(request({ feature: 'agentStats', agent: 'Omen' }));
-    expect(agent.payload.selection[uuid(2, 3)]).toHaveLength(40);
+    expect(agent.selection[uuid(2, 3)]).toHaveLength(40);
+    expect(agent.payload.summary!.groups.agents.map((a) => [a.id, a.appearances])).toEqual([['Omen', 40]]);
     const pair = await server.analyze(request({ feature: 'synergy' }));
-    const duo = buildSynergy(pair.payload.dataset, defaultSynergyFilters).find((r) => r.pair.key === JSON.stringify([uuid(2, 2), uuid(2, 3)].sort()))!;
+    const duo = pair.payload.synergy!.find((r) => r.pair.key === JSON.stringify([uuid(2, 2), uuid(2, 3)].sort()))!;
     expect(duo.sharedSample.matches).toBe(30);
     expect([duo.playerA.baseline.matches, duo.playerB.baseline.matches].sort()).toEqual([10, 10]);
     expect(buildSynergy(snapshot.dataset, defaultSynergyFilters).find((r) => r.pair.key === duo.pair.key)).toBeUndefined();
@@ -324,8 +339,10 @@ describe('consistency, consent and privacy', () => {
     expect(text).not.toContain(uuid(1, 1));
     expect(text.toLowerCase()).not.toMatch(/henrikdev|puuid|hmac|internal_|season_id|provider_match/u);
     await db.query("UPDATE consents SET status='revoked', revoked_at=now() WHERE player_id=$1", [uuid(1, 2)]);
-    const revoked = (await server.analyze(request({ feature: 'lifetimeTotals' }))).payload;
-    expect(revoked.selection[uuid(2, 2)]).toBeUndefined();
+    const revokedResult = await server.analyze(request({ feature: 'lifetimeTotals' }));
+    const revoked = revokedResult.payload;
+    expect(revokedResult.selection[uuid(2, 2)]).toBeUndefined();
+    expect(revoked.summary!.analytics.some((a) => a.player.id === uuid(2, 2))).toBe(false);
     expect(JSON.stringify(revoked)).not.toContain('Player2');
   }, 60_000);
 
@@ -334,10 +351,10 @@ describe('consistency, consent and privacy', () => {
     await seedPlayers(db, 2);
     await seedMatches(db, Array.from({ length: 20 }, (_, i) => ({ n: i + 1, hoursAgo: i * 5, seats: [{ player: 1 }, { player: 2 }] })));
     db.hook = async () => { await db.pg.query("UPDATE consents SET status='revoked', revoked_at=now() WHERE player_id=$1", [uuid(1, 2)]); };
-    const payload = (await service(db).analyze(request({ feature: 'lifetimeTotals' }))).payload;
-    expect(payload.selection[uuid(2, 2)]).toBeUndefined();
-    expect(payload.dataset.matches.every((m) => m.performances.every((p) => p.acs > 0))).toBe(true);
-    expect(payload.selection[uuid(2, 1)]).toHaveLength(20);
+    const result = await service(db).analyze(request({ feature: 'lifetimeTotals' }));
+    expect(result.selection[uuid(2, 2)]).toBeUndefined();
+    expect(result.payload.summary!.analytics.every((a) => a.stats.acs > 0)).toBe(true);
+    expect(result.selection[uuid(2, 1)]).toHaveLength(20);
   }, 60_000);
 
   it('serves view=analysis through the existing function and fails closed while disabled', async () => {
@@ -353,8 +370,8 @@ describe('consistency, consent and privacy', () => {
   });
 });
 
-describe('DATA-03B.2B bounded performance', () => {
-  it.each([100, 300, 1000, 5000, 10_000])('keeps phase-2 evidence bounded by policy over %i durable matches', async (count) => {
+describe('DATA-03B.2B/2C bounded performance', () => {
+  it.each([100, 300, 1000, 2000, 5000, 10_000])('keeps policy-bounded features bounded and aggregates ALL TRACKED fully over %i durable matches', async (count) => {
     const db = await database();
     await seedPlayers(db, 4);
     const specs = variedSpecs(count);
@@ -367,7 +384,14 @@ describe('DATA-03B.2B bounded performance', () => {
     const act = await server.analyze(request({ feature: 'actOverview', act: 'e11a4', map: 'Bind' }));
     const pair = await server.analyze(request({ feature: 'synergy', act: 'e11a5' }));
     const lifetime = await server.analyze(request({ feature: 'lifetimeTotals' }));
-    expect(lifetime.payload.status).toBe(count > 2000 ? 'partial' : 'available');
+    // server-analysis-v2: no 2000 cap — the whole tracked population is aggregated and disclosed complete.
+    expect(lifetime.payload.status).toBe('available');
+    expect(lifetime.payload.coverage).toMatchObject({ trackedMatchCount: count, populationMatches: count, populationComplete: true, populationLimit: null });
+    expect(lifetime.metrics.selectedMatches).toBe(count);
+    expect(lifetime.metrics.shippedMatches).toBe(0);
+    // Response scales with members x maps x agents, not with matches.
+    expect(lifetime.metrics.serializedBytes).toBeLessThan(120_000);
+    expect(pair.metrics.serializedBytes).toBeLessThan(120_000);
     const progress = await server.analyze(request({ feature: 'improvementIndex' }));
     // Bounded by improvement windows (≤ 30 current + 60 baseline per player), never the 2000 population.
     expect(progress.metrics.selectedMatches).toBeLessThanOrEqual(4 * (30 + 60));

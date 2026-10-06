@@ -13,6 +13,9 @@ import { createPerformanceEntries, selectPerformances } from '../src/analytics/f
 import { populationFromMatches } from '../src/analytics/scope/resolveScope';
 import { analysisQueryFor } from '../src/hooks/useScopedAnalysis';
 import { serializeScope } from '../server/dataset/analysisService';
+import { summarizeSelection } from '../src/analytics/summary';
+import { buildSynergy, defaultSynergyFilters } from '../src/synergy/analytics';
+import { buildAnalyticsContext } from '../server/dataset/analyticsContext';
 import type { NormalizedAnalyticsDataset } from '../src/dataSources/types';
 import type { AnalysisFilters } from '../src/analytics/types';
 
@@ -34,18 +37,26 @@ function snapshotOf(dataset: NormalizedAnalyticsDataset): DatasetReadyResponse {
 /** Simulates the server: the SAME engine over the full durable dataset, serialized like view=analysis. */
 function serverAnswer(full: NormalizedAnalyticsDataset, query: AnalysisQuery, seen: AnalysisQuery[]): DatasetAnalysisResponse {
   seen.push(query);
+  if (query.feature === 'synergy') {
+    const synergy = buildSynergy(full, defaultSynergyFilters).map((result) => ({ ...result, sharedSample: { ...result.sharedSample, matches: result.sharedSample.matches + 300 } }));
+    return { ok: true, schemaVersion: 6, view: 'analysis', analysisVersion: 'server-analysis-v2', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v2',
+      adaptiveWindowVersion: 'adaptive-window-v1', scoreVersion: 'community-score-v2', synergyVersion: 'duo-synergy-v1', feature: 'synergy', status: 'available', reasons: [],
+      coverage: { trackedMatchCount: 4321, populationComplete: true, populationMatches: 4321, serverHistoryUsed: true, transportSnapshotUsed: false, populationLimit: null, lifetimeComplete: false },
+      population: { seasonKeys: [], seasonStatus: 'unavailable', rankStatus: 'unavailable' }, synergy, evidence, dataset: { ...full, matches: [] } };
+  }
   const period: AnalysisFilters['period'] = query.feature === 'currentStrength' ? 'current' : query.feature === 'fixedRecent' ? (query.recent === 10 ? 'recent10' : 'recent30') : query.feature === 'actOverview' ? 'act' : 'all';
   const filters: AnalysisFilters = { playerId: query.player ?? 'all', period, map: query.map ?? 'all', agent: query.agent ?? 'all', role: (query.role ?? 'all') as AnalysisFilters['role'], gameMode: query.mode ?? 'all', minMatches: 0, minRounds: 0 };
   const population = populationFromMatches(full.matches, true);
   const selection = selectPerformances(createPerformanceEntries(full), filters, { population });
-  const ids = new Set(selection.entries.map((e) => e.match.id));
-  return { ok: true, schemaVersion: 6, view: 'analysis', analysisVersion: 'server-analysis-v1', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v2',
+  const scope = serializeScope(selection.scope!) as DatasetAnalysisResponse['scope'];
+  const windowIds = new Set(scope!.players.flatMap((p) => (p.window ? [...p.window.currentMatchIds, ...p.window.baselineMatchIds] : [])));
+  const sorted = { ...selection, entries: [...selection.byPlayer.values()].flat().sort((a, b) => b.match.playedAt.localeCompare(a.match.playedAt) || a.playerId.localeCompare(b.playerId)) };
+  return { ok: true, schemaVersion: 6, view: 'analysis', analysisVersion: 'server-analysis-v2', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v2',
     adaptiveWindowVersion: 'adaptive-window-v1', scoreVersion: 'community-score-v2', feature: query.feature, status: 'available', reasons: [],
-    coverage: { trackedMatchCount: full.matches.length, populationComplete: true, serverHistoryUsed: true, transportSnapshotUsed: false, populationLimit: 2000, lifetimeComplete: false },
+    coverage: { trackedMatchCount: full.matches.length, populationComplete: true, populationMatches: new Set(selection.entries.map((e) => e.match.id)).size, serverHistoryUsed: true, transportSnapshotUsed: false, populationLimit: null, lifetimeComplete: false },
     population: { seasonKeys: [], seasonStatus: 'unavailable', rankStatus: 'unavailable' },
-    scope: serializeScope(selection.scope!) as DatasetAnalysisResponse['scope'],
-    selection: Object.fromEntries([...selection.byPlayer].map(([p, e]) => [p, e.map((x) => x.match.id)])),
-    evidence, dataset: { ...full, matches: full.matches.filter((m) => ids.has(m.id)) } };
+    scope, summary: JSON.parse(JSON.stringify(summarizeSelection(sorted))),
+    evidence, dataset: { ...full, matches: full.matches.filter((m) => windowIds.has(m.id)) } };
 }
 
 describe('DATA-03B.2B production consumers', () => {
@@ -65,10 +76,10 @@ describe('DATA-03B.2B production consumers', () => {
     const seen: AnalysisQuery[] = [];
     window.location.hash = '#/leaderboard?period=all';
     await render({ load: async () => snapshotOf(snapshot), loadAnalysis: async (query) => serverAnswer(full, query, seen) });
-    await settle(() => container.textContent?.includes('由伺服器依完整已追蹤歷史') ?? false);
+    await settle(() => container.textContent?.includes('由伺服器依全部已追蹤戰績') ?? false);
     // The provider's default prefetch may come first; the page's own request must be present.
     expect(seen).toContainEqual(analysisQueryFor({ playerId: 'all', period: 'all', map: 'all', agent: 'all', role: 'all', gameMode: 'all', minMatches: 0, minRounds: 0 }, 'lifetimeTotals', true));
-    expect(container.textContent).toContain(`由伺服器依完整已追蹤歷史（${full.matches.length} 場）選樣`);
+    expect(container.textContent).toContain(`由伺服器依全部已追蹤戰績（${full.matches.length} 場）選樣`);
     const matchCounts = [...container.querySelectorAll('table tbody tr')].map((row) => row.children[4]?.textContent).filter(Boolean).map(Number);
     expect(Math.max(...matchCounts)).toBe(20);
     expect(Math.max(...matchCounts)).toBeGreaterThan(snapshot.matches.length);
@@ -84,7 +95,7 @@ describe('DATA-03B.2B production consumers', () => {
       load: async () => { await new Promise((r) => setTimeout(r, 50)); snapshotResolved = true; return snapshotOf(full); },
       loadAnalysis: async (query) => { if (!snapshotResolved) analysisBeforeSnapshot = true; return serverAnswer(full, query, seen); },
     });
-    await settle(() => container.textContent?.includes('由伺服器依完整已追蹤歷史') ?? false);
+    await settle(() => container.textContent?.includes('由伺服器依全部已追蹤戰績') ?? false);
     expect(analysisBeforeSnapshot).toBe(true);
     const link = [...container.querySelectorAll('a')].find((a) => a.getAttribute('href') === '#/leaderboard')!;
     await act(async () => { link.click(); });
@@ -125,6 +136,69 @@ describe('DATA-03B.2B production consumers', () => {
     await settle(() => container.textContent?.includes('伺服器分析暫時無法取得') ?? false);
     expect(container.textContent).toContain('不顯示替代結果');
     expect(container.querySelector('[role=alert]')).not.toBeNull();
-    expect(container.textContent).not.toContain('由伺服器依完整已追蹤歷史');
+    expect(container.textContent).not.toContain('由伺服器依全部已追蹤戰績');
+  });
+
+  const contextOf = (tracked: number, wins: number, maps: string[]) => buildAnalyticsContext({
+    groups: [{ queue_id: 'competitive', queue_name: 'Competitive', season_short: null, has_season_id: false, has_duration: true, has_start: true, matches: tracked }],
+    rankObservations: 0, sqlQueryCount: 3,
+    facets: { maps: maps.map((map) => ({ map, matches: 1 })), agents: ['Jett'], outcome_matches: tracked, outcome_wins: wins },
+  });
+
+  it('Synergy has no 300 ceiling: a minimum of 310 shared matches keeps pairs with > 300', async () => {
+    const full = realDemo();
+    window.location.hash = '#/synergy?min=310';
+    await render({ load: async () => snapshotOf(full), loadAnalysis: async (query) => serverAnswer(full, query, []),
+      loadAnalyticsContext: async () => contextOf(4321, 2000, ['Ascent']) });
+    await settle(() => container.textContent?.includes('此情境共 4321 場') ?? false);
+    const input = container.querySelector('input[aria-label="排行最少共同場次"]') as HTMLInputElement;
+    expect(input.value).toBe('310');
+    expect(input.getAttribute('max')).toBe('4321');
+    expect(container.textContent).toMatch(/共同 3\d\d 場/u);
+    expect(container.textContent).not.toContain('目前條件下沒有符合共同場次門檻的搭檔');
+    expect(container.textContent).not.toMatch(/300 場快照|300 場上限/u);
+  });
+
+  it('Dashboard discloses the tracked population, never the transport snapshot size', async () => {
+    const full = realDemo();
+    const snapshot = { ...full, matches: full.matches.slice(0, 6) };
+    window.location.hash = '#/';
+    await render({ load: async () => snapshotOf(snapshot), loadAnalysis: async (query) => serverAnswer(full, query, []),
+      loadAnalyticsContext: async () => contextOf(4321, 2161, ['Ascent']) });
+    await settle(() => container.textContent?.includes('已追蹤 4321 場真實對戰') ?? false);
+    expect(container.textContent).toContain('已追蹤 4321 場真實對戰');
+    expect(container.textContent).toContain('50.0%');
+    expect(container.textContent).not.toContain(`${snapshot.matches.length} 場真實對戰`);
+    expect(container.textContent).not.toMatch(/NaN|Infinity/u);
+  });
+
+  it('Maps renders the server summary (maps beyond the snapshot) and filter options from all tracked facts', async () => {
+    const full = realDemo();
+    const snapshot = { ...full, matches: full.matches.filter((m) => m.map === 'Ascent').slice(0, 2) };
+    window.location.hash = '#/maps?period=all';
+    await render({ load: async () => snapshotOf(snapshot), loadAnalysis: async (query) => serverAnswer(full, query, []),
+      loadAnalyticsContext: async () => contextOf(full.matches.length, 10, [...new Set(full.matches.map((m) => m.map))]) });
+    const mapOptions = () => [...container.querySelectorAll('.analysis-filters select')].find((select) => select.querySelector('option')?.textContent === '全部地圖');
+    const mapCount = new Set(full.matches.map((m) => m.map)).size;
+    await settle(() => container.querySelectorAll('.summary-card').length > 1 && (mapOptions()?.querySelectorAll('option').length ?? 0) > mapCount);
+    const cards = [...container.querySelectorAll('.summary-card strong')].map((node) => node.textContent);
+    expect(new Set(cards).size).toBe(mapCount);
+    const options = [...(mapOptions()?.querySelectorAll('option') ?? [])].map((o) => o.textContent);
+    for (const map of new Set(full.matches.map((m) => m.map))) expect(options).toContain(map);
+  });
+
+  it('Demo Maps/Leaderboard/Synergy compute locally with zero API calls', async () => {
+    const fetchSpy = globalThis.fetch;
+    let calls = 0;
+    globalThis.fetch = (async () => { calls += 1; throw new Error('no network in Demo'); }) as typeof fetch;
+    try {
+      for (const hash of ['#/maps?period=all', '#/leaderboard', '#/synergy']) {
+        window.location.hash = hash;
+        await act(async () => { root.render(<DatasetProvider forceDemo><AvatarProvider><App key={hash} /></AvatarProvider></DatasetProvider>); });
+        await settle(() => (container.textContent ?? '').length > 200);
+        expect(container.textContent).not.toMatch(/NaN|Infinity/u);
+      }
+      expect(calls).toBe(0);
+    } finally { globalThis.fetch = fetchSpy; }
   });
 });
