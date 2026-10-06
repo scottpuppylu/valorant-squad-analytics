@@ -6,6 +6,7 @@ import type { HistoricalDiscoveryProvider } from './historicalDiscoveryProvider.
 import type { PostgresSyncStore } from './postgresSyncStore.js';
 import { normalizeSeasonEvidence } from '../evidence/seasonEvidence.js';
 import { logDatabaseFailure } from './databaseFailureStage.js';
+import { HistoricalIdentityError, identityFailure } from '../persistence/errors.js';
 import type { DeepCursorState, SyncChunkMetrics, SyncCursorRecord, SyncRunRecord, SyncTerminationReason } from './types.js';
 
 type RecordValue = Record<string, unknown>;
@@ -84,6 +85,8 @@ export async function executeDeepHistoryChunk(options: {
     try { written = await durable.persistSyncPage(input, payload, run.subject.playerId, now().toISOString()); }
     catch (error) {
       if (error instanceof PublicApiError && error.code === 'CONSENT_REVOKED') throw error;
+      // historical-identity-v1: an identity failure is not a database failure (no DB telemetry).
+      if (error instanceof HistoricalIdentityError) throw identityFailure();
       logDatabaseFailure('persist_sync_page', run.kind, deep.historyPhase, error);
       throw new PublicApiError(503, 'DATABASE_ERROR', '歷史資料尚未完整提交，保留原進度。');
     }

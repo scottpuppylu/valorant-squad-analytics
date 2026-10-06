@@ -9,7 +9,7 @@ import { DurableEvidenceService } from '../server/persistence/durableEvidenceSer
 import { HistoricalSyncService } from '../server/sync/historicalSyncService';
 import { PostgresSyncStore } from '../server/sync/postgresSyncStore';
 import type { HistoricalDiscoveryProvider } from '../server/sync/historicalDiscoveryProvider';
-import { sourceMatchHmac } from '../server/identityProtection';
+import { providerIdentityHmac, sourceMatchHmac } from '../server/identityProtection';
 import { DatasetProjectionService } from '../server/dataset/datasetProjectionService';
 import { PostgresDatasetReadRepository } from '../server/dataset/postgresDatasetReadRepository';
 import { buildAnalyticsContext, PostgresAnalyticsContextRepository } from '../server/dataset/analyticsContext';
@@ -107,7 +107,7 @@ describe('season evidence normalization (TASK-DATA-SEASON-01)', () => {
 
   it('keeps an otherwise-valid match when the season is malformed', () => {
     const input = { ...connection, playerId: '00000000-0000-4000-8000-000000000001', limit: 1 as const };
-    const [evidence] = normalizeHenrikEvidence(page(match(0, 'garbage')), input, hmacKey);
+    const [evidence] = normalizeHenrikEvidence(page(match(0, 'garbage')), input, hmacKey, providerIdentityHmac('HenrikDev', connection.affinity, 'season-participant', hmacKey));
     expect(evidence).toBeDefined();
     expect(evidence!.seasonId).toBeUndefined();
     expect(evidence!.seasonShort).toBeUndefined();

@@ -67,7 +67,19 @@ function roundParticipant(matchId: string, value: Json, key?: string): EvidenceR
   };
 }
 
-export function normalizeHenrikEvidence(payload: unknown, input: MatchImportInput, explicitKey?: string): DurableMatchEvidence[] {
+/**
+ * `expectedProviderIdentityHmac` is the syncing account's durable `provider_identities.lookup_hmac`
+ * (TASK-DATA-HISTORICAL-IDENTITY-01, `historical-identity-v1`). A participant is the consenting account
+ * only when `providerIdentityHmac('HenrikDev', affinity, players[].puuid)` equals it; the Riot name/tag
+ * is never an identity signal. The caller enforces exactly one such participant per match.
+ */
+export function normalizeHenrikEvidence(
+  payload: unknown,
+  input: MatchImportInput,
+  explicitKey: string | undefined,
+  expectedProviderIdentityHmac: string,
+): DurableMatchEvidence[] {
+  if (expectedProviderIdentityHmac.length === 0) throw new Error('Expected provider identity is required.');
   if (!isRecord(payload)) return [];
   return asRecords(payload.data).slice(0, input.limit).flatMap((match) => {
     const metadata = isRecord(match.metadata) ? match.metadata : undefined;
@@ -99,11 +111,11 @@ export function normalizeHenrikEvidence(payload: unknown, input: MatchImportInpu
         : !economy || loadout?.status === 'unavailable' || spent?.status === 'unavailable'
           ? 'unavailable'
           : loadout?.status === 'observed' && spent?.status === 'observed' ? 'observed' : 'missing';
-      const consenting = asText(player.name)?.toLocaleLowerCase() === input.gameName.toLocaleLowerCase()
-        && asText(player.tag)?.toLocaleLowerCase() === input.tag.toLocaleLowerCase();
+      const identity = providerIdentityHmac('HenrikDev', input.affinity, puuid, explicitKey);
+      const consenting = identity === expectedProviderIdentityHmac;
       return [{
         lookupHmac: participantHmac(matchId, puuid, explicitKey),
-        providerIdentityHmac: consenting ? providerIdentityHmac('HenrikDev', input.affinity, puuid, explicitKey) : undefined,
+        providerIdentityHmac: consenting ? identity : undefined,
         teamKey: asText(player.team_id) ?? 'unknown',
         agentId: asText(agent?.id), agentName: asText(agent?.name),
         status: stats ? 'observed' as const : 'missing' as const,

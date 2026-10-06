@@ -1,6 +1,12 @@
 export type EvidenceStatus = 'observed' | 'missing' | 'unavailable';
 
 export const DURABLE_NORMALIZATION_VERSION = 'durable-evidence-v2' as const;
+/**
+ * Consenting-participant identity rule (docs/HISTORICAL_IDENTITY.md). Deliberately separate from
+ * DURABLE_NORMALIZATION_VERSION: the normalized evidence shape is unchanged, and bumping that version
+ * would make every stored v2 match ineligible for event metrics.
+ */
+export const HISTORICAL_IDENTITY_VERSION = 'historical-identity-v1' as const;
 
 export interface EvidenceParticipant {
   lookupHmac: string;

@@ -13,6 +13,7 @@ import { HenrikDataProvider } from '../server/henrikDataProvider';
 import { MemberAdminService } from '../server/identity/memberAdminService';
 
 const hmacKey = 'test-only-key-material-with-at-least-thirty-two-bytes';
+const expectedIdentity = providerIdentityHmac('HenrikDev', 'ap', 'consenting-puuid', hmacKey);
 const input: MatchImportInput = {
   playerId: '11111111-1111-4111-8111-111111111111',
   gameName: 'GoblinScout', tag: 'TW', affinity: 'ap', consent: true,
@@ -259,7 +260,7 @@ describe('durable database and consent foundation', () => {
     );
     expect(correctedRow.rows[0]).toEqual({ ability_1_casts: 4, spent_total: 5000 });
     expect(summary.performance).toMatchObject({
-      sqlQueryCount: 12,
+      sqlQueryCount: 15, // + import gate, identity resolution and participant-conflict check (historical-identity-v1)
       evidenceCounts: { participants: 3, teams: 2, rounds: 1, roundParticipants: 3, kills: 1, assistants: 1, locations: 2 },
     });
     const orphaned = await database.query<{ count: string }>(`
@@ -274,7 +275,7 @@ describe('durable database and consent foundation', () => {
   });
 
   it('preserves observed zero, marks missing evidence and does not create a non-consenting player', async () => {
-    const evidence = normalizeHenrikEvidence(rawPayload(), input, hmacKey)[0]!;
+    const evidence = normalizeHenrikEvidence(rawPayload(), input, hmacKey, expectedIdentity)[0]!;
     expect(evidence).toMatchObject({ normalizationVersion: 'durable-evidence-v2', roundsStatus: 'observed', killsStatus: 'observed' });
     expect(evidence.participants[0]).toMatchObject({ abilityStatus: 'observed', ability1Casts: 3, economyStatus: 'observed', spentTotal: 4300 });
     expect(evidence.participants[1]).toMatchObject({ abilityStatus: 'observed', ability1Casts: 0, economyStatus: 'observed', spentTotal: 0 });
@@ -301,8 +302,8 @@ describe('durable database and consent foundation', () => {
     const missingPlayer: Record<string, unknown> = { ...source[0] };
     delete missingPlayer.ability_casts;
     delete missingPlayer.economy;
-    const missing = normalizeHenrikEvidence({ ...payload, data: [{ ...payload.data[0], players: [missingPlayer] }] }, input, hmacKey)[0]!.participants[0]!;
-    const unavailable = normalizeHenrikEvidence({ ...payload, data: [{ ...payload.data[0], players: [{ ...source[0], ability_casts: null, economy: [] }] }] }, input, hmacKey)[0]!.participants[0]!;
+    const missing = normalizeHenrikEvidence({ ...payload, data: [{ ...payload.data[0], players: [missingPlayer] }] }, input, hmacKey, expectedIdentity)[0]!.participants[0]!;
+    const unavailable = normalizeHenrikEvidence({ ...payload, data: [{ ...payload.data[0], players: [{ ...source[0], ability_casts: null, economy: [] }] }] }, input, hmacKey, expectedIdentity)[0]!.participants[0]!;
     expect(missing).toMatchObject({ abilityStatus: 'missing', economyStatus: 'missing' });
     expect(missing.ability1Casts).toBeUndefined();
     expect(unavailable).toMatchObject({ abilityStatus: 'unavailable', economyStatus: 'unavailable' });
@@ -312,12 +313,12 @@ describe('durable database and consent foundation', () => {
   it('distinguishes observed empty, missing and malformed event collections', () => {
     const payload = rawPayload();
     const base = payload.data[0]!;
-    const observedEmpty = normalizeHenrikEvidence({ ...payload, data: [{ ...base, rounds: [], kills: [] }] }, input, hmacKey)[0]!;
+    const observedEmpty = normalizeHenrikEvidence({ ...payload, data: [{ ...base, rounds: [], kills: [] }] }, input, hmacKey, expectedIdentity)[0]!;
     const missingMatch: Record<string, unknown> = { ...base };
     delete missingMatch.rounds;
     delete missingMatch.kills;
-    const missing = normalizeHenrikEvidence({ ...payload, data: [missingMatch] }, input, hmacKey)[0]!;
-    const unavailable = normalizeHenrikEvidence({ ...payload, data: [{ ...base, rounds: null, kills: {} }] }, input, hmacKey)[0]!;
+    const missing = normalizeHenrikEvidence({ ...payload, data: [missingMatch] }, input, hmacKey, expectedIdentity)[0]!;
+    const unavailable = normalizeHenrikEvidence({ ...payload, data: [{ ...base, rounds: null, kills: {} }] }, input, hmacKey, expectedIdentity)[0]!;
     expect(observedEmpty).toMatchObject({ roundsStatus: 'observed', killsStatus: 'observed', rounds: [] });
     expect(missing).toMatchObject({ roundsStatus: 'missing', killsStatus: 'missing', rounds: [] });
     expect(unavailable).toMatchObject({ roundsStatus: 'unavailable', killsStatus: 'unavailable', rounds: [] });

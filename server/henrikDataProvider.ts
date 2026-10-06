@@ -9,6 +9,7 @@ import {
 import type { AccountResolutionResult, ConnectionInput, MatchImportInput, MatchImportResult, ProviderAuditEndpoint, ProviderEvidenceAuditResult, ProviderPerformanceScoreAudit, ProviderStatus, ValorantDataProvider } from './contracts.js';
 import { inspectShape } from './evidence/shapeInspector.js';
 import { PublicApiError } from './errors.js';
+import { HistoricalIdentityError, identityFailure } from './persistence/errors.js';
 import { normalizeHenrikMatches } from './normalizeHenrik.js';
 import type { DurableEvidenceWriter } from './persistence/durableEvidenceService.js';
 import { createDurableEvidenceWriter } from './persistence/runtime.js';
@@ -175,7 +176,10 @@ export class HenrikDataProvider implements ValorantDataProvider {
     const dataset = normalizeHenrikMatches(payload, input);
     const publicNormalizationMs = Math.round(performance.now() - publicNormalizationStarted);
     const durableWrite = this.durableWriter
-      ? await this.durableWriter.persistMatches(input, payload, this.now().toISOString())
+      ? await this.durableWriter.persistMatches(input, payload, this.now().toISOString()).catch((error: unknown) => {
+        if (error instanceof HistoricalIdentityError) throw identityFailure();
+        throw error;
+      })
       : undefined;
     if (durableWrite?.performance) {
       process.stdout.write(`${JSON.stringify({

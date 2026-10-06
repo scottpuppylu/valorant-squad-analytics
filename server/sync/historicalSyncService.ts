@@ -1,6 +1,7 @@
 import type { MatchImportInput, ValorantAffinity } from '../contracts.js';
 import { logDatabaseFailure, type DatabaseFailureStage } from './databaseFailureStage.js';
 import { PublicApiError } from '../errors.js';
+import { HistoricalIdentityError, identityFailure } from '../persistence/errors.js';
 import type { HistoricalMatchProvider } from '../henrikDataProvider.js';
 import { lookupHmac, sourceMatchHmac } from '../identityProtection.js';
 import type { DurableEvidenceService } from '../persistence/durableEvidenceService.js';
@@ -427,7 +428,11 @@ export class HistoricalSyncService {
         sqlQueryCount,
       })}\n`);
       return this.requireStatus(run.publicId);
-    } catch (error) {
+    } catch (caught) {
+      // historical-identity-v1: identity failures are classified MALFORMED_RESPONSE, never DATABASE_ERROR.
+      const identity = caught instanceof HistoricalIdentityError;
+      const error: unknown = identity ? identityFailure() : caught;
+      if (identity) databaseStage = false;
       if (error instanceof PublicApiError && error.code === 'CONSENT_REVOKED') {
         await this.store.cancelRunForConsent(run.id, run.subject.playerId, run.kind, this.now().toISOString());
         released = true;

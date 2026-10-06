@@ -3,6 +3,7 @@ import type { SqlExecutor } from '../db/types.js';
 import type { DurableMatchEvidence } from '../evidence/types.js';
 import type { ConnectedPlayerInput, ConnectedPlayerRecord, ConsentRepository, MatchEvidenceRepository, PlayerRepository, RankRepository, SyncRepository } from './contracts.js';
 import { PUBLIC_DATASET_CONSENT_METHOD } from '../../shared/privacyPolicy.js';
+import { ParticipantAccountConflictError, ProviderIdentityUnresolvedError } from '../persistence/errors.js';
 
 export const DEFAULT_SQUAD_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -62,6 +63,21 @@ export class PostgresPlayerRepository implements PlayerRepository {
       [randomUUID(), squadId, playerId],
     );
     return { id: playerId, publicId };
+  }
+
+  /**
+   * TASK-DATA-HISTORICAL-IDENTITY-01: the exact account's durable HenrikDev identity HMAC for one affinity.
+   * Returns only `lookup_hmac`; 0 or >1 rows fail closed. There is no name/tag fallback.
+   */
+  async resolveProviderIdentityHmac(executor: SqlExecutor, account: { id: string } | { publicId: string }, affinity: string): Promise<string> {
+    const byId = 'id' in account;
+    const result = await executor.query<{ lookup_hmac: string }>(
+      `SELECT pi.lookup_hmac FROM provider_identities pi JOIN players p ON p.id=pi.player_id
+       WHERE ${byId ? 'p.id' : 'p.public_id'}=$1 AND pi.provider='HenrikDev' AND pi.affinity=$2 AND p.anonymized_at IS NULL`,
+      [byId ? account.id : account.publicId, affinity],
+    );
+    if (result.rows.length !== 1 || !result.rows[0]!.lookup_hmac) throw new ProviderIdentityUnresolvedError();
+    return result.rows[0]!.lookup_hmac.trim();
   }
 }
 
@@ -128,6 +144,18 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
         evidence.startedAt ?? null, evidence.gameLengthMs ?? null, observedAt, evidence.roundsStatus, evidence.killsStatus,
         evidence.seasonId ?? null, evidence.seasonShort ?? null],
     );
+
+    // TASK-DATA-HISTORICAL-IDENTITY-01: never re-link a participant row owned by a different account, and
+    // never give this account a second participant row in one match. Both fail closed (transaction rolls back).
+    const consenting = evidence.participants.find((participant) => participant.providerIdentityHmac);
+    if (consenting) {
+      const conflict = await transaction.query<{ conflict: boolean }>(
+        `SELECT EXISTS(SELECT 1 FROM match_participants WHERE source_match_id=$1 AND player_id IS NOT NULL
+           AND ((participant_lookup_hmac=$2 AND player_id<>$3) OR (player_id=$3 AND participant_lookup_hmac<>$2))) AS conflict`,
+        [sourceMatchId, consenting.lookupHmac, playerId],
+      );
+      if (conflict.rows[0]?.conflict === true) throw new ParticipantAccountConflictError();
+    }
 
     const teamRows = evidence.teams.map((team) => [
       randomUUID(), sourceMatchId, team.teamKey, team.won ?? null, team.roundsWon ?? null, team.roundsLost ?? null,

@@ -1,6 +1,7 @@
 import type { ConnectionInput, MatchImportInput } from '../contracts.js';
-import { ConsentingParticipantAbsentError } from './errors.js';
+import { ConsentingParticipantAbsentError, ConsentingParticipantAmbiguousError } from './errors.js';
 import type { SqlDatabase, SqlExecutor } from '../db/types.js';
+import type { DurableMatchEvidence } from '../evidence/types.js';
 import { normalizeHenrikEvidence } from '../evidence/normalizeHenrikEvidence.js';
 import { providerIdentityHmac } from '../identityProtection.js';
 import {
@@ -48,6 +49,13 @@ export interface DurableSyncPageSummary {
   matchLookupHmacs: string[];
   startedAtValues: string[];
   performance: DurablePersistencePerformance;
+}
+
+/** historical-identity-v1: every match must contain EXACTLY ONE participant carrying the account's identity. */
+function assertSingleConsentingParticipant(match: DurableMatchEvidence): void {
+  const count = match.participants.filter((participant) => participant.providerIdentityHmac).length;
+  if (count === 0) throw new ConsentingParticipantAbsentError();
+  if (count > 1) throw new ConsentingParticipantAmbiguousError();
 }
 
 export class DurableEvidenceService implements DurableEvidenceWriter {
@@ -113,8 +121,10 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
   }
 
   async persistMatches(input: MatchImportInput, payload: unknown, at = new Date().toISOString()): Promise<DurableWriteSummary> {
+    await this.assertImportAllowed(input);
+    const expectedIdentity = await this.players.resolveProviderIdentityHmac(this.database, { publicId: input.playerId }, input.affinity);
     const normalizationStarted = performance.now();
-    const evidence = normalizeHenrikEvidence(payload, input, this.hmacKey);
+    const evidence = normalizeHenrikEvidence(payload, input, this.hmacKey, expectedIdentity);
     const normalizationMs = Math.round(performance.now() - normalizationStarted);
     const evidenceCounts = evidence.reduce<DurablePersistencePerformance['evidenceCounts']>((counts, match) => {
       counts.participants += match.participants.length;
@@ -132,11 +142,9 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
     }, { participants: 0, teams: 0, rounds: 0, roundParticipants: 0, kills: 0, assistants: 0, locations: 0 });
     let matchWrites = 0;
     let dbTransactionMs = 0;
-    let sqlQueryCount = 0;
-    await this.assertImportAllowed(input);
+    let sqlQueryCount = 2;
     for (const match of evidence) {
-      const consenting = match.participants.find((participant) => participant.providerIdentityHmac);
-      if (!consenting?.providerIdentityHmac) throw new Error('Consenting participant is absent from provider evidence.');
+      assertSingleConsentingParticipant(match);
       const transactionStarted = performance.now();
       await this.database.transaction(async (transaction) => {
         const measuredTransaction: SqlExecutor = {
@@ -172,8 +180,9 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
     playerId: string,
     at = new Date().toISOString(),
   ): Promise<DurableSyncPageSummary> {
+    const expectedIdentity = await this.players.resolveProviderIdentityHmac(this.database, { id: playerId }, input.affinity);
     const normalizationStarted = performance.now();
-    const evidence = normalizeHenrikEvidence(payload, input, this.hmacKey);
+    const evidence = normalizeHenrikEvidence(payload, input, this.hmacKey, expectedIdentity);
     const normalizationMs = Math.round(performance.now() - normalizationStarted);
     const evidenceCounts = evidence.reduce<DurablePersistencePerformance['evidenceCounts']>((counts, match) => {
       counts.participants += match.participants.length;
@@ -190,11 +199,9 @@ export class DurableEvidenceService implements DurableEvidenceWriter {
       return counts;
     }, { participants: 0, teams: 0, rounds: 0, roundParticipants: 0, kills: 0, assistants: 0, locations: 0 });
     let dbTransactionMs = 0;
-    let sqlQueryCount = 0;
+    let sqlQueryCount = 1;
     for (const match of evidence) {
-      if (!match.participants.some((participant) => participant.providerIdentityHmac)) {
-        throw new ConsentingParticipantAbsentError();
-      }
+      assertSingleConsentingParticipant(match);
       const transactionStarted = performance.now();
       await this.database.transaction(async (transaction) => {
         const measuredTransaction: SqlExecutor = {

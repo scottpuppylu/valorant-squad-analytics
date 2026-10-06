@@ -43,15 +43,15 @@ class PGliteDatabase implements SqlDatabase {
   async close() { await this.pg.close(); }
 }
 
-function match(index: number, name: string = connection.gameName) {
+function match(index: number, name: string = connection.gameName, puuid = 'fictional-consenting-participant') {
   return {
     metadata: { match_id: `fictional-db-failure-match-${index}`, started_at: new Date(Date.UTC(2026, 4, 30 - index, 12)).toISOString(), game_length_in_ms: 120_000,
       map: { id: 'map-id', name: 'Ascent' }, queue: { id: 'competitive', name: 'Competitive' } },
-    players: [{ puuid: 'fictional-consenting-participant', name, tag: connection.tag, team_id: 'Blue', agent: { id: 'agent-id', name: 'Sova' },
+    players: [{ puuid, name, tag: connection.tag, team_id: 'Blue', agent: { id: 'agent-id', name: 'Sova' },
       stats: { kills: 3, deaths: 1, assists: 1, score: 300, headshots: 1, bodyshots: 1, legshots: 0, damage: { dealt: 200, received: 50 } } }],
     teams: [{ team_id: 'Blue', won: true, rounds: { won: 1, lost: 0 } }],
     rounds: [{ id: 1, winning_team: 'Blue', result: 'Eliminated', plant: null,
-      stats: [{ player: { puuid: 'fictional-consenting-participant' }, stats: { kills: 3, score: 300 }, economy: { loadout_value: 3900, remaining: 800 } }] }],
+      stats: [{ player: { puuid }, stats: { kills: 3, score: 300 }, economy: { loadout_value: 3900, remaining: 800 } }] }],
     kills: [],
   };
 }
@@ -96,12 +96,19 @@ async function runFailingChunk(env: Awaited<ReturnType<typeof setup>>) {
 }
 
 describe('database-failure stage signatures (deep_backfill live_v4)', () => {
-  it('C1a — 3rd match lacks the consenting participant (Riot ID changed): 2 of 3 commit, DATABASE_ERROR, cursor kept → MATCHES production', async () => {
+  it('C1a (FIXED by historical-identity-v1) — a 3rd match under an older Riot ID now persists: no failure, cursor advances', async () => {
     const env = await setup(new Map([firstPage, [3, [match(3), match(4), match(5, 'OldRiotName')]]]));
     const { error, after } = await runFailingChunk(env);
-    expect(error).toMatchObject({ status: 503, code: 'DATABASE_ERROR' });
-    expect(productionLike(after)).toEqual(PRODUCTION);
-    expect(after.matches).toBe(5); // page 1 (3) + the failing page's 2 newer matches
+    expect(error).toBeUndefined();
+    expect(after).toMatchObject({ runError: null, nextStart: 6, leaseHeld: false, matches: 6 });
+  });
+
+  it('C1a true identity absence (no participant with the account PUUID): 2 of 3 commit, MALFORMED_RESPONSE (not DATABASE_ERROR), cursor kept', async () => {
+    const env = await setup(new Map([firstPage, [3, [match(3), match(4), match(5, connection.gameName, 'fictional-someone-else')]]]));
+    const { error, after } = await runFailingChunk(env);
+    expect(error).toMatchObject({ status: 502, code: 'MALFORMED_PROVIDER_RESPONSE' });
+    expect(productionLike(after)).toEqual({ ...PRODUCTION, runError: 'MALFORMED_RESPONSE' });
+    expect(after.matches).toBe(5); // page 1 (3) + the failing page's 2 newer matches (per-match atomicity)
   });
 
   it('C1b — the 3rd per-match persistence transaction fails in the database: same signature → MATCHES production', async () => {
@@ -197,11 +204,13 @@ describe('database-failure-stage-v1 telemetry distinguishes the three production
   };
   const forbidden = /fictional|SyncGoblin|OldRiotName|puuid|hmac|[0-9a-f]{8}-[0-9a-f]{4}-|injected failure|Connection terminated|SELECT|INSERT|UPDATE/iu;
 
-  it('C1a logs persist_sync_page / consenting_participant_absent', async () => {
-    const env = await setup(new Map([firstPage, [3, [match(3), match(4), match(5, 'OldRiotName')]]]));
+  it('C1a: a renamed match and a true identity absence both emit NO sync_database_failure (historical-identity-v1)', async () => {
+    const renamed = await setup(new Map([firstPage, [3, [match(3), match(4), match(5, 'OldRiotName')]]]));
+    const absent = await setup(new Map([firstPage, [3, [match(3), match(4), match(5, connection.gameName, 'fictional-someone-else')]]]));
     const events = capture();
-    await runFailingChunk(env);
-    expect(events()).toEqual([{ event: 'sync_database_failure', failureStageVersion: 'database-failure-stage-v1', stage: 'persist_sync_page', syncKind: 'deep_backfill', historyPhase: 'live_v4', errorKind: 'consenting_participant_absent' }]);
+    await runFailingChunk(renamed);
+    await runFailingChunk(absent);
+    expect(events()).toEqual([]);
   });
   it('C1b logs persist_sync_page / connection with the SQLSTATE class only', async () => {
     const env = await setup(new Map([firstPage, [3, [match(3), match(4), match(5)]]]));
