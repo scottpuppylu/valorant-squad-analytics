@@ -1,7 +1,7 @@
 # Multi-account bulk historical backfill — `bulk-history-v1` (TASK-DATA-BULK-01)
 
-Status (2026-10-06): **IMPLEMENTED / CANARY PASSED**. Phase 1 (TASK-DATA-BULK-01A) **STOPPED / NEEDS REVIEW** on the
-first provider 429; see below. Further crawling needs its
+Status (2026-10-06): **IMPLEMENTED / CANARY PASSED**. Phase 1 (TASK-DATA-BULK-01A) stopped on the first provider 429.
+Phase 2 (TASK-DATA-BULK-01B, 6 RPM) **STOPPED / BLOCKED** on a DATABASE_ERROR after 53.6 min with zero 429; see below. Further crawling needs its
 own explicit human authorization.
 
 ## Why
@@ -239,7 +239,98 @@ dominates chunk latency. Two lanes stayed safe (no LOCK_BUSY, chunk max 11.8 s).
 **Phase-2 decision: A.** Continue bulk-history-v1 unchanged, but with a lower `--provider-rpm` (an existing flag, no
 code change). Not prepared to execute without review.
 
-### Prepared Phase-2 command (NOT executed; needs explicit authorization)
+## Production bulk crawl Phase 2 — TASK-DATA-BULK-01B (2026-10-06): STOPPED / BLOCKED (DATABASE_ERROR)
+
+**Bounds:** 2 lanes, `--provider-rpm 6`, ≤ 600 charged provider requests, ≤ 750 HTTP requests, ≤ 120 min,
+`--stop-on-rate-limit`, all 9 eligible accounts.
+- **Execution:** HEAD `f900e93`, foreground Terminal; window 2026-10-06T10:28:13Z → 11:21:49Z (**53.6 min**).
+- **Resume:** the saved state (9 public run ids) was re-verified with 9 zero-cost status reads.
+- **Stop reason:** `database_error`. The controller stopped the whole session at the first `DATABASE_ERROR`, as designed,
+  with no retry and no resume.
+  - The failure was one `sync/continue` for account 滑板車 (主帳), which returned HTTP **503** at 11:21:39Z with no chunk
+    event logged. The run is now `failed` / `DATABASE_ERROR` (`retries` 2; 56 provider requests vs 54 pages).
+  - **Root cause NOT VERIFIED.** The server logs no SQL details by design, and DB-level inspection needs secret access
+    (not authorized). Whether the error is transient or deterministic for that account's next page is unknown.
+
+**Rate verdict: C — STOPPED FOR NON-RATE SAFETY FAILURE.**
+- 6 RPM ran **53.6 min with zero 429**: 311 charged / 310 measured provider requests, 5.8 provider/min.
+- Launches were exactly 10 s apart. A rolling window counts 7 only when both endpoints of an exactly-60.0 s span are
+  included; the controller window is half-open (≤ 6).
+- This is strong but **not accepted** evidence: the run did not end on a normal bound.
+
+| | Charged | Measured | Unmeasured | HTTP start / continue / status | Chunks |
+|---|---|---|---|---|---|
+| Phase 2 | 311 (cap 600) | 310 | 1 (the failed chunk) | 0 / 311 / 9 = 320 (cap 750) | 309 |
+
+| Phase (post-chunk) | Chunks | Seen | Persisted | Overlaps | Provider requests | Notes |
+|---|---|---|---|---|---|---|
+| live_v4 | 292 | 873 | 873 | 538 | 292 | 1 request per page |
+| stored_index | 18 | 50 | 2 | 48 | 18 | Index requests only, **0 detail requests**; mostly known matches |
+
+Server totals:
+- Provider fetch 403.5 s (avg 1.3 s per chunk); DB 2,231.5 s (avg 7.2 s, **78%**); server total 2,850.6 s; max chunk
+  **12.7 s** (< 25 s).
+- Throughput: 17.2 observations/min (923 seen), 6.3 unique tracked matches/min.
+
+**Fairness:** 9/9 accounts served, round-robin.
+- 7 accounts had 35 chunks each; 夏天 had 34; 滑板車 had 30 before failing.
+- At most 2 in flight, never 2 for one account. LOCK_BUSY 0.
+
+| Error | Count |
+|---|---|
+| 429 | 0 |
+| Timeout | 0 |
+| Provider 5xx | 0 |
+| DATABASE_ERROR | **1** |
+| LOCK_BUSY | 0 |
+| Consent | 0 |
+| Malformed | 0 |
+| HTTP 500 | 0 |
+| Pagination repetition | 0 |
+| SYNC_BACKOFF | 0 |
+| Network / unexpected | 0 |
+
+**Final account states:**
+- 8 accounts are `paused`, with no backoff and no error; leases are released.
+- jack and 夏天 are in `stored_index` (pages 7/164 and 11/129).
+- 滑板車 is `failed`. No account is source-exhausted.
+
+**Growth:**
+- Tracked matches went **332 → 671 (+339 unique)** from 923 account-observations. 586 overlaps are shared friend
+  matches and re-seen matches.
+- The oldest tracked date moved from **2026-08-14 to 2025-01-25**; the newest is unchanged at 2026-10-05.
+- `lifetimeComplete` stays false.
+
+**Post-run read-only checks:**
+- Dataset: REAL, ready, schema 6, member-identity-v2, 9 members / 9 accounts.
+- History: 671 browsable (371 beyond the snapshot, 0 duplicates).
+- Analysis: every `server-analysis-v2` response had `transportSnapshotUsed=false`, `populationLimit=null` and
+  `populationComplete=true`. Populations: lifetime/map/agent 671, Act 497, synergy 671 (36 pairs, max 80 shared),
+  currentStrength 130, improvement 21.
+- Weapon all/current return 200. 0 non-finite values, no leaks.
+- DB-level integrity: NOT VERIFIED.
+
+**New risk (DATA-03B.2C latency):**
+- Production `lifetimeTotals` / `mapStats` / `agentStats` / `synergy` now take **≈ 9.4–10.0 s** at 671 matches, against
+  5.5 s at 332 (≈ 13 ms per added match, linear).
+- Extrapolated, the 60 s function limit is reached near **~4,000–4,500 tracked matches**. That is a real ceiling for
+  全部已追蹤, which must not be papered over.
+
+**Next bulk decision: D — investigate the database error and chunk/analysis latency before the next crawl.** Prerequisites:
+1. A separate task to diagnose the 滑板車 `DATABASE_ERROR` safely (it needs an authorized read path; no repair or
+   reset here).
+2. A latency task for full-tracked analytics (incremental/materialized aggregates, sampling never allowed) before the
+   population approaches ~4,000.
+
+The prepared continuation below is NOT executed and must not run until both are reviewed.
+
+### Prepared Phase-3 command (NOT executed; only after the decision-D prerequisites)
+
+```bash
+npm run history:bulk -- --base-url https://valorant-squad-analytics.vercel.app --all --execute --lanes 2 --provider-rpm 6 --max-provider-requests 600 --max-http-requests 750 --max-minutes 120 --stop-on-rate-limit --json
+```
+
+### Phase-2 command as prepared after Phase 1 (executed in TASK-DATA-BULK-01B above)
 
 Updated after Phase 1: provider rate lowered to 6/min (the 429 occurred at a sustained 8/min); everything else is the same
 unchanged controller and 2 lanes.

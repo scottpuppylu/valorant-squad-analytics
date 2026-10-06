@@ -4,7 +4,18 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-PERFORMANCE-SCORE-01 (2026-10-06)
+## Current decision — TASK-DATA-BULK-01B Phase 2 (2026-10-06)
+
+**STOPPED / BLOCKED** on the first `DATABASE_ERROR` (one `sync/continue` 503 for 滑板車; root cause NOT VERIFIED).
+- Ran 53.6 min at 2 lanes / 6 RPM with **zero 429**: 311 charged / 310 measured provider requests.
+- Mix: 292 live_v4 + 18 stored_index chunks (0 detail requests).
+- Tracked 332 → **671**; oldest 2026-08-14 → **2025-01-25**.
+- 8 runs paused, 1 failed; no worker left running.
+- New risk: production full-tracked analysis ≈ 10 s at 671 matches (linear) → ~60 s near ~4,000–4,500 matches.
+- Next bulk decision: **D**. Investigate the DB error and the analysis latency before any further crawl. See
+  [BULK_HISTORY.md](BULK_HISTORY.md).
+
+## Earlier decision — TASK-DATA-PERFORMANCE-SCORE-01 (2026-10-06)
 
 **AUDIT COMPLETE / PHASE B BLOCKED — the provider Performance Score field is NOT VERIFIED (Phase-A outcome D).**
 - Riot: Performance Score (0–500) replaces ACS for scoreboard/MVP; the formula is not published.

@@ -62,7 +62,8 @@
 | TASK-SECURITY-03 Tailwind 4 / build toolchain security migration | NOT STARTED — needs explicit authorization |
 | TASK-DATA-BULK-01 multi-account bulk historical backfill accelerator | IMPLEMENTED / CANARY PASSED (2026-10-06; bulk-history-v1; 12 charged / 10 actual provider requests; 2 lanes default) — see docs/BULK_HISTORY.md |
 | TASK-DATA-BULK-01A production bulk crawl Phase 1 | EVIDENCE ACCEPTED / STOPPED ON PROVIDER 429 (2026-10-06): 84 charged / 77 actual provider requests; tracked 213 → 332 — see docs/BULK_HISTORY.md |
-| TASK-DATA-BULK-01B bulk crawl Phase 2 | NOT STARTED — may resume at the separately approved lower provider RPM |
+| TASK-DATA-BULK-01B bulk crawl Phase 2 (2 lanes / 6 RPM) | STOPPED / BLOCKED (2026-10-06): first DATABASE_ERROR after 53.6 min, zero 429; 311 charged provider requests; tracked 332 → 671; oldest 2025-01-25; root cause NOT VERIFIED — see docs/BULK_HISTORY.md |
+| Full-tracked analysis latency (≈ 10 s at 671 matches, linear) | RISK — must be addressed before ~4,000 tracked matches (60 s limit); never by sampling or a cap |
 | TASK-SCORING-RANK-01 | NOT STARTED |
 | TASK-DATA-PERFORMANCE-SCORE-01 official Performance Score evidence | AUDIT COMPLETE / PHASE B BLOCKED (2026-10-06): provider field NOT VERIFIED (outcome D); `stats.score` = legacy combat-score total → ACS_SAFE; nothing ingested — see docs/PERFORMANCE_SCORE.md |
 | TASK-SCORING-SHARED-MATCH-01 shared-match relative rating | NOT STARTED |
