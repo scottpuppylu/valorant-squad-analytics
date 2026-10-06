@@ -1,6 +1,7 @@
 # Multi-account bulk historical backfill — `bulk-history-v1` (TASK-DATA-BULK-01)
 
-Status (2026-10-06): **IMPLEMENTED / CANARY PASSED**. A full crawl has **NOT STARTED** and needs its
+Status (2026-10-06): **IMPLEMENTED / CANARY PASSED**. Phase 1 (TASK-DATA-BULK-01A) **STOPPED / NEEDS REVIEW** on the
+first provider 429; see below. Further crawling needs its
 own explicit human authorization.
 
 ## Why
@@ -177,7 +178,77 @@ The real duration is longer:
 - overlaps (shared matches) count as observations but not as new matches;
 - live depth is unknown.
 
-### Future full-crawl command (NOT executed; needs explicit authorization)
+## Production bulk crawl Phase 1 — TASK-DATA-BULK-01A (2026-10-06): STOPPED / NEEDS REVIEW
+
+The authorized bounds were 2 lanes, ≤ 8 provider requests/min, ≤ 500 charged provider requests, ≤ 650 HTTP
+requests, ≤ 120 min and `--stop-on-rate-limit`. The run used HEAD `1d3a647` in a foreground Terminal tab, all 9
+eligible accounts, and the saved resume state (2 run ids). It **stopped at the first 429 after 631.5 s**, as required.
+There was no retry and no resume.
+
+- **Window:** 2026-10-06T05:28:41Z → 05:39:13Z. Stop reason `rate_limited`.
+- **Cause:** a **provider-side** 429.
+  - The server persisted `lastErrorCategory: RATE_LIMITED` with `retries 1` and a short `nextAttemptAt` on one run (滑鏟).
+  - That run shows 23 provider requests against 22 pages, so the request reached the provider.
+  - Our own route limiter was not the cause: rolling maximums were 8 provider launches/60 s, 8 continues/60 s and
+    4 starts/60 s (route limits are 6/10).
+  - Whether other traffic shared the provider key at that moment: NOT VERIFIED.
+- **Provider requests:** 84 charged (69 measured + 15 conservatively charged starts on pre-existing runs) of 500.
+  **77 actual** (one per live_v4 page, plus the one 429 request; server counters).
+- **HTTP requests:** start 7 / continue 70 / status 2 = 79.
+- **Fairness:** 9 of 9 accounts served, 8–9 chunks each (2 lanes, round-robin).
+- **Errors:** 0 LOCK_BUSY (so no concurrent same-account work reached the server lease).
+
+| Error | Count |
+|---|---|
+| 429 | 1 |
+| Timeout | 0 |
+| 5xx | 0 |
+| DATABASE_ERROR | 0 |
+| Consent | 0 |
+| Malformed | 0 |
+| HTTP 500 | 0 |
+| Pagination repeats | 0 |
+| Backoffs (other than the 429) | 0 |
+
+- **Phases:** every chunk was `live_v4`; **stored_index chunks: 0**.
+
+| Phase | Chunks | Seen / persisted / overlaps (measured) | Server time (sum) | Provider fetch | DB | Max chunk |
+|---|---|---|---|---|---|---|
+| live_v4 | 76 | 207 / 207 / 97 | 699.0 s (avg 9.2 s) | 128.7 s (avg 1.7 s) | 523.4 s (avg 6.9 s, 75%) | 11.8 s |
+| stored_index | 0 | — | — | — | — | — |
+
+- **Throughput:**
+  - 19.7 measured observations/min, a lower bound: the 7 resumed start chunks are unmeasured, at about 3 each.
+  - Provider requests: 8.0 charged/min and 7.3 actual/min.
+- **Unique growth:** tracked matches went **213 → 332 (+119)** from about 228 account-observations. Shared friend
+  matches collapse to one source match each.
+- **Coverage:** the global oldest date moved from 2026-08-21 to **2026-08-14**; the newest is unchanged (2026-10-05).
+  `lifetimeComplete` is false, and no account is `sourceExhausted`.
+- **Final state:** all 9 runs `paused` in `live_v4` (leases released). One account is in a short provider backoff.
+  Nothing is complete, failed or revoked.
+- **Post-run read-only checks:**
+  - Dataset: REAL, ready, schema 6, member-identity-v2, 9 members / 9 accounts.
+  - 0 duplicate member, account or snapshot match ids; no non-finite numbers; leak scan clean.
+  - Analytics smoke — Overall/currentStrength, Profile form, Progress, Synergy, lifetime totals, Weapon
+    (all/current), analytics context and History: all 200, with versions unchanged.
+- **DB-level integrity:** NOT VERIFIED (it would need secret access).
+
+**Reading.** The binding constraint was the provider rate, not stored_index (never reached) and not our scheduler. DB time
+dominates chunk latency. Two lanes stayed safe (no LOCK_BUSY, chunk max 11.8 s).
+
+**Phase-2 decision: A.** Continue bulk-history-v1 unchanged, but with a lower `--provider-rpm` (an existing flag, no
+code change). Not prepared to execute without review.
+
+### Prepared Phase-2 command (NOT executed; needs explicit authorization)
+
+Updated after Phase 1: provider rate lowered to 6/min (the 429 occurred at a sustained 8/min); everything else is the same
+unchanged controller and 2 lanes.
+
+```bash
+npm run history:bulk -- --base-url https://valorant-squad-analytics.vercel.app --all --execute --lanes 2 --provider-rpm 6 --max-provider-requests 600 --max-http-requests 750 --max-minutes 120 --stop-on-rate-limit --json
+```
+
+### Original full-crawl command from the canary report (superseded by the Phase-2 command above)
 
 ```bash
 npm run history:bulk -- --base-url https://valorant-squad-analytics.vercel.app --all --execute --lanes 2 --provider-rpm 8 --max-provider-requests 2500 --max-minutes 420 --stop-on-rate-limit --json

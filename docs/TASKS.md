@@ -4,7 +4,17 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-BULK-01 (2026-10-06)
+## Current decision — TASK-DATA-BULK-01A Phase 1 (2026-10-06)
+
+**STOPPED / NEEDS REVIEW** — it stopped, as required, at the first **provider-side 429**, 631.5 s into the bounded run.
+- Provider requests: 84 charged of 500 (77 actual).
+- All 9 accounts served; every chunk was live_v4 (0 stored_index).
+- Tracked matches 213 → 332 (+119); oldest coverage 2026-08-21 → 2026-08-14.
+- Zero DB, timeout, 5xx, consent or lock errors. All runs are paused and resumable.
+- Recommendation: **A** (unchanged controller, lower `--provider-rpm 6`). Phase 2 is NOT STARTED and needs authorization.
+  See [BULK_HISTORY.md](BULK_HISTORY.md).
+
+## Earlier decision — TASK-DATA-BULK-01 (2026-10-06)
 
 **IMPLEMENTED / CANARY PASSED.** `bulk-history-v1` (`npm run history:bulk`) is a local maintainer controller.
 - It drives the existing account-scoped deep_backfill through the public sync routes only, with no secrets and no new endpoint.
