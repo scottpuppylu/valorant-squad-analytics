@@ -6,7 +6,8 @@ import {
   summarizeHenrikV4DetailFields,
   summarizeHenrikV4Fields,
 } from '../src/dataSources/thirdParty/henrikV4.js';
-import type { AccountResolutionResult, ConnectionInput, MatchImportInput, MatchImportResult, ProviderAuditEndpoint, ProviderEvidenceAuditResult, ProviderStatus, ValorantDataProvider } from './contracts.js';
+import type { AccountResolutionResult, ConnectionInput, MatchImportInput, MatchImportResult, ProviderAuditEndpoint, ProviderEvidenceAuditResult, ProviderPerformanceScoreAudit, ProviderStatus, ValorantDataProvider } from './contracts.js';
+import { inspectShape } from './evidence/shapeInspector.js';
 import { PublicApiError } from './errors.js';
 import { normalizeHenrikMatches } from './normalizeHenrik.js';
 import type { DurableEvidenceWriter } from './persistence/durableEvidenceService.js';
@@ -204,6 +205,34 @@ export class HenrikDataProvider implements ValorantDataProvider {
 
   async fetchMatchDetail(input: ConnectionInput, matchId: string): Promise<unknown> {
     return this.request(`/valorant/v4/match/${encodeURIComponent(input.affinity)}/${encodeURIComponent(matchId)}`);
+  }
+
+  /**
+   * TASK-DATA-PERFORMANCE-SCORE-01: discover score-like field PATHS (no values, no identifiers) in the
+   * newest v4 history page (size 3) and at most one v4 match detail. 2 logical requests, never persisted.
+   */
+  async auditPerformanceScoreShape(input: MatchImportInput): Promise<ProviderPerformanceScoreAudit> {
+    const history = await this.request(
+      `/valorant/v4/matches/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`,
+      { size: '3', start: '0' },
+    );
+    const firstMatchId = matchIds(history, 'history')[0];
+    let detail: { status: 'observed' | 'not-found' | 'unavailable'; payload?: unknown } = { status: 'not-found' };
+    if (firstMatchId) {
+      try { detail = { status: 'observed', payload: await this.request(`/valorant/v4/match/${encodeURIComponent(input.affinity)}/${encodeURIComponent(firstMatchId)}`) }; }
+      catch (error) { detail = { status: endpointStatus(error) }; }
+    }
+    const historyShape = inspectShape([history]);
+    const detailShape = detail.payload === undefined ? undefined : inspectShape([detail.payload]);
+    return {
+      schema: { provider: 'HenrikDev', endpointVersion: 'v4', documentedOpenApiVersion: '4.6.0' },
+      inspectorVersion: historyShape.inspectorVersion,
+      logicalProviderRequests: firstMatchId ? 2 : 1,
+      matchHistory: { status: 'observed', candidates: historyShape.candidates, pathCount: historyShape.paths.length, truncated: historyShape.truncated },
+      matchDetail: detailShape
+        ? { status: detail.status, candidates: detailShape.candidates, pathCount: detailShape.paths.length, truncated: detailShape.truncated }
+        : { status: detail.status },
+    };
   }
 
   async auditEvidence(input: MatchImportInput): Promise<ProviderEvidenceAuditResult> {

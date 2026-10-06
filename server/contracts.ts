@@ -1,3 +1,4 @@
+import type { ShapeObservation } from './evidence/shapeInspector.js';
 import type { NormalizedAnalyticsDataset } from '../src/dataSources/types.js';
 import type { HenrikCapabilitySummary } from '../src/dataSources/thirdParty/henrikV4.js';
 import type { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy.js';
@@ -61,11 +62,21 @@ export interface ProviderEvidenceAuditResult {
   };
 }
 
+/** TASK-DATA-PERFORMANCE-SCORE-01 targeted audit: shape only, at most 2 logical provider requests. */
+export interface ProviderPerformanceScoreAudit {
+  schema: { provider: 'HenrikDev'; endpointVersion: 'v4'; documentedOpenApiVersion: '4.6.0' };
+  inspectorVersion: 'provider-shape-inspector-v1';
+  logicalProviderRequests: number;
+  matchHistory: { status: 'observed'; candidates: ShapeObservation[]; pathCount: number; truncated: boolean };
+  matchDetail: { status: 'observed' | 'not-found' | 'unavailable'; candidates?: ShapeObservation[]; pathCount?: number; truncated?: boolean };
+}
+
 export interface ValorantDataProvider {
   status(): ProviderStatus;
   resolveAccount(input: ConnectionInput): Promise<AccountResolutionResult>;
   importMatches(input: MatchImportInput): Promise<MatchImportResult>;
   auditEvidence(input: MatchImportInput): Promise<ProviderEvidenceAuditResult>;
+  auditPerformanceScoreShape?(input: MatchImportInput): Promise<ProviderPerformanceScoreAudit>;
 }
 
 export interface ApiRequest {

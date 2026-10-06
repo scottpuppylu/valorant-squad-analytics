@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { ApiRequest, ApiResponse } from '../../../server/contracts.js';
+import type { ApiRequest, ApiResponse, ProviderEvidenceAuditResult, ProviderPerformanceScoreAudit } from '../../../server/contracts.js';
 import { createHenrikDataProvider } from '../../../server/henrikDataProvider.js';
 import { PublicApiError } from '../../../server/errors.js';
 import { clientKey, readJsonBody, requireMethod, secureJson, sendError } from '../../../server/http.js';
@@ -19,10 +19,15 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     assertProviderAuditAllowed();
     const client = clientKey(request);
     enforceRateLimit(`audit:${client}`, Date.now(), 1);
-    const input = parseMatchImportInput(readJsonBody(request));
+    const body = readJsonBody(request);
+    const mode = typeof body === 'object' && body !== null && 'mode' in body ? (body as { mode?: unknown }).mode : undefined;
+    if (mode !== undefined && mode !== 'performance-score') throw new PublicApiError(400, 'BAD_REQUEST', '稽核模式不正確。');
+    const input = parseMatchImportInput(body);
     if (input.limit !== 3) throw new PublicApiError(400, 'BAD_REQUEST', '證據稽核固定使用三場受控樣本。');
-    const audit = await withImportLock(auditLockKey(client, input.gameName, input.tag), () => (
-      createHenrikDataProvider().auditEvidence(input)
+    const provider = createHenrikDataProvider();
+    // TASK-DATA-PERFORMANCE-SCORE-01: shape-only mode (≤ 2 logical requests) beside the generic audit.
+    const audit = await withImportLock<ProviderEvidenceAuditResult | ProviderPerformanceScoreAudit>(auditLockKey(client, input.gameName, input.tag), () => (
+      mode === 'performance-score' ? provider.auditPerformanceScoreShape(input) : provider.auditEvidence(input)
     ));
     response.status(200).json({ ok: true, audit });
   } catch (error) {
