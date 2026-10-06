@@ -1,6 +1,6 @@
 # Multi-account bulk historical backfill — `bulk-history-v1` (TASK-DATA-BULK-01)
 
-Status (2026-10-06): **IMPLEMENTED / CANARY PASSED**. Phase 1 (TASK-DATA-BULK-01A) stopped on the first provider 429.
+Status (2026-10-06): **ACTIVE / VALIDATED** — Phase 3 (TASK-DATA-BULK-01E) sustained 6 RPM for the full 120-minute window with zero errors; tracked 672 → 838. Next: optimize stored_index (decision C) before more Bulk. Earlier status: **IMPLEMENTED / CANARY PASSED**. Phase 1 (TASK-DATA-BULK-01A) stopped on the first provider 429.
 Phase 2 (TASK-DATA-BULK-01B, 6 RPM) **STOPPED / BLOCKED** on a DATABASE_ERROR after 53.6 min with zero 429; see below. Further crawling needs its
 own explicit human authorization.
 
@@ -332,7 +332,113 @@ Server totals:
 
 The prepared continuation below is NOT executed and must not run until both are reviewed.
 
-### Prepared Phase-3 command (NOT executed; only after the decision-D prerequisites)
+## Production bulk crawl Phase 3 — TASK-DATA-BULK-01E (2026-10-06): COMPLETE / ACCEPTED — 6 RPM SUSTAINED
+
+**Authorization:** explicit human authorization for one bounded foreground run (2 lanes, 6 RPM, ≤ 600 charged
+provider requests, ≤ 750 HTTP requests, 120 minutes, stop on the first rate limit), with HEAD `70898c6`.
+Preconditions held:
+- historical-identity-v1 and full-tracked-aggregate-v1 / analysis-match-facts-v1 were deployed.
+- No other worker was running.
+- Facts were healthy before the run (`queries=6`, `fallback=0`).
+
+**Command** (visible foreground tab; the terminal tool forbids pipes, so stdout and stderr went to the gitignored
+`.local/bulk-phase3.log` through `cmd /c "… > .local\bulk-phase3.log 2>&1"`):
+`npm run -s history:bulk -- --base-url https://valorant-squad-analytics.vercel.app --all --execute --lanes 2 --provider-rpm 6 --max-provider-requests 600 --max-http-requests 750 --max-minutes 120 --stop-on-rate-limit --json`
+
+**Window:** 2026-10-06T16:17:08Z → 18:17:08Z (7,200 s). Stop reason `max_minutes`, the normal bounded end.
+
+**Rate verdict: A — 6 RPM sustained for the full authorized 120-minute window.**
+- Errors: 0 RATE_LIMITED or 429, 0 timeout, 0 PROVIDER_ERROR, 0 DATABASE_ERROR, 0 MALFORMED (identity),
+  0 LOCK_BUSY, 0 consent revoked, 0 HTTP 500, 0 unexpected response, 0 SYNC_BACKOFF, 0 network failure,
+  0 chunk-safety stop.
+- Pagination repeat: 0 controller-visible.
+- Logs: 0 `sync_database_failure` in the retained Vercel logs.
+
+| Metric | Value |
+|---|---|
+| Provider requests charged / measured / unmeasured | 599 / 599 / 0 (difference 0) |
+| Actual provider requests per minute | 4.99 (stored_index reserves 2 and refunds the unused 1, which spaces launches) |
+| Max rolling provider launches (controller window) | 6 per 60 s |
+| HTTP: start / continue / status / total | 0 / 589 / 9 / 598 (≤ 750) |
+| Max accounts in flight / same-account concurrency | 2 / 0 |
+| Chunks (pages) | 589 |
+| Seen / persisted observations / overlaps | 1,733 / 282 / 1,567 |
+| Provider fetch / DB / server total | 294.6 s / 1,032.7 s / 1,850.2 s (3.14 s average per chunk) |
+| Max chunk | 14.8 s (hard limit 25 s) |
+
+**By phase** (derived from the controller log; the phase is the label after each chunk):
+
+| Phase | Chunks | Provider | Seen | Persisted | Overlap | Persisted per provider request |
+|---|---|---|---|---|---|---|
+| live_v4 | 89 | 89 | 267 | 267 | 115 | 3.0 |
+| stored_index | 494 | 503 | 1,455 | 14 | 1,442 | **0.028** |
+| → complete transitions | 6 | 7 | 11 | 1 | 10 | — |
+
+stored_index timing is a partial sample. Vercel Hobby keeps runtime logs for only about 1 hour, so 269 chunk
+events from the last ~50 minutes remain:
+- stored_index chunks average 1.2 s, maximum 6.7 s, 0 detail requests and 0 DB writes (every entry was already
+  durable).
+- DB time is concentrated in live_v4 pages that write: about 1,033 s of DB over about 95 writing pages, including
+  the analysis-fact refresh.
+
+**Production after** (read-only):
+- tracked 672 → **838** (+166 unique). Competitive 309 → 345, Unrated 158 → 203, other 205 → 290.
+- Earliest 2025-01-25 → **2024-01-13**. Latest 2026-10-05 → 2026-10-06.
+- lastSyncedAt 2026-10-06T18:15:37Z; 9 members / 9 accounts; `lifetimeComplete=false`.
+- Observations versus unique matches: 1,733 account observations, 282 written, 166 new unique source matches
+  (1.70 written observations per new unique match; friends share matches).
+
+**Accounts** (community name · final phase / state · chunks · seen / persisted / overlap · provider · coverage · max chunk):
+- jack · complete (source exhausted) · 50 · 148 / 0 / 148 · 50 · 2025-01-25 → 2026-10-03 · 3.3 s
+- 加分 · stored_index / ready · 84 · 245 / 72 / 182 · 88 · 2025-03-21 → 2026-10-06 · 14.5 s
+- 小麻花 · stored_index / ready · 83 · 247 / 70 / 224 · 83 · 2026-05-26 → 2026-10-04 · 14.8 s
+- 天堂 · complete (source exhausted) · 70 · 207 / 27 / 197 · 70 · 2026-01-09 → 2026-10-03 · 14.4 s
+- 魔王 · complete (source exhausted) · 62 · 184 / 20 / 176 · 62 · 2026-01-25 → 2026-09-28 · 13.5 s
+- 走路 · complete (source exhausted) · 60 · 176 / 10 / 174 · 61 · 2024-08-27 → 2026-10-06 · 12.8 s
+- 滑鏟 · stored_index / ready · 83 · 246 / 72 / 197 · 83 · 2026-02-15 → 2026-10-03 · 14.5 s
+- 滑板車 · complete (source exhausted) · 62 · 179 / 8 / 171 · 64 · 2026-01-29 → 2026-10-06 · 14.8 s
+  (resumed cleanly past the former identity failure)
+- 夏天 · complete (source exhausted) · 35 · 101 / 3 / 98 · 38 · 2024-01-13 → 2026-10-01 · 6.8 s
+
+None was in backoff; 6 are source exhausted, which means provider-visible sources are exhausted, **not** that
+lifetime history is complete.
+
+**After the run:**
+- Analysis facts: lifetime, map, agent, synergy, currentStrength and improvement all reported `queries=6`,
+  `fallback=0`, so every match written during the crawl carries a fresh fact from its own transaction. No manual
+  hydration was run.
+- Populations are complete for Competitive: lifetime, map, agent and synergy 345; currentStrength 139, all
+  Competitive. `populationLimit=null`, `serverHistoryUsed=true`, `transportSnapshotUsed=false`.
+- History browses 400 matches beyond the 300-match snapshot with 0 duplicates.
+- Latency (server total): lifetime 2.61 s, map 2.54 s, agent 2.58 s, synergy 2.71 s, currentStrength + form
+  2.72 s, improvement 1.63 s, weapon all 7.2 s / current 4.6 s.
+- Integrity: no NaN or Infinity and no identifier leak.
+- Before / after rule: 0 provider calls outside Bulk and 0 direct SQL; production writes happened only through
+  the sync API.
+
+**Phase-3 decision: C — optimize stored_index before more Bulk.**
+- stored_index consumed 84 % of the provider budget (503 requests) for 14 persisted observations, about 36
+  requests per useful observation. Its index pages walked matches that are already durable (1,442 overlaps).
+  live_v4 yielded 3.0 per request.
+- Three accounts (加分, 小麻花, 滑鏟) remain in stored_index. Continuing unchanged would spend most of the budget
+  re-reading known index entries.
+- Candidate: the deferred known-boundary fast path (TASK-DATA-FASTSYNC-01.1 family). It needs its own SDD task;
+  it was not optimized during this run.
+- The rate stays at 2 lanes / 6 RPM; no higher rate is recommended.
+
+**Rough estimates** (Phase-3 mix ≈ 2.9 account observations per provider request at ≈ 5 actual requests per
+minute; not a promise):
+- 4,500 / 6,000 / 7,500 observations ≈ 1,550 / 2,070 / 2,590 provider requests ≈ 5.2 / 6.9 / 8.6 hours.
+- live_v4 is ≈ 3.0 new observations per request; stored_index re-reads known entries at ≈ 2.9 entries per request
+  but almost none are new.
+
+### Prepared Phase-4 command (NOT executed; only after a stored_index optimization task is accepted)
+
+```
+npm run -s history:bulk -- --base-url https://valorant-squad-analytics.vercel.app --all --execute --lanes 2 --provider-rpm 6 --max-provider-requests 600 --max-http-requests 750 --max-minutes 120 --stop-on-rate-limit --json
+```
+
+### Prepared Phase-3 command (as prepared after Phase 2; EXECUTED in TASK-DATA-BULK-01E above with the 6 RPM / 750 HTTP / 120 min limits)
 
 ```bash
 npm run history:bulk -- --base-url https://valorant-squad-analytics.vercel.app --all --execute --lanes 2 --provider-rpm 6 --max-provider-requests 600 --max-http-requests 750 --max-minutes 120 --stop-on-rate-limit --json

@@ -4,7 +4,19 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-03B.2D (2026-10-06)
+## Current decision — TASK-DATA-BULK-01E (2026-10-06)
+
+**COMPLETE / ACCEPTED — 6 RPM sustained for the full 120-minute window.**
+- 599 charged = 599 measured provider requests, 598 HTTP requests, 0 errors of any kind, max chunk 14.8 s, max
+  2 accounts in flight, 0 same-account concurrency.
+- Tracked 672 → 838 (+166 unique), earliest 2024-01-13. 6 accounts are source-exhausted (not lifetime-complete);
+  3 remain in stored_index.
+- Analysis facts are fresh after the crawl (`queries=6`, `fallback=0`).
+- Next decision: **C — optimize stored_index before more Bulk.** stored_index spent 503 requests for 14 persisted
+  observations; live_v4 yields 3.0 per request.
+- See [BULK_HISTORY.md](BULK_HISTORY.md).
+
+## Earlier decision — TASK-DATA-03B.2D (2026-10-06)
 
 **COMPLETE / ACCEPTED (`full-tracked-aggregate-v1` over `analysis-match-facts-v1`, migration 0011).** Production: 672 matches hydrated (1,405 facts); lifetime 5.28 → 2.78 s, map −50 %, agent −52 %, Act −58 %, synergy −49 %; 6 statements, 0 fallback, identical bytes. See [FULL_TRACKED_LATENCY.md](FULL_TRACKED_LATENCY.md).
 - Phase A: the chunked phase 2 re-scanned whole topology tables per 250-match chunk (O(n²)), and event

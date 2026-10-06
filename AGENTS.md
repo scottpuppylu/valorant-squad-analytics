@@ -62,7 +62,8 @@
 | TASK-SECURITY-03 Tailwind 4 / build toolchain security migration | NOT STARTED — needs explicit authorization |
 | TASK-DATA-BULK-01 multi-account bulk historical backfill accelerator | IMPLEMENTED / CANARY PASSED (2026-10-06; bulk-history-v1; 12 charged / 10 actual provider requests; 2 lanes default) — see docs/BULK_HISTORY.md |
 | TASK-DATA-BULK-01A production bulk crawl Phase 1 | EVIDENCE ACCEPTED / STOPPED ON PROVIDER 429 (2026-10-06): 84 charged / 77 actual provider requests; tracked 213 → 332 — see docs/BULK_HISTORY.md |
-| TASK-DATA-BULK-01B bulk crawl Phase 2 (2 lanes / 6 RPM) | BOTH KNOWN BLOCKERS RESOLVED (HISTORICAL-IDENTITY-01 + DATA-03B.2D); Bulk NOT RUN until separate explicit human authorization — originally STOPPED / BLOCKED (2026-10-06): first DATABASE_ERROR after 53.6 min, zero 429; 311 charged provider requests; tracked 332 → 671; oldest 2025-01-25; root cause NOT VERIFIED — see docs/BULK_HISTORY.md |
+| TASK-DATA-BULK-01E bulk crawl Phase 3 (2 lanes / 6 RPM) | COMPLETE / ACCEPTED (2026-10-06): full 120 min, 599 charged = 599 measured provider requests, 0 errors of any kind, max chunk 14.8 s; tracked 672 → 838, earliest 2024-01-13; 6 accounts source-exhausted (not lifetime-complete); 6 RPM SUSTAINED ACCEPTED; next decision C (stored_index re-reads known entries: 503 requests → 14 persisted) — see docs/BULK_HISTORY.md |
+| TASK-DATA-BULK-01B bulk crawl Phase 2 (2 lanes / 6 RPM) | HISTORICAL RUN STOPPED; BOTH KNOWN BLOCKERS RESOLVED (HISTORICAL-IDENTITY-01 + DATA-03B.2D); continued as TASK-DATA-BULK-01E — originally STOPPED / BLOCKED (2026-10-06): first DATABASE_ERROR after 53.6 min, zero 429; 311 charged provider requests; tracked 332 → 671; oldest 2025-01-25; root cause NOT VERIFIED — see docs/BULK_HISTORY.md |
 | Full-tracked analysis latency | RESOLVED by TASK-DATA-03B.2D (constant statements; local 10 k realistic lifetime 4.5 s, synergy 6.3 s); remaining O(n) is CPU aggregation and the phase-1 scan |
 | TASK-SCORING-RANK-01 | NOT STARTED |
 | TASK-DATA-PERFORMANCE-SCORE-01 official Performance Score evidence | AUDIT COMPLETE / PHASE B BLOCKED (2026-10-06): provider field NOT VERIFIED (outcome D); `stats.score` = legacy combat-score total → ACS_SAFE; nothing ingested — see docs/PERFORMANCE_SCORE.md |
@@ -82,6 +83,7 @@ they were written; lines marked **[SUPERSEDED]** must not be read as current sta
 
 ### Dated stage log
 
+- TASK-DATA-BULK-01E (2026-10-06): 2 lanes / 6 RPM is the validated bulk rate; never raise it without a separate rate experiment. Do not run more Bulk before a stored_index efficiency task (the stored index mostly re-reads already-durable matches). sourceExhausted is never lifetime completeness.
 - TASK-DATA-03B.2D (2026-10-06): full-population analysis must stay constant-statement. Rules:
   - `analysis_participant_facts` (analysis-match-facts-v1) holds only the exact output of `reconstructMatchFacts`
     (server/dataset/matchAssembly.ts, THE per-match projection). Never store scores, identifiers or member aggregates there.
