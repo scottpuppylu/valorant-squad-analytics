@@ -8,6 +8,7 @@ import { PostgresDatasetReadRepository } from '../server/dataset/postgresDataset
 import { buildAnalyticsContext, PostgresAnalyticsContextRepository } from '../server/dataset/analyticsContext';
 import { filtersFor, parseAnalysisRequest, ServerAnalysisService, type AnalysisRequest } from '../server/dataset/analysisService';
 import { PublicApiError } from '../server/errors';
+import { hydrateAnalysisFacts } from '../server/dataset/analysisFactHydration';
 import datasetHandler from '../api/valorant/dataset';
 import type { ApiResponse } from '../server/contracts';
 import { PUBLIC_DATASET_PRIVACY_VERSION } from '../shared/privacyPolicy';
@@ -376,11 +377,13 @@ describe('DATA-03B.2B/2C bounded performance', () => {
     await seedPlayers(db, 4);
     const specs = variedSpecs(count);
     await seedMatches(db, specs);
+    // Production steady state: analysis-match-facts-v1 hydrated (TASK-DATA-03B.2D).
+    await hydrateAnalysisFacts(db, { batchSize: 500 });
     const server = service(db);
     const current = await server.analyze(request({ form: true }));
     expect(current.metrics.eligibleMatches).toBe(count);
     expect(current.metrics.selectedMatches).toBeLessThanOrEqual(4 * (50 + 10 + 30));
-    expect(current.metrics.sqlQueryCount).toBeLessThanOrEqual(9);
+    expect(current.metrics.sqlQueryCount).toBe(6);
     const act = await server.analyze(request({ feature: 'actOverview', act: 'e11a4', map: 'Bind' }));
     const pair = await server.analyze(request({ feature: 'synergy', act: 'e11a5' }));
     const lifetime = await server.analyze(request({ feature: 'lifetimeTotals' }));
@@ -392,6 +395,9 @@ describe('DATA-03B.2B/2C bounded performance', () => {
     expect(lifetime.payload.coverage).toMatchObject({ trackedMatchCount: count, populationMatches: competitiveCount, populationComplete: true, populationLimit: null });
     expect(lifetime.metrics.selectedMatches).toBe(competitiveCount);
     expect(lifetime.metrics.shippedMatches).toBe(0);
+    // full-tracked-aggregate-v1: constant statements and no 250-match chunks at every size.
+    expect(lifetime.metrics).toMatchObject({ sqlQueryCount: 6, phase2Chunks: 0, fallbackMatches: 0 });
+    expect(pair.metrics).toMatchObject({ sqlQueryCount: 6, phase2Chunks: 0, fallbackMatches: 0 });
     // Response scales with members x maps x agents, not with matches.
     expect(lifetime.metrics.serializedBytes).toBeLessThan(120_000);
     expect(pair.metrics.serializedBytes).toBeLessThan(120_000);

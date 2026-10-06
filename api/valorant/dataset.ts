@@ -37,8 +37,9 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     if (view === 'analysis') {
       const analysisRequest = parseAnalysisRequest(request.query);
       const { payload, metrics } = await createServerAnalysisService().analyze(analysisRequest);
-      // Phase durations only (no identifiers) for production latency diagnosis.
-      response.setHeader('Server-Timing', `phase1;dur=${metrics.phase1Ms}, resolve;dur=${metrics.resolveMs}, phase2;dur=${metrics.phase2Ms}, total;dur=${metrics.totalMs}`);
+      // Phase durations and aggregate counts only (no identifiers) for production latency diagnosis.
+      // TASK-DATA-03B.2D: fact = the single analysis-fact read; fallback = matches rebuilt from raw evidence.
+      response.setHeader('Server-Timing', `phase1;dur=${metrics.phase1Ms}, resolve;dur=${metrics.resolveMs}, fact;dur=${metrics.factMs}, phase2;dur=${metrics.phase2Ms}, aggregate;dur=${metrics.aggregateMs}, total;dur=${metrics.totalMs}, queries;desc="${metrics.sqlQueryCount}", fallback;desc="${metrics.fallbackMatches}"`);
       response.status(200).json(payload);
       return;
     }

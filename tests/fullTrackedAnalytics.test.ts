@@ -8,6 +8,7 @@ import { datasetWindowSize } from '../server/dataset/types';
 import { isDatasetAnalysisResponse } from '../src/dataSources/server/analysisResult';
 import { isDatasetAnalyticsContextResponse } from '../src/dataSources/server/datasetContract';
 import { closeAll, database, seedMatches, seedPlayers, uuid, type Spec } from './support/durableFixtures';
+import { hydrateAnalysisFacts } from '../server/dataset/analysisFactHydration';
 
 /**
  * TASK-DATA-03B.2C — the REAL website has no 300 (transport) or 2000 (former phase-2) match-count
@@ -31,10 +32,12 @@ function population(count: number): Spec[] {
   });
 }
 
-async function seeded(count: number, players = 3) {
+/** Durable evidence with analysis-match-facts-v1 hydrated (the production steady state) unless `facts` is false. */
+async function seeded(count: number, players = 3, facts = true) {
   const db = await database();
   await seedPlayers(db, players);
   await seedMatches(db, population(count));
+  if (facts) await hydrateAnalysisFacts(db, { batchSize: 500 });
   return db;
 }
 
@@ -84,7 +87,8 @@ describe('no generic 2000 phase-2 cap', () => {
     expect(lifetime.payload.coverage).toMatchObject({ populationMatches: count, populationComplete: true, populationLimit: null });
     expect(totalMatches(lifetime.payload)).toBe(count + Math.floor(count / 4));
     expect(lifetime.metrics.shippedMatches).toBe(0);
-    expect(lifetime.metrics.phase2Chunks).toBe(Math.ceil(count / 250));
+    // full-tracked-aggregate-v1: one fact read for the whole population — no 250-match chunks.
+    expect(lifetime.metrics).toMatchObject({ phase2Chunks: 0, fallbackMatches: 0, factMatches: count, sqlQueryCount: 6 });
 
     const bind = await server.analyze(request({ feature: 'mapStats', map: 'Bind' }));
     expect(bind.payload.summary!.groups.maps).toEqual([expect.objectContaining({ id: 'Bind', matches: population(count).filter((s) => s.map === 'Bind').length })]);
@@ -115,8 +119,17 @@ describe('no generic 2000 phase-2 cap', () => {
     expect(big.payload.coverage).toMatchObject({ trackedMatchCount: 5000, populationMatches: 5000, populationComplete: true });
     expect(totalMatches(big.payload)).toBe(5000 + 1250);
     expect(big.metrics.serializedBytes).toBeLessThan(small.metrics.serializedBytes * 1.2);
-    // Linear in chunks, never one query per match.
-    expect(big.metrics.sqlQueryCount).toBe(3 + 2 + 4 * Math.ceil(5000 / 250));
+    // full-tracked-aggregate-v1: constant statements (5 phase-1 + 1 fact read), independent of n.
+    expect(big.metrics.sqlQueryCount).toBe(6);
+    expect(big.metrics).toMatchObject({ phase2Chunks: 0, fallbackMatches: 0, factMatches: 5000 });
+  }, 300_000);
+
+  it('without facts the exact raw fallback still covers the full population (work-unit chunks, never a cap)', async () => {
+    const withFacts = await service(await seeded(600)).analyze(request({ feature: 'lifetimeTotals' }));
+    const raw = await service(await seeded(600, 3, false)).analyze(request({ feature: 'lifetimeTotals' }));
+    expect(raw.metrics).toMatchObject({ factMatches: 0, fallbackMatches: 600, phase2Chunks: 3, sqlQueryCount: 6 + 4 * 3 });
+    expect(raw.payload.coverage).toMatchObject({ populationMatches: 600, populationComplete: true });
+    expect(JSON.stringify(raw.payload)).toBe(JSON.stringify(withFacts.payload));
   }, 300_000);
 });
 

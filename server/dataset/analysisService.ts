@@ -18,8 +18,10 @@ import { MODE_ELIGIBILITY_POLICY_VERSION } from '../../src/analytics/modeEligibi
 import { buildAnalyticsContext, PostgresAnalyticsContextRepository } from './analyticsContext.js';
 import { hasMemberCollision, membersFromRows, type DatasetProjectionService } from './datasetProjectionService.js';
 import { activePlayers, detailQueries, playersQuery, selectedMatches } from './postgresDatasetReadRepository.js';
+import { factOf, factReadSql, freshFactPredicate, FULL_TRACKED_AGGREGATE_VERSION, type FactReadRow } from './analysisFacts.js';
+import { assembleMatch, type ParticipantFact } from './matchAssembly.js';
 import type { DatasetEvidenceAvailability, DatasetPlayerRow } from './types.js';
-import { datasetSchemaVersion } from './types.js';
+import { datasetIdentityVersion, datasetSchemaVersion } from './types.js';
 
 /**
  * TASK-DATA-03B.2B — server-side context-aware analytics consumption.
@@ -173,10 +175,17 @@ export const analysisObservationsSql = `
   SELECT v.match_id AS internal_match_id, v.public_id::text AS public_match_id, v.started_at, v.map_name, v.queue_id, v.queue_name,
          v.game_length_ms, v.season_short, v.player_id AS internal_player_id, v.player_public_id::text AS player_public_id, v.member_public_id::text AS member_public_id, v.agent_name,
          mt.won AS team_won, mt.rounds_won, mt.rounds_lost,
-         (v.core_ok AND rc.rounds > 0 AND pr.present = rc.rounds) AS usable
+         -- TASK-DATA-03B.2D: a fresh analysis fact already holds the exact basic round-evidence gate; only
+         -- participants without one evaluate the per-row round counts (scalar subqueries run lazily in CASE).
+         (v.core_ok AND CASE WHEN f.match_participant_id IS NOT NULL THEN f.present_every_round ELSE (
+           (SELECT count(*)::int FROM rounds r WHERE r.source_match_id=v.match_id) > 0
+           AND (SELECT count(*)::int FROM rounds r
+                JOIN round_participants rp ON rp.round_id=r.id AND rp.match_participant_id=v.participant_id
+                WHERE r.source_match_id=v.match_id AND rp.present IS TRUE)
+             = (SELECT count(*)::int FROM rounds r WHERE r.source_match_id=v.match_id)) END) AS usable
   FROM (
     SELECT sm.id AS match_id, sm.public_id, sm.started_at, sm.map_name, sm.queue_id, sm.queue_name, sm.game_length_ms, sm.season_short,
-           mp.id AS participant_id, mp.player_id, ap.public_id AS player_public_id, ap.member_public_id, mp.agent_name,
+           sm.last_observed_at, mp.id AS participant_id, mp.player_id, ap.public_id AS player_public_id, ap.member_public_id, mp.agent_name,
            -- Projection's "first performance row": the lowest public id visible participant of the match.
            first_value(mp.team_key) OVER (PARTITION BY sm.id ORDER BY ap.public_id) AS first_team_key,
            (mp.stats_evidence_status='observed' AND mp.agent_name IS NOT NULL AND mp.kills IS NOT NULL AND mp.deaths IS NOT NULL
@@ -186,14 +195,14 @@ export const analysisObservationsSql = `
     JOIN active_players ap ON ap.id=mp.player_id
     WHERE sm.started_at IS NOT NULL
   ) v
-  -- Keyed per-row lookups on existing unique indexes (no CTE-to-CTE joins; see SERVER_ANALYSIS.md).
-  CROSS JOIN LATERAL (SELECT count(*)::int AS rounds FROM rounds r WHERE r.source_match_id=v.match_id) rc
-  CROSS JOIN LATERAL (
-    SELECT count(*)::int AS present FROM rounds r
-    JOIN round_participants rp ON rp.round_id=r.id AND rp.match_participant_id=v.participant_id
-    WHERE r.source_match_id=v.match_id AND rp.present IS TRUE
-  ) pr
+  LEFT JOIN analysis_participant_facts f ON f.match_participant_id=v.participant_id AND ${freshFactPredicate('f', 'v')}
   LEFT JOIN match_teams mt ON mt.source_match_id=v.match_id AND mt.team_key=v.first_team_key`;
+
+function assemblyContext(rows: DatasetPlayerRow[]) {
+  const accountsPerMember = new Map<string, number>();
+  for (const row of rows) accountsPerMember.set(row.member_public_id, (accountsPerMember.get(row.member_public_id) ?? 0) + 1);
+  return { playerRowByInternalId: new Map(rows.map((row) => [row.internal_player_id, row])), accountsPerMember };
+}
 
 const finiteNumber = (value: unknown) => (typeof value === 'number' ? value : Number(value));
 
@@ -306,33 +315,70 @@ export class ServerAnalysisService {
       }
       const resolveMs = performance.now() - resolveStarted;
 
-      // ---- Phase 2: full evidence for EVERY selected match, in deterministic chunks (no cap).
+      // ---- Phase 2 (full-tracked-aggregate-v1): full evidence for EVERY selected match (no cap).
+      // One statement reads the visible performance rows with their fresh analysis facts; a match is
+      // assembled from facts only when every visible participant has one. The rest (absent or stale facts)
+      // are reconstructed from raw durable evidence with the same shared projection, in work-unit chunks.
       const phase2Started = performance.now();
       const internalIds = [...selectedIds].flatMap((id) => internalByPublic.get(id) ?? []).sort();
-      const chunks: string[][] = [];
-      for (let index = 0; index < internalIds.length; index += PHASE2_CHUNK_MATCHES) chunks.push(internalIds.slice(index, index + PHASE2_CHUNK_MATCHES));
       const full = new Map<string, MatchRecord>();
       let availability: DatasetEvidenceAvailability | undefined;
-      let projectedPlayers: Player[] = [];
-      let projectedOnce = false;
+      let projectedPlayers: Player[] = membersFromRows(playerRows, agentsByInternal);
       let projectionMs = 0;
+      let factMs = 0;
+      const factStarted = performance.now();
+      const factRows = internalIds.length ? (await query<FactReadRow>(factReadSql(selectedMatches), [internalIds])).rows : [];
+      factMs = performance.now() - factStarted;
+      const assemblyStarted = performance.now();
+      const fallbackIds: string[] = [];
+      const factRowsByMatch = new Map<string, FactReadRow[]>();
+      for (const row of factRows) factRowsByMatch.set(row.internal_match_id, [...(factRowsByMatch.get(row.internal_match_id) ?? []), row]);
+      const assembly = assemblyContext(playerRows);
+      let roundEvidence = true;
+      let headshotEvidence = true;
+      let identityConflicts = 0;
+      let factMatches = 0;
+      for (const [matchId, rows] of factRowsByMatch) {
+        const facts = new Map<string, ParticipantFact>();
+        for (const row of rows) { const fact = factOf(row); if (fact) facts.set(row.internal_participant_id, fact); }
+        const result = assembleMatch(assembly, rows, facts);
+        // A member collision withholds the match on either path; it never needs topology.
+        if (result.kind === 'identity_conflict') { identityConflicts += 1; continue; }
+        if (facts.size !== rows.length) { fallbackIds.push(matchId); continue; }
+        factMatches += 1;
+        if (result.kind !== 'assembled') continue;
+        if (!result.roundEvidenceComplete) roundEvidence = false;
+        if (!result.headshotEvidenceComplete) headshotEvidence = false;
+        if (result.match) full.set(result.match.id, result.match);
+      }
+      if (identityConflicts > 0) {
+        process.stdout.write(`${JSON.stringify({ event: 'member_identity_conflict', identityVersion: datasetIdentityVersion, matchesWithheld: identityConflicts })}
+`);
+      }
+      if (factMatches > 0 || fallbackIds.length === 0) {
+        availability = {
+          acs: 'derived', adr: 'derived',
+          headshotPercentage: headshotEvidence ? 'derived' : 'partial',
+          kast: roundEvidence ? 'reconstructed' : 'partial',
+          firstKills: roundEvidence ? 'reconstructed' : 'partial',
+          firstDeaths: roundEvidence ? 'reconstructed' : 'partial',
+        };
+      }
+      projectionMs += performance.now() - assemblyStarted;
+      const chunks: string[][] = [];
+      for (let index = 0; index < fallbackIds.length; index += PHASE2_CHUNK_MATCHES) chunks.push(fallbackIds.slice(index, index + PHASE2_CHUNK_MATCHES));
       const projectChunk = async (ids: string[]) => {
-        const rows = ids.length
-          ? await Promise.all(detailQueries(query, selectedMatches, [ids]))
-          : undefined;
+        const rows = await Promise.all(detailQueries(query, selectedMatches, [ids]));
         // Raw rounds/events are released after each chunk; only compact match records are kept.
         const projectionStarted = performance.now();
         const projected = this.projection.project({
-          players: playerRows,
-          performances: rows ? rows[0].rows : [], rounds: rows ? rows[1].rows : [],
-          roundParticipants: rows ? rows[2].rows : [], events: rows ? rows[3].rows : [],
+          players: playerRows, performances: rows[0].rows, rounds: rows[1].rows, roundParticipants: rows[2].rows, events: rows[3].rows,
         }, agentsByInternal);
         projectionMs += performance.now() - projectionStarted;
         for (const match of projected.dataset.matches) full.set(match.id, match);
         availability = availability ? mergeAvailability(availability, projected.availability) : projected.availability;
-        if (!projectedOnce) { projectedPlayers = projected.dataset.players; projectedOnce = true; }
+        projectedPlayers = projected.dataset.players;
       };
-      if (chunks.length === 0) await projectChunk([]);
       for (let index = 0; index < chunks.length; index += PHASE2_PARALLEL_CHUNKS) {
         await Promise.all(chunks.slice(index, index + PHASE2_PARALLEL_CHUNKS).map(projectChunk));
       }
@@ -431,6 +477,7 @@ export class ServerAnalysisService {
       const metrics = {
         sqlQueryCount, phase1Ms: round(phase1Ms), resolveMs: round(resolveMs), phase2Ms: round(phase2Ms), projectionMs: round(projectionMs), aggregateMs: round(aggregateMs), totalMs: round(performance.now() - started),
         observationRows: observations.length, eligibleMatches: skeletons.length, selectedMatches: selectedIds.size, shippedMatches: matches.length, phase2Chunks: chunks.length, serializedBytes: Buffer.byteLength(JSON.stringify(payload)),
+        engine: FULL_TRACKED_AGGREGATE_VERSION, factMs: round(factMs), factRows: factRows.length, factMatches, fallbackMatches: fallbackIds.length,
       };
       return { payload, metrics, selection };
     }
