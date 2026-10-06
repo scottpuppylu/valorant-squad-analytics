@@ -6,6 +6,7 @@ export const publicRoutePaths = {
   synergy: '/synergy',
   maps: '/maps',
   agents: '/agents',
+  weapons: '/weapons',
   matches: '/matches',
   connect: '/connect',
   dictionary: '/dictionary',

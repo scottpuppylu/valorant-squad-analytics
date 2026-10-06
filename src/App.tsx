@@ -17,6 +17,7 @@ const ConnectPage = lazy(() => import('./pages/ConnectPage').then((module) => ({
 import { publicRoutePaths } from './routes';
 import { DatasetRuntimeBoundary } from './components/DatasetRuntimeBoundary';
 import { useDataset } from './hooks/useDataset';
+const WeaponsPage = lazy(() => import('./pages/WeaponsPage').then((module) => ({ default: module.WeaponsPage })));
 const SynergyPage = lazy(() => import('./pages/SynergyPage').then((module) => ({ default: module.SynergyPage })));
 
 function DefaultPlayerRoute() {
@@ -37,6 +38,7 @@ export default function App() {
             <Route path={publicRoutePaths.synergy} element={<SynergyPage />} />
             <Route path={publicRoutePaths.maps} element={<MapsPage />} />
             <Route path={publicRoutePaths.agents} element={<AgentsPage />} />
+            <Route path={publicRoutePaths.weapons} element={<WeaponsPage />} />
             <Route path={publicRoutePaths.matches} element={<MatchesPage />} />
             <Route path="/players" element={<DefaultPlayerRoute />} />
             <Route path={publicRoutePaths.players} element={<PlayerProfilePage />} />

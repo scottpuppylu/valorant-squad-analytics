@@ -52,6 +52,11 @@ export function formatDateTime(value?: string): string {
   return new Intl.DateTimeFormat('zh-TW', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(value));
 }
 
+/** Weapon kills per 100 played rounds; display-only rounding. */
+export function formatPer100(value: number | undefined): string {
+  return value === undefined || !Number.isFinite(value) ? unavailable : value.toFixed(1);
+}
+
 /** Relative "X 分鐘前" for sync freshness; display-only. */
 export function formatMinutesAgo(value: string | undefined, now: number = Date.now()): string {
   if (!value || Number.isNaN(Date.parse(value))) return unavailable;

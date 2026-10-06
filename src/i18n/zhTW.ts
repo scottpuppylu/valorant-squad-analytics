@@ -13,6 +13,7 @@ export const zhTW = {
     compare: '比較',
     maps: '地圖分析',
     agents: '特務／角色分析',
+    weapons: '武器分析',
     matches: '對戰',
     connect: '加入調查',
     dictionary: '數據字典',
@@ -56,6 +57,7 @@ export const primaryNavigation = [
 export const secondaryNavigation = [
   { to: '/maps', label: zhTW.navigation.maps },
   { to: '/agents', label: zhTW.navigation.agents },
+  { to: '/weapons', label: zhTW.navigation.weapons },
   { to: '/dictionary', label: zhTW.navigation.dictionary },
   { to: '/connect', label: zhTW.navigation.connect },
   { to: '/about', label: zhTW.navigation.about },

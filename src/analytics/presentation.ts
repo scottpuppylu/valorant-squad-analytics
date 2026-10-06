@@ -97,3 +97,15 @@ export const recentRefreshLabels = {
   unavailable: '目前無法更新此玩家戰績',
   retryLater: '稍後可再更新',
 } as const;
+
+/** TASK-WEAPON-01 weapon-analytics-v1 copy. Never claims complete lifetime, causality or per-weapon HS%/ADR. */
+export const weaponScopeLabels = { all: '全部已追蹤', current: '目前實力區間', act: '指定 Act' } as const;
+export const weaponEvidenceLabels = { available: '證據充足', partial: '部分證據', unavailable: '資料不足' } as const;
+export const weaponReasonLabels: Record<string, string> = {
+  small_sample: '樣本少，僅供參考',
+  round_weapon_evidence_partial: '回合武器證據不完整',
+  kill_weapon_evidence_partial: '擊殺武器證據不完整',
+  act_not_observed: '此 Act 沒有已追蹤資料',
+  member_not_visible: '此成員目前不公開',
+  current_strength_adaptive_window: '沿用「目前實力」自適應區間',
+};

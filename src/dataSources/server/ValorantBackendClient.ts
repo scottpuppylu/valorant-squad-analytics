@@ -18,6 +18,8 @@ import type {
   DatasetAnalyticsContextResponse,
 } from './contracts';
 import type { AnalysisQuery, DatasetAnalysisResponse } from './analysisResult';
+import type { WeaponQuery } from '../../analytics/weapons/local';
+import type { WeaponAnalyticsResponse } from './weaponContract';
 
 export class BackendApiError extends Error {
   constructor(readonly code: ProviderPublicErrorCode, message: string) {
@@ -70,6 +72,16 @@ export class ValorantBackendClient {
     }
     if (query.recent) params.set('recent', String(query.recent));
     if (query.form) params.set('form', '1');
+    return requestJson(`/api/valorant/dataset?${params.toString()}`, { signal });
+  }
+
+  /** TASK-WEAPON-01 member weapon analytics (semantic scope/context only; same dataset function). */
+  weaponAnalytics(query: WeaponQuery, signal?: AbortSignal): Promise<WeaponAnalyticsResponse | DatasetDisabledResponse> {
+    const params = new URLSearchParams({ view: 'analysis', feature: 'weaponAnalytics', scope: query.scope, mode: query.mode });
+    if (query.player !== 'all') params.set('player', query.player);
+    if (query.act) params.set('act', query.act);
+    if (query.map !== 'all') params.set('map', query.map);
+    if (query.agent !== 'all') params.set('agent', query.agent);
     return requestJson(`/api/valorant/dataset?${params.toString()}`, { signal });
   }
 

@@ -28,6 +28,8 @@ export interface DatasetContextValue {
    * freshness gate; new durable matches reload the snapshot, which also clears the analysis cache.
    */
   refreshRecent?(accountId: string, mode: 'auto' | 'manual'): Promise<RecentRefreshOutcome>;
+  /** TASK-WEAPON-01 per-tab cached server weapon analytics; PUBLIC REAL only (cleared on every reload). */
+  loadWeaponAnalytics?: NonNullable<DatasetApiClient['loadWeaponAnalytics']>;
   refresh(): Promise<void>;
 }
 

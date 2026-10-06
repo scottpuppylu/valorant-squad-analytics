@@ -20,6 +20,7 @@ import { ScopeExplanation } from '../components/ScopeExplanation';
 import { ProgressIndexCard } from '../components/ProgressIndexCard';
 import { RecentRefreshPanel } from '../components/RecentRefreshPanel';
 import { MemberAccounts } from '../components/MemberAccounts';
+import { WeaponSummaryCard } from '../components/WeaponSummaryCard';
 import { AnalysisStatusNotice } from '../components/AnalysisStatusNotice';
 import { useProgressIndex, useScopedAnalysis } from '../hooks/useScopedAnalysis';
 import { describeWindow, scopeReasonLabels } from '../analytics/presentation';
@@ -88,6 +89,7 @@ export function PlayerProfilePage() {
     <AnalysisFilterBar filters={filters} onChange={update} onReset={reset} players={activeDataset.players} maps={availableMaps} agents={availableAgents} gameModes={availableGameModes} includePlayer={false} seasonKeys={population.seasonKeys} />
     <AnalysisStatusNotice analysis={analysis} />
     <ScopeExplanation scope={selection.scope} players={activeDataset.players} source={analysis.source} trackedMatchCount={analysis.trackedMatchCount} />
+    <WeaponSummaryCard player={player} />
 
     {!analytics ? <EmptyState title="目前條件下沒有出賽資料" description="請調整日期、地圖或特務條件。" actions={<button className="button-secondary" onClick={reset} type="button">重設條件</button>} /> : <>
 

@@ -71,6 +71,25 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
     return Object.assign(cached, { clear: () => cache.clear() });
   }, [client]);
 
+  // TASK-WEAPON-01: same per-tab request cache semantics as server analysis (cleared on every reload,
+  // so a FASTSYNC-triggered snapshot reload never leaves stale weapon results).
+  const weaponLoader = useMemo(() => {
+    const loadWeapon = client.loadWeaponAnalytics?.bind(client);
+    if (!loadWeapon) return undefined;
+    const cache = new Map<string, ReturnType<typeof loadWeapon>>();
+    const cached = (query: Parameters<typeof loadWeapon>[0]) => {
+      const key = JSON.stringify(query);
+      let pending = cache.get(key);
+      if (!pending) {
+        pending = loadWeapon(query);
+        cache.set(key, pending);
+        pending.catch(() => cache.delete(key));
+      }
+      return pending;
+    };
+    return Object.assign(cached, { clear: () => cache.clear() });
+  }, [client]);
+
   const load = useCallback(async (refreshing: boolean) => {
     const previous = stateRef.current;
     if (refreshing && previous.status === 'ready') setState({ ...previous, status: 'stale', message: '正在更新持久化資料…' });
@@ -81,6 +100,7 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
     }
     try {
       analysisLoader?.clear();
+      weaponLoader?.clear();
       // Prefetch the default 目前實力 population in parallel with the bootstrap snapshot.
       if (analysisLoader) void analysisLoader(defaultCurrentStrengthQuery).catch(() => undefined);
       const response = await client.load();
@@ -98,7 +118,7 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
         setState({ status: 'error', source: 'REAL_SERVER', dataset: emptyRealDataset(), message: '持久化資料暫時無法讀取，未切換成 Demo。' });
       }
     }
-  }, [analysisLoader, client, demo, forceDemo]);
+  }, [analysisLoader, client, demo, forceDemo, weaponLoader]);
 
   useEffect(() => {
     removeBrowserRealDataset();
@@ -162,8 +182,9 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
     ...(state.source === 'REAL_SERVER' && activeContext ? { analyticsContext: activeContext } : {}),
     ...(state.source === 'REAL_SERVER' && analysisLoader ? { loadAnalysis: analysisLoader } : {}),
     ...(state.source === 'REAL_SERVER' && canRefreshRecent ? { refreshRecent: recentRefresh } : {}),
+    ...(state.source === 'REAL_SERVER' && weaponLoader ? { loadWeaponAnalytics: weaponLoader } : {}),
     refresh: () => load(true),
-  }), [activeContext, analysisLoader, analytics, historyLoader, canRefreshRecent, load, recentRefresh, state]);
+  }), [activeContext, analysisLoader, analytics, historyLoader, canRefreshRecent, load, recentRefresh, state, weaponLoader]);
 
   return <DatasetContext.Provider value={value}>{children}</DatasetContext.Provider>;
 }
