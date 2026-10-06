@@ -22,13 +22,15 @@ const demo = demoDataSource.snapshot();
 const NOVA_MAIN = '00000000-0000-4000-8000-00000000d001';
 const NOVA_ALT = '00000000-0000-4000-8000-00000000da01';
 
-describe('weapon-analytics-v1 Demo engine', () => {
+describe('weapon-analytics-v2 Demo engine', () => {
   it('aggregates the fictional two-account member from BOTH accounts (union, not average)', () => {
     const analytics = buildAnalytics(demo);
     const query: WeaponQuery = { player: 'nova-hex', scope: 'all', map: 'all', agent: 'all', mode: 'all' };
     const member = localWeaponAnalytics(demo, analytics.performanceEntries, analytics.population, query).member!;
     expect(member.accounts.map((a) => a.accountId).sort()).toEqual([NOVA_MAIN, NOVA_ALT].sort());
-    const facts = demoWeaponFacts(demo).filter((fact) => fact.memberId === 'nova-hex');
+    // weapon-analytics-v2: only Competitive facts contribute (same policy as the server).
+    const competitiveIds = new Set(demo.matches.filter((match) => match.gameMode === 'Competitive').map((match) => match.id));
+    const facts = demoWeaponFacts(demo).filter((fact) => fact.memberId === 'nova-hex' && competitiveIds.has(fact.matchId));
     const perAccount = (accountId: string) => buildWeaponAnalytics(aggregateWeaponFacts(facts.filter((fact) => fact.accountId === accountId)), { memberIds: ['nova-hex'], memberId: 'nova-hex', scope: { mode: 'all', status: 'available', reasons: [], context: { map: 'all', agent: 'all', mode: 'all' } } }).member!;
     const main = perAccount(NOVA_MAIN); const alt = perAccount(NOVA_ALT);
     const op = (m: typeof member) => m.weapons.find((w) => w.weaponKey === 'operator');

@@ -39,7 +39,7 @@ function serverAnswer(full: NormalizedAnalyticsDataset, query: AnalysisQuery, se
   seen.push(query);
   if (query.feature === 'synergy') {
     const synergy = buildSynergy(full, defaultSynergyFilters).map((result) => ({ ...result, sharedSample: { ...result.sharedSample, matches: result.sharedSample.matches + 300 } }));
-    return { ok: true, schemaVersion: 6, view: 'analysis', analysisVersion: 'server-analysis-v2', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v2',
+    return { ok: true, schemaVersion: 6, view: 'analysis', analysisVersion: 'server-analysis-v2', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v3',
       adaptiveWindowVersion: 'adaptive-window-v1', scoreVersion: 'community-score-v2', synergyVersion: 'duo-synergy-v1', feature: 'synergy', status: 'available', reasons: [],
       coverage: { trackedMatchCount: 4321, populationComplete: true, populationMatches: 4321, serverHistoryUsed: true, transportSnapshotUsed: false, populationLimit: null, lifetimeComplete: false },
       population: { seasonKeys: [], seasonStatus: 'unavailable', rankStatus: 'unavailable' }, synergy, evidence, dataset: { ...full, matches: [] } };
@@ -51,7 +51,7 @@ function serverAnswer(full: NormalizedAnalyticsDataset, query: AnalysisQuery, se
   const scope = serializeScope(selection.scope!) as DatasetAnalysisResponse['scope'];
   const windowIds = new Set(scope!.players.flatMap((p) => (p.window ? [...p.window.currentMatchIds, ...p.window.baselineMatchIds] : [])));
   const sorted = { ...selection, entries: [...selection.byPlayer.values()].flat().sort((a, b) => b.match.playedAt.localeCompare(a.match.playedAt) || a.playerId.localeCompare(b.playerId)) };
-  return { ok: true, schemaVersion: 6, view: 'analysis', analysisVersion: 'server-analysis-v2', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v2',
+  return { ok: true, schemaVersion: 6, view: 'analysis', analysisVersion: 'server-analysis-v2', scopeRuleVersion: 'analysis-scope-v1', featurePolicyVersion: 'feature-scope-policy-v3',
     adaptiveWindowVersion: 'adaptive-window-v1', scoreVersion: 'community-score-v2', feature: query.feature, status: 'available', reasons: [],
     coverage: { trackedMatchCount: full.matches.length, populationComplete: true, populationMatches: new Set(selection.entries.map((e) => e.match.id)).size, serverHistoryUsed: true, transportSnapshotUsed: false, populationLimit: null, lifetimeComplete: false },
     population: { seasonKeys: [], seasonStatus: 'unavailable', rankStatus: 'unavailable' },
@@ -81,7 +81,9 @@ describe('DATA-03B.2B production consumers', () => {
     expect(seen).toContainEqual(analysisQueryFor({ playerId: 'all', period: 'all', map: 'all', agent: 'all', role: 'all', gameMode: 'all', minMatches: 0, minRounds: 0 }, 'lifetimeTotals', true));
     expect(container.textContent).toContain(`由伺服器依全部已追蹤戰績（${full.matches.length} 場）選樣`);
     const matchCounts = [...container.querySelectorAll('table tbody tr')].map((row) => row.children[4]?.textContent).filter(Boolean).map(Number);
-    expect(Math.max(...matchCounts)).toBe(20);
+    // Strength population = Competitive only (mode-eligibility-policy-v1).
+    const competitivePerPlayer = full.players.map((p) => full.matches.filter((m) => m.gameMode === 'Competitive' && m.performances.some((x) => x.playerId === p.id)).length);
+    expect(Math.max(...matchCounts)).toBe(Math.max(...competitivePerPlayer));
     expect(Math.max(...matchCounts)).toBeGreaterThan(snapshot.matches.length);
   });
 
@@ -142,7 +144,9 @@ describe('DATA-03B.2B production consumers', () => {
   const contextOf = (tracked: number, wins: number, maps: string[]) => buildAnalyticsContext({
     groups: [{ queue_id: 'competitive', queue_name: 'Competitive', season_short: null, has_season_id: false, has_duration: true, has_start: true, matches: tracked }],
     rankObservations: 0, sqlQueryCount: 3,
-    facets: { maps: maps.map((map) => ({ map, matches: 1 })), agents: ['Jett'], outcome_matches: tracked, outcome_wins: wins },
+    // Unrated (and entertainment) outcomes are inventory only; the Dashboard win rate uses Competitive alone.
+    facets: { maps: maps.map((map) => ({ map, matches: 1 })), agents: ['Jett'], outcome_matches: tracked + 1000, outcome_wins: wins + 1000,
+      outcomes_by_queue: [{ queue_id: 'competitive', queue_name: 'Competitive', matches: tracked, wins }, { queue_id: 'unrated', queue_name: 'Unrated', matches: 700, wins: 700 }, { queue_id: 'swiftplay', queue_name: 'Swiftplay', matches: 300, wins: 300 }] },
   });
 
   it('Synergy has no 300 ceiling: a minimum of 310 shared matches keeps pairs with > 300', async () => {
@@ -200,5 +204,19 @@ describe('DATA-03B.2B production consumers', () => {
       }
       expect(calls).toBe(0);
     } finally { globalThis.fetch = fetchSpy; }
+  });
+
+  it('legacy ?mode=Unrated on a strength page is disclosed, never computed, and Unrated is not offered', async () => {
+    const full = realDemo();
+    const seen: AnalysisQuery[] = [];
+    window.location.hash = '#/leaderboard?period=all&mode=Unrated';
+    await render({ load: async () => snapshotOf(full), loadAnalysis: async (query) => serverAnswer(full, query, seen) });
+    await settle(() => container.textContent?.includes('此分析僅使用排位模式') ?? false);
+    expect(container.querySelector('[role=alert]')?.textContent).toContain('此分析僅使用排位模式');
+    const modeSelect = [...container.querySelectorAll('.analysis-filters select')].find((select) => select.querySelector('option')?.textContent?.startsWith('排位'))!;
+    const enabled = [...modeSelect.querySelectorAll('option')].filter((option) => !option.disabled).map((option) => option.value);
+    expect(enabled).toEqual(['all', 'Competitive']);
+    expect(container.querySelectorAll('table tbody tr').length).toBe(0);
+    expect(container.textContent).not.toMatch(/NaN|Infinity/u);
   });
 });

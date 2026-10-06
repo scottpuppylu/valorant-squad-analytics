@@ -386,8 +386,11 @@ describe('DATA-03B.2B/2C bounded performance', () => {
     const lifetime = await server.analyze(request({ feature: 'lifetimeTotals' }));
     // server-analysis-v2: no 2000 cap — the whole tracked population is aggregated and disclosed complete.
     expect(lifetime.payload.status).toBe('available');
-    expect(lifetime.payload.coverage).toMatchObject({ trackedMatchCount: count, populationMatches: count, populationComplete: true, populationLimit: null });
-    expect(lifetime.metrics.selectedMatches).toBe(count);
+    // mode-eligibility-policy-v1: inventory counts every mode; the strength population is Competitive only
+    // (variedSpecs makes every 6th match Unrated).
+    const competitiveCount = count - Math.floor(count / 6);
+    expect(lifetime.payload.coverage).toMatchObject({ trackedMatchCount: count, populationMatches: competitiveCount, populationComplete: true, populationLimit: null });
+    expect(lifetime.metrics.selectedMatches).toBe(competitiveCount);
     expect(lifetime.metrics.shippedMatches).toBe(0);
     // Response scales with members x maps x agents, not with matches.
     expect(lifetime.metrics.serializedBytes).toBeLessThan(120_000);

@@ -254,7 +254,11 @@ describe('scopes and filters', () => {
     ]);
     const run = async (partial: Partial<WeaponRequest>) => (await service(db).analyze(req({ player: uuid(2, 1), ...partial }))).payload;
     expect((await run({})).member!.coverage.roundWeapon.eligible).toBe(5);
-    expect((await run({ mode: 'all' })).member!.coverage.roundWeapon.eligible).toBe(8);
+    // weapon-analytics-v2: 'all' means every ELIGIBLE mode (Competitive); Deathmatch never contributes.
+    expect((await run({ mode: 'all' })).member!.coverage.roundWeapon.eligible).toBe(5);
+    const excluded = await run({ mode: 'Deathmatch' });
+    expect(excluded.member?.coverage.roundWeapon.eligible ?? 0).toBe(0);
+    expect(excluded.scope.reasons).toContain('queue_excluded_by_policy');
     expect((await run({ map: 'Ascent' })).member!.weapons.map((w) => w.weaponKey)).toEqual(['operator']);
     expect((await run({ agent: 'Sova' })).member!.weapons.map((w) => [w.weaponKey, w.observedWeaponRounds])).toEqual([['vandal', 3]]);
     const act = await run({ scope: 'act', act: 'e11a4' });

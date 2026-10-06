@@ -71,7 +71,7 @@ describe('selected evidence and presentation integration',()=>{
     const matches=mutate((p)=>{p.agent='Omen';});
     const dataset={players:[player],matches,mode:'DEMO' as const,isDemo:true,sourceId:'fixture'};
     const selection=selectPerformances(createPerformanceEntries(dataset),{...defaultAnalysisFilters,role:'Controller'});
-    expect(selection.entries).toHaveLength(20);
+    expect(selection.entries).toHaveLength(matches.filter((m)=>m.gameMode==='Competitive').length);
     expect(rankPlayers(selection,defaultAnalysisFilters,'roleValue')[0]!.analytics.scores.roleValue.trace.selectedRole).toBe('Controller');
   });
   it('rankings preserve sub-display precision and missing rows have no number',()=>{

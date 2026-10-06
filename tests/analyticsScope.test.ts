@@ -201,7 +201,7 @@ describe('adaptive-window-v1 required cases', () => {
   });
 });
 
-describe('feature-scope-policy-v2', () => {
+describe('feature-scope-policy-v3', () => {
   const players = [player('p1'), player('p2')];
   const matches = [
     ...matchesFor('p1', [...spread(10, 9, { season: 'e9a3', map: 'Bind' }), ...spread(10, 9, { season: 'e9a2' }).map((s) => ({ ...s, daysAgo: s.daysAgo + 30 }))]),
@@ -218,9 +218,11 @@ describe('feature-scope-policy-v2', () => {
     expect(Object.values(featureScopePolicies).every((policy) => policy.fallback !== ('lifetime' as never))).toBe(true);
   });
 
-  it('lifetime statistics use all eligible tracked evidence in all modes', () => {
+  it('lifetime statistics use all eligible tracked COMPETITIVE evidence (mode-eligibility-policy-v1)', () => {
     const selection = selectPerformances(entries, { ...defaultAnalysisFilters, period: 'all' }, { population: pop });
-    expect(selection.entries).toHaveLength(32);
+    expect(selection.entries).toHaveLength(20);
+    expect(selection.byPlayer.has('p2')).toBe(false);
+    expect(selection.scope!.players.get('p2')).toMatchObject({ status: 'unavailable', reasons: ['queue_restricted_by_policy'] });
     expect(selection.scope).toMatchObject({ kind: 'LIFETIME', status: 'available', fallbackUsed: false });
   });
 
@@ -230,7 +232,7 @@ describe('feature-scope-policy-v2', () => {
     expect(act.entries).toHaveLength(10);
     const none = selectPerformances(entries, { ...defaultAnalysisFilters, period: 'act', act: 'e1a1' }, { population: pop });
     expect(none.entries).toHaveLength(0);
-    expect(none.scope).toMatchObject({ kind: 'ACT', status: 'unavailable', reasons: ['season_evidence_unavailable'] });
+    expect(none.scope).toMatchObject({ kind: 'ACT', status: 'unavailable', reasons: ['queue_restricted_by_policy', 'season_evidence_unavailable'] });
     const noSeasons = populationFromMatches(matches.map((match) => ({ ...match, seasonKey: undefined })), true);
     expect(selectPerformances(entries, { ...defaultAnalysisFilters, period: 'act', act: 'e9a2' }, { population: noSeasons }).entries).toHaveLength(0);
   });
@@ -262,7 +264,9 @@ describe('feature-scope-policy-v2', () => {
 
   it('Synergy uses the shared PAIR context, including an explicit Act', () => {
     expect(selectSynergyMatches(dataset, { ...defaultSynergyFilters, act: 'e9a3' }).every((match) => match.seasonKey === 'e9a3')).toBe(true);
-    expect(selectSynergyMatches(dataset, defaultSynergyFilters)).toHaveLength(32);
+    // duo-synergy-v1 compares Overall across different matches → Competitive only.
+    expect(selectSynergyMatches(dataset, defaultSynergyFilters)).toHaveLength(20);
+    expect(selectSynergyMatches(dataset, { ...defaultSynergyFilters, gameMode: 'Unrated' })).toHaveLength(0);
   });
 
   it('loading history pages in the browser never changes analytics results', () => {

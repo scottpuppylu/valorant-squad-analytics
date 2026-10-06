@@ -40,7 +40,7 @@ describe('weapon-catalog-v2 Warden classification', () => {
     }
     const result = buildWeaponAnalytics(aggregateWeaponFacts(facts()), { memberIds: ['m'], memberId: 'm', scope });
     expect(result.weaponCatalogVersion).toBe('weapon-catalog-v2');
-    expect(result.weaponAnalyticsVersion).toBe('weapon-analytics-v1');
+    expect(result.weaponAnalyticsVersion).toBe('weapon-analytics-v2');
     const warden = result.member!.weapons.find((w) => w.weaponName === 'Warden')!;
     expect(warden).toMatchObject({ weaponKey: 'warden', category: 'Rifle', isFirearm: true });
     for (const row of [...result.member!.breakdowns.maps, ...result.member!.breakdowns.agents, ...result.member!.breakdowns.acts]) {

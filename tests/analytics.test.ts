@@ -6,12 +6,18 @@ import { buildAnalytics } from '../src/data/analytics';
 import { demoDataSource } from '../src/dataSources/demo/DemoDataSource';
 
 const { activeDataset, performanceEntries } = buildAnalytics(demoDataSource.snapshot());
+/** mode-eligibility-policy-v1: strength analytics use Competitive entries only. */
+const competitive = performanceEntries.filter((entry) => entry.match.gameMode === 'Competitive');
+const competitiveByPlayer = new Map<string, number>();
+for (const entry of competitive) competitiveByPlayer.set(entry.playerId, (competitiveByPlayer.get(entry.playerId) ?? 0) + 1);
 
 describe('analytics selection pipeline', () => {
-  it('selects all normalized player performances by default', () => {
+  it('selects every Competitive player performance by default (other modes are excluded)', () => {
     const selection = selectPerformances(performanceEntries, defaultAnalysisFilters);
-    expect(selection.entries).toHaveLength(160);
-    expect(selection.byPlayer.size).toBe(8);
+    expect(competitive.length).toBeLessThan(performanceEntries.length);
+    expect(selection.entries).toHaveLength(competitive.length);
+    expect(selection.entries.every((entry) => entry.match.gameMode === 'Competitive')).toBe(true);
+    expect(selection.byPlayer.size).toBe(competitiveByPlayer.size);
   });
 
   it('applies map, agent, role, mode and player filters to actual performance rows', () => {
@@ -42,14 +48,14 @@ describe('analytics selection pipeline', () => {
 
   it('defines recent windows per player after contextual filters', () => {
     const recent = selectPerformances(performanceEntries, { ...defaultAnalysisFilters, period: 'recent10' });
-    expect(recent.byPlayer.size).toBe(8);
-    expect([...recent.byPlayer.values()].every((entries) => entries.length === 10)).toBe(true);
-    expect(recent.entries).toHaveLength(80);
+    expect(recent.byPlayer.size).toBe(competitiveByPlayer.size);
+    expect([...recent.byPlayer].every(([playerId, entries]) => entries.length === Math.min(10, competitiveByPlayer.get(playerId)!))).toBe(true);
+    expect(recent.entries.every((entry) => entry.match.gameMode === 'Competitive')).toBe(true);
   });
 
   it('keeps recent 30 capped per player without dropping smaller eligible histories', () => {
     const recent = selectPerformances(performanceEntries, { ...defaultAnalysisFilters, period: 'recent30' });
-    expect(recent.entries).toHaveLength(160);
+    expect(recent.entries).toHaveLength([...competitiveByPlayer.values()].reduce((sum, count) => sum + Math.min(30, count), 0));
     expect([...recent.byPlayer.values()].every((entries) => entries.length <= 30)).toBe(true);
   });
 
@@ -71,9 +77,10 @@ describe('rankings, comparisons and summaries', () => {
   it('ranks every eligible player deterministically in both directions', () => {
     const descending = rankPlayers(selection, defaultAnalysisFilters, 'overall', 'desc');
     const ascending = rankPlayers(selection, defaultAnalysisFilters, 'acs', 'asc');
-    expect(descending).toHaveLength(8);
+    expect(descending).toHaveLength(competitiveByPlayer.size);
     expect(descending.map(({ analytics }) => analytics.player.id)).toEqual(rankPlayers(selection, defaultAnalysisFilters, 'overall', 'desc').map(({ analytics }) => analytics.player.id));
-    expect(descending.every((row, index) => index === 0 || descending[index - 1]!.value! >= row.value!)).toBe(true);
+    // Overall orders by evidence status first, then value within the same status.
+    expect(descending.every((row, index) => index === 0 || descending[index - 1]!.analytics.scores.overall.status !== row.analytics.scores.overall.status || descending[index - 1]!.value! >= row.value!)).toBe(true);
     expect(ascending.every((row, index) => index === 0 || ascending[index - 1]!.value! <= row.value!)).toBe(true);
     expect(descending.every(({ value }) => Number.isFinite(value) && value! >= 0 && value! <= 100)).toBe(true);
     expect(rankPlayers(selection, defaultAnalysisFilters, 'acs')[0]!.value).toBe(rankPlayers(selection, defaultAnalysisFilters, 'acs')[0]!.analytics.stats.acs);
