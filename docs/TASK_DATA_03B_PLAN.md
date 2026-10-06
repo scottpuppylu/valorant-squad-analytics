@@ -1,5 +1,9 @@
 # TASK-DATA-03B — Full-history runtime consumption
 
+> **DATA-03B.2C COMPLETE / ACCEPTED (2026-10-06):** there is no 300 functional ceiling and no 2000
+> ALL/ACT/PAIR ceiling (server-analysis-v2). The transport snapshot is internal only, and history browsing
+> pages through all tracked matches. See [FULL_TRACKED_ANALYTICS.md](FULL_TRACKED_ANALYTICS.md).
+
 **DATA-03B.1: COMPLETE / ACCEPTED. DATA-03B.2A and 2B: COMPLETE / ACCEPTED** (ANALYTICS_SCOPES.md,
 SERVER_ANALYTICS.md); history pages remain browse-only. The DATA-03B.2 definition and the "STAGED, server
 aggregated" direction below are superseded by the Context-Aware Analytics Scope Engine

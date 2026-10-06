@@ -125,8 +125,8 @@ Boundary values (±9.999 stable, ±10 directional, shrink and jackknife formulas
 - The server resolves both windows over **all** durable history with the same pure resolver
   (`src/analytics/progress/windows.ts`).
 - Phase 2 loads only those windows (≤ 30 + 60 matches per player): 55 matches selected from 100
-  through 10,000 in fixtures. It never touches the 2000 LIFETIME/ACT/PAIR bound (DATA-03B.2C is
-  deferred).
+  through 10,000 in fixtures. It never touched the former 2000 LIFETIME/ACT/PAIR bound, which was
+  removed by DATA-03B.2C (server-analysis-v2). Its own windows remain intentionally bounded.
 - Response `progress[]`: {playerId, actPolicy, window: current/baseline samples, match-id lists,
   boundaries, confidence, reasons}, plus `improvementVersion`.
 - The browser computes the index with `computeImprovementIndex` (same engine as all other

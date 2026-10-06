@@ -1,5 +1,14 @@
 # Server-side context-aware analytics
 
+> **TASK-DATA-03B.2C (2026-10-06) — CURRENT: `server-analysis-v2`.**
+> - The 2000-match phase-2 cap is REMOVED. Phase 2 walks the whole selected population in 250-match
+>   chunks.
+> - Responses carry `summary` (selection-summary-v1) or `synergy` (duo-synergy-v1 results) instead of
+>   population matches.
+> - `dataset.matches` = bounded-window matches only; `populationLimit: null`; `populationComplete` is
+>   truthful; `populationMatches` is disclosed; no `selection` field.
+> - Every "phase 2 ≤ 2000" / `server_population_limit` statement below is **[SUPERSEDED]**. See [FULL_TRACKED_ANALYTICS.md](FULL_TRACKED_ANALYTICS.md).
+
 > **TASK-WEAPON-01 (weapon-analytics-v1):** `feature=weaponAnalytics` is served by the same function through a separate aggregate service (4 fixed statements, GROUPING SETS) and is not subject to the 2000-match phase-2 bound. See [WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md).
 
 > **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** the `player` context is a MEMBER id; phase 1 observations carry `member_public_id` and phase 2 loads the selected matches across all of the member's accounts; populations are merged at evidence grain. No formula change. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
@@ -72,13 +81,13 @@ server-side (tested).
 |---|---|---|
 | currentStrength (Dashboard, Leaderboard, Compare, Profile default) | adaptive-window-v1 per player over all history, Competitive, Act boundary | ≤ 50 matches per player (+ recentForm ≤ 10 + 30) |
 | recentForm (`form=1`) | non-overlapping current + baseline; baseline may reach far past #300 | policy bounds |
-| lifetimeTotals / mapStats / agentStats | all eligible tracked matches in context (全部已追蹤, never 完整生涯) | phase 2 ≤ 2000 |
-| actOverview (+ map/agent) | all tracked matches tagged with the Act; unknown Act never included; partial coverage → `partial` | phase 2 ≤ 2000 |
+| lifetimeTotals / mapStats / agentStats | all eligible tracked matches in context (全部已追蹤, never 完整生涯) | none (v2; was phase 2 ≤ 2000) |
+| actOverview (+ map/agent) | all tracked matches tagged with the Act; unknown Act never included; partial coverage → `partial` | none (v2; was phase 2 ≤ 2000) |
 | fixedRecent | explicit newest 10/30 per player | 30 per player |
-| synergy | one PAIR context for shared and both baselines; opponents excluded | phase 2 ≤ 2000 |
+| synergy | one PAIR context for shared and both baselines; opponents excluded | none (v2; was phase 2 ≤ 2000) |
 | improvementIndex (TASK-PROGRESS-01, player context only) | current + strictly older baseline per player (same Act first, explicit previous-Act fallback) | ≤ 30 + 60 per player; independent of the 2000 bound |
 
-If a LIFETIME/ACT/PAIR population exceeds 2000 matches, the newest 2000 are used and the
+[SUPERSEDED by server-analysis-v2 — no cap] If a LIFETIME/ACT/PAIR population exceeds 2000 matches, the newest 2000 are used and the
 response says `status: partial` with `server_population_limit`. This is a disclosed bound and
 never a silent one. Beyond that size, the next step is versioned server aggregates or
 materialized per-match metric facts (**DATA-03B.2C**, not started; needs measured need).

@@ -46,7 +46,7 @@
 | DATA-03B.1 history pagination | COMPLETE / ACCEPTED |
 | DATA-03B.2A scope engine | COMPLETE / ACCEPTED |
 | DATA-03B.2B server analytics (`view=analysis`) | COMPLETE / ACCEPTED |
-| DATA-03B.2C scalable LIFETIME/ACT/PAIR aggregation (>2000 phase-2 bound) | DEFERRED — required before a true LIFETIME/ACT/PAIR population can exceed the 2000-match analytical bound without becoming partial |
+| TASK-DATA-03B.2C no website match-count ceiling / scalable full-tracked analytics | COMPLETE / ACCEPTED (2026-10-06; server-analysis-v2, selection-summary-v1; 300 = transport-only; generic 2000 cap REMOVED; no migration) — see docs/FULL_TRACKED_ANALYTICS.md |
 | TASK-DATA-SEASON-01 season evidence | COMPLETE / ACCEPTED (Act data available; coverage partial and dynamic) |
 | TASK-PROGRESS-01 Adaptive Improvement Index | COMPLETE / ACCEPTED (2026-10-06; improvement-index-v1) — see docs/PROGRESS_INDEX.md |
 | TASK-DATA-FASTSYNC-01 opportunistic recent refresh | COMPLETE / ACCEPTED (2026-10-06; recent-refresh-v1) — see docs/FAST_RECENT_SYNC.md |
@@ -61,8 +61,9 @@
 | TASK-SECURITY-02 dependency audit drift reassessment | COMPLETE / SECURITY DISPOSITION ACCEPTED (2026-10-06): full audit 7 (5 high GHSA-vfj7 → SEC-2026-001 original subset only; 2 moderate GHSA-rj75 → SEC-2026-002, review 2026-11-03); source-map-js GHSA-68fv FIXED; production audit 0 — see docs/SECURITY_EXCEPTIONS.md |
 | TASK-SECURITY-03 Tailwind 4 / build toolchain security migration | NOT STARTED — needs explicit authorization |
 | TASK-DATA-BULK-01 multi-account bulk historical backfill accelerator | IMPLEMENTED / CANARY PASSED (2026-10-06; bulk-history-v1; 12 charged / 10 actual provider requests; 2 lanes default) — see docs/BULK_HISTORY.md |
-| TASK-DATA-BULK-01A production bulk crawl Phase 1 | STOPPED / NEEDS REVIEW (2026-10-06): first provider 429 after 631.5 s; 84 charged / 77 actual provider requests; tracked 213 → 332 — see docs/BULK_HISTORY.md |
-| Full bulk crawl Phase 2 | NOT STARTED — needs explicit human authorization |
+| TASK-DATA-BULK-01A production bulk crawl Phase 1 | EVIDENCE ACCEPTED / STOPPED ON PROVIDER 429 (2026-10-06): 84 charged / 77 actual provider requests; tracked 213 → 332 — see docs/BULK_HISTORY.md |
+| TASK-DATA-BULK-01B bulk crawl Phase 2 | NOT STARTED — may resume at the separately approved lower provider RPM |
+| TASK-SCORING-RANK-01 | NOT STARTED |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
 | Riot ticket #139243830 | OPEN — informational / non-blocking |
@@ -72,6 +73,18 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-DATA-03B.2C (2026-10-06, SDD STRICT) — COMPLETE / ACCEPTED. Rules:
+  - The REAL website has NO match-count product ceiling.
+  - `datasetWindowSize=300` is a transport bootstrap only. Never use it, or `boundedMatchLimit`, as an
+    analytics or history population.
+  - `view=analysis` is `server-analysis-v2`. It aggregates the FULL feature population server-side in
+    chunks, with the same src/ functions (`selection-summary-v1`, duo-synergy-v1), and ships only
+    aggregates plus bounded-window matches.
+  - Never reintroduce a population cap, sample 全部已追蹤, load all history into the browser, or mark
+    `populationComplete` true without full evidence.
+  - Filter options and Dashboard counts come from all-tracked `view=analytics` facets (identifier-free).
+  - Read docs/FULL_TRACKED_ANALYTICS.md before changing analytics populations or payloads.
 
 - TASK-DATA-BULK-01 (2026-10-06, SDD STRICT): `bulk-history-v1` = `npm run history:bulk` (scripts/bulk-history.ts,
   scripts/bulk/). Rules:

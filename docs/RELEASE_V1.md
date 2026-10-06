@@ -1,5 +1,9 @@
 # V1 release preflight
 
+> **TASK-DATA-03B.2C (2026-10-06):** the REAL website 300-match functional ceiling and the generic
+> 2000 ALL/ACT/PAIR cap were removed (server-analysis-v2). This was verified read-only in production
+> (tracked 332 > 300). It is not a release action; V1 is NOT YET RELEASED. See [FULL_TRACKED_ANALYTICS.md](FULL_TRACKED_ANALYTICS.md).
+
 > **TASK-DATA-BULK-01 (2026-10-06):** the bulk backfill canary passed (≤ 12 provider requests); the full crawl is NOT
 > STARTED. This is not a release action, and V1 is NOT YET RELEASED. See [BULK_HISTORY.md](BULK_HISTORY.md).
 

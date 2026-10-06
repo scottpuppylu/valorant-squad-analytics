@@ -4,7 +4,21 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-BULK-01A Phase 1 (2026-10-06)
+## Current decision — TASK-DATA-03B.2C (2026-10-06)
+
+**COMPLETE / ACCEPTED.**
+- The website 300-match functional ceiling is REMOVED; the transport snapshot is a bounded internal
+  optimization only.
+- History browsing covers all eligible tracked history via pagination.
+- REAL analytics are server-side over the full tracked population per feature policy
+  (`server-analysis-v2`, `selection-summary-v1`). The generic 2000 ALL/ACT/PAIR cap is REMOVED.
+- Intentional adaptive windows are PRESERVED; `lifetimeComplete=false`.
+- No formula, schema or migration change.
+- Production (read-only): tracked 332, history 332 browsable, every analysis `populationComplete`.
+- TASK-DATA-BULK-01B (Phase 2) NOT STARTED and may resume at the lower approved RPM;
+  TASK-DATA-RANK-01 NOT STARTED. See [FULL_TRACKED_ANALYTICS.md](FULL_TRACKED_ANALYTICS.md).
+
+## Earlier decision — TASK-DATA-BULK-01A Phase 1 (2026-10-06)
 
 **STOPPED / NEEDS REVIEW** — it stopped, as required, at the first **provider-side 429**, 631.5 s into the bounded run.
 - Provider requests: 84 charged of 500 (77 actual).

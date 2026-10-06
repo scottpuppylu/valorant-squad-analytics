@@ -1,5 +1,16 @@
 # Code map
 
+## TASK-DATA-03B.2C full-tracked analytics
+
+- `src/analytics/summary.ts` (selection-summary-v1, `summarizeSelection`): the page aggregates. It is
+  shared by the browser (Demo/local) and `server/dataset/analysisService.ts` (server-analysis-v2:
+  chunked full phase 2, server-side summary and Synergy).
+- `src/analytics/rankings.ts` `rankAnalytics` / `insufficientFromAnalytics`; `src/analytics/analysis.ts`
+  `computeBadgesFromSummary`.
+- `src/hooks/useScopedAnalysis.ts` exposes `summary` and `useSynergyResults`.
+- `server/dataset/analyticsContext.ts` `analyticsFacetsSql` (identifier-free facets).
+- See [FULL_TRACKED_ANALYTICS.md](FULL_TRACKED_ANALYTICS.md).
+
 ## TASK-WEAPON-01 weapon analytics
 
 - src/analytics/weapons/catalog.ts (weapon-catalog-v2; v2 adds Warden → Rifle; tests/weaponCatalog.test.ts), engine.ts (weapon-analytics-v1: aggregates → result,

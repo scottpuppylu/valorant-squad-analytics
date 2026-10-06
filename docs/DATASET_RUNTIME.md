@@ -1,5 +1,12 @@
 # Durable dataset runtime
 
+> **TASK-DATA-03B.2C (2026-10-06):**
+> - The default newest-300 snapshot is a TRANSPORT bootstrap only. `boundedMatchLimit` and
+>   `snapshotWindow` mean transport size, never tracked history or analysis completeness.
+> - REAL analytics are `server-analysis-v2` aggregates over all tracked history.
+> - `view=analytics` adds identifier-free `facets` (maps, agents, game modes, team outcome).
+> - Statements below that the snapshot "remains the only analytics input" are **[SUPERSEDED]**. See [FULL_TRACKED_ANALYTICS.md](FULL_TRACKED_ANALYTICS.md).
+
 > **TASK-WEAPON-01 (weapon-analytics-v1):** `DatasetContext.loadWeaponAnalytics` (PUBLIC REAL only) has a per-tab cache cleared on every snapshot reload; Demo computes from fictional facts; REAL never falls back to local data. See [WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md).
 
 > **TASK-IDENTITY-01B (member-identity-v2, schema 6):** schema 6 / `identityVersion: member-identity-v2`; the nickname is projected only when set; analytics are unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md#member-naming-model-task-identity-01b).
@@ -41,7 +48,7 @@ window is a transport optimization; which evidence each feature uses is decided 
 ## Full-history pages (TASK-DATA-03B.1)
 
 `GET /api/valorant/dataset` without `view` is the unchanged schema 4 newest-300
-snapshot described below and remains the only analytics input.
+snapshot described below [SUPERSEDED: it is no longer an analytics input — see FULL_TRACKED_ANALYTICS.md].
 `GET /api/valorant/dataset?view=history[&limit=1..100][&cursor=…|&before=<public match id>]`
 returns `dataset-history-v1` pages over **all** eligible durable matches, newest to
 oldest by `(started_at, public_id)`, with a signed position-only cursor, explicit

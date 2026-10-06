@@ -1,5 +1,12 @@
 # Context-aware analytics scopes
 
+> **TASK-DATA-03B.2C (2026-10-06):**
+> - Scopes are resolved and aggregated server-side over all tracked history (server-analysis-v2,
+>   selection-summary-v1).
+> - LIFETIME/ACT/PAIR have no match-count cap.
+> - Adaptive/recent/progress windows remain intentional, bounded definitions.
+> - The scope versions are unchanged. See [FULL_TRACKED_ANALYTICS.md](FULL_TRACKED_ANALYTICS.md).
+
 > **TASK-WEAPON-01 (weapon-analytics-v1):** weapon ALL TRACKED/ACT aggregate all eligible durable evidence via SQL; CURRENT reuses the existing currentStrength adaptive selection. The registry is unchanged (feature-scope-policy-v2). See [WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md).
 
 > **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** every scope resolves over MEMBER evidence merged across that member's currently eligible accounts (never per account then averaged). The scope versions are unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
