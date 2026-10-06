@@ -2,7 +2,10 @@
 
 SDD STRICT, 2026-10-06. Starting HEAD `78e5f64`; checkpoint `checkpoint-before-bulk-db-diagnosis-01`.
 
-**Outcome: DIAGNOSIS BLOCKED BY OBSERVABILITY.**
+> **Superseded by TASK-DATA-BULK-01D below: ROOT CAUSE VERIFIED. It is C1a, a historical Riot-ID identity mismatch, and not a
+> database fault.** The analysis below is the original 01C record and is unchanged.
+
+**Outcome (TASK-DATA-BULK-01C): DIAGNOSIS BLOCKED BY OBSERVABILITY.**
 - The failure is narrowed to three candidates that produce an identical durable signature; the root cause is NOT VERIFIED.
 - `database-failure-stage-v1` (sanitized stage telemetry) is implemented and **READY FOR CONTROLLED REPRODUCTION**.
 - Controlled reproduction: **NOT AUTHORIZED / NOT RUN**.
@@ -191,3 +194,56 @@ telemetry is deployed. It would be one provider request and one page.
   current name; separate task).
 - `persist_sync_page` + `connection` / `postgres` → DB.
 - `cursor_success_commit` → C2 (transient, or SQLSTATE-specific).
+
+## TASK-DATA-BULK-01D — controlled production reproduction (2026-10-06): ROOT CAUSE VERIFIED (C1a)
+
+**Authorization:** explicit human authorization for EXACTLY ONE `POST /api/valorant/sync/continue` for 滑板車's existing failed
+deep_backfill run.
+- Executed from a gitignored one-shot local script with a single-POST guard and no retry. The run id was resolved in memory and
+  never printed.
+- HEAD `ce511d0`; the production deployment was created 4 s after that commit, so `database-failure-stage-v1` was deployed.
+- No bulk worker was running.
+
+**Pre-state (read-only):**
+- deep_backfill, `failed`, `DATABASE_ERROR`, live_v4, sourceExhausted false.
+- Pages 54, provider requests 56, run retries 2, detail requests 0.
+- Coverage 2026-05-18T14:45:28Z → 2026-10-04T15:58:02Z; no `nextAttemptAt`.
+- Tracked 671 (2025-01-25 → 2026-10-05).
+
+**The one POST:** 2026-10-06T13:34:36.555Z → 13:34:48.252Z (11.7 s) → **HTTP 503 `DATABASE_ERROR`**.
+
+**Telemetry** (Vercel request log, read-only CLI; one event; no identifiers):
+
+```
+{"event":"sync_database_failure","failureStageVersion":"database-failure-stage-v1","stage":"persist_sync_page",
+ "syncKind":"deep_backfill","historyPhase":"live_v4","errorKind":"consenting_participant_absent"}
+```
+
+**Post-state (read-only):**
+
+| Counter | Before → after | Delta |
+|---|---|---|
+| status / phase | failed / live_v4 | unchanged |
+| pages | 54 → 54 | +0 |
+| provider requests | 56 → 57 | **+1** (≤ 1 logical; budget kept) |
+| run retries | 2 → 3 | +1 |
+| detail requests | 0 → 0 | +0 |
+| coverage | — | unchanged (cursor did not advance) |
+| tracked matches | 671 → 671 | +0 unique |
+
+**Conclusion: C1a VERIFIED. Root-cause class: DETERMINISTIC HISTORICAL IDENTITY BUG.**
+- In the next live_v4 page, a match carries no participant whose Riot name/tag equals the account's **current** Riot ID.
+  `normalizeHenrikEvidence` identifies the consenting participant by current name+tag (`normalizeHenrikEvidence.ts:102`), so
+  `persistSyncPage` throws `ConsentingParticipantAbsentError`, which the deep chunk reports as `DATABASE_ERROR`.
+- **The database itself is not at fault.** C1b and C2 are refuted for this failure: the stage is persist, not cursor commit,
+  and the kind is identity, not connection or Postgres.
+- The most likely reason is that the account used a different Riot ID in older matches. That specific reason is not separately
+  proven: the payload and names are never retained, by design.
+- It recurs at this cursor on every attempt, so **bulk cannot pass this point for this account** until identity matching is fixed.
+
+**Effects of the single request:**
+- One provider history page was read.
+- The page's matches that do contain the consenting participant were re-upserted idempotently. There was no new unique match
+  (tracked +0), and the matches committed in Phase 2 stayed as they were.
+- `recordFailure` committed: run retry +1, provider count +1, lease released, cursor unchanged.
+- **0 direct SQL** reads or writes. No other production mutation, no second POST and no bulk.

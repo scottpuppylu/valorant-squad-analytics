@@ -4,7 +4,20 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-BULK-01C (2026-10-06)
+## Current decision — TASK-DATA-BULK-01D (2026-10-06)
+
+**COMPLETE / ROOT CAUSE VERIFIED (C1a).**
+- Exactly one controlled `sync/continue` returned 503 DATABASE_ERROR with telemetry `persist_sync_page` /
+  `consenting_participant_absent` (deep_backfill, live_v4).
+- Effects: provider +1, pages +0, retries +1, cursor unchanged, tracked +0.
+- Root-cause class: deterministic historical identity matching. The consenting participant is matched by current Riot
+  name+tag. The database is not at fault.
+- TASK-DATA-BULK-01B is **BLOCKED ON IDENTITY FIX**.
+- Next: TASK-DATA-HISTORICAL-IDENTITY-01 (SDD STRICT), which identifies the consenting participant by durable provider
+  identity instead of the current Riot ID. NOT STARTED.
+- See [BULK_DATABASE_ERROR_DIAGNOSIS.md](BULK_DATABASE_ERROR_DIAGNOSIS.md).
+
+## Earlier decision — TASK-DATA-BULK-01C (2026-10-06)
 
 **DIAGNOSIS BLOCKED BY OBSERVABILITY / ROOT CAUSE NOT VERIFIED.**
 - The failure (滑板車, live_v4) happened after a successful provider request and after 2 of the page's matches committed;

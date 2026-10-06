@@ -316,6 +316,8 @@ Server totals:
 - Extrapolated, the 60 s function limit is reached near **~4,000–4,500 tracked matches**. That is a real ceiling for
   全部已追蹤, which must not be papered over.
 
+> **TASK-DATA-BULK-01D (controlled reproduction):** ROOT CAUSE VERIFIED. The DATABASE_ERROR is a deterministic historical identity failure (`persist_sync_page` / `consenting_participant_absent`): an older match lacks a participant matching the account's current Riot ID. It is not a database fault, and it recurs at this cursor. Bulk is BLOCKED ON IDENTITY FIX.
+
 > **TASK-DATA-BULK-01C:** the failure is narrowed to three candidates with an identical signature: a 3rd-match consenting participant absent (Riot ID change), a per-match DB failure, or a short final page whose cursor commit failed. The root cause is NOT VERIFIED. The cursor is preserved, the lease released, 2 page matches committed, and replay is idempotent. `database-failure-stage-v1` telemetry is deployed and ready for a separately authorized controlled reproduction. See [BULK_DATABASE_ERROR_DIAGNOSIS.md](BULK_DATABASE_ERROR_DIAGNOSIS.md).
 
 **Next bulk decision: D — investigate the database error and chunk/analysis latency before the next crawl.** Prerequisites:
