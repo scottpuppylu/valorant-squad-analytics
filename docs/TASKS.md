@@ -6,7 +6,13 @@
 
 ## Current decision — TASK-IDENTITY-01B (2026-10-06)
 
-**IN PROGRESS — code deployed; production name write PENDING maintainer execution.**
+**COMPLETE / ACCEPTED.** The 9 approved community names were applied by the one-time fail-closed data
+migration 0010 (see [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md)). Production: 9 members × 1 account,
+9 community names, nicknames unset, 0 merges. TASK-WEAPON-01 is NOT STARTED and recommended next.
+TASK-ADMIN-01 is NOT STARTED.
+
+[SUPERSEDED / HISTORICAL — the earlier record was "IN PROGRESS — code deployed; production name write
+PENDING maintainer execution", kept below.]
 - Done: primary community name + optional nickname (`member-identity-v2`, schema 6, migration
   0009) and operator-only editing (`set-nickname`, `clear-nickname`, `plan-names`, `apply-names`).
 - Pending: the 9 approved names (`ops/community-names-2026-10-06.json`) pre-check as unambiguous

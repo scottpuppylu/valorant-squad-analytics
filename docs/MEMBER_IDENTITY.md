@@ -83,6 +83,10 @@ each (9 distinct game names, 9 members, 9 accounts, tracked 191).
 
 ### Production name assignment status
 
+**COMPLETE / ACCEPTED (2026-10-06) via one-time data migration 0010.** See "Production
+community-name assignment (migration 0010)" below.
+
+The earlier operator-run plan below is **[SUPERSEDED / HISTORICAL]**. The original record was:
 **PENDING MAINTAINER EXECUTION.**
 - The code and migration 0009 are deployed: production serves schema 6 / v2, with 9 members, 9
   accounts, all `legacy_account` and all nicknames NULL.
@@ -103,6 +107,68 @@ Then read-only public acceptance confirms:
 - unchanged Riot `Name#Tag`;
 - 9 × 1 accounts and 0 merges;
 - numeric parity.
+
+### Production community-name assignment (migration 0010)
+
+**Why a migration:** production `DATABASE_URL` is a Vercel Sensitive secret. It was never
+retrieved, printed or copied for this, and no public admin endpoint was added. The authorized
+write path is the existing production build step `npm run db:migrate:vercel`, which already
+consumes the secret internally and applies each migration once, in a transaction, recorded in
+`schema_migrations`.
+
+**`0010_approved_community_names.sql`** is append-only and runs as a single `DO` statement.
+- **Lock:** `LOCK TABLE members, players IN SHARE ROW EXCLUSIVE MODE` with a 10 s `lock_timeout`.
+  This blocks concurrent identity and account writes for the milliseconds between verification
+  and update, still allows reads, and is self-conflicting.
+- **Mapping:** the 9 approved pairs live in a `VALUES` list. A test keeps it identical to
+  `ops/community-names-2026-10-06.json`.
+
+**Fail-closed preconditions (any failure raises and rolls back everything):**
+- 9 valid, unique target names.
+- Exactly 9 live members and 9 live accounts, strictly 1:1, with no live account on an archived
+  member and no account without a member.
+- 0 same-match member collisions.
+- Each approved game name matches exactly one account (exact Unicode equality; no LIKE, case
+  folding, tags or stats), and that account is live.
+- 9 distinct accounts and 9 distinct non-archived members.
+- No member already carries a *different* curated community name. The same name is accepted.
+
+**Update:** `members.display_name`, `display_name_source = 'community'` and `updated_at` only.
+
+**Postconditions:**
+- names and sources equal the approved values;
+- member and account counts unchanged;
+- account→member ownership checksum unchanged;
+- nickname checksum unchanged;
+- 0 collisions.
+
+**Scope guard:** a database containing *none* of the approved game names (fresh, test or developer
+database) records 0010 as a no-op. Any approved name present means every check is mandatory.
+
+It never re-runs, so later `rename-member`, `set-nickname` and `clear-nickname` edits are never
+reset. Nothing was added to `migrate-vercel.ts`, and there is no post-build rename step.
+
+**Production acceptance (read-only, 0 provider calls, `/sync/start` stubbed in the page):**
+- **Pre-deploy baseline:** schema 6 / v2; 9 members × 1 account; tracked 191; public id set
+  unchanged; all `legacy_account`; 0 nicknames; every approved name matched exactly 1 account.
+- **Deploy:** commits `d0c2b15` and `0ac5670`; Vercel production build succeeded and applied 0010.
+  CI and Pages passed.
+- **After:**
+  - Member names: 小麻花, jack, 天堂, 魔王, 夏天, 加分, 走路, 滑板車, 滑鏟. All
+    `community`, 0 nicknames.
+  - Same 9 public ids; 1 account each; 0 merges.
+  - Riot `Name#Tag` unchanged; tracked 191 → 191; 191/191 matches byte-identical.
+  - Contract valid; no leak pattern.
+- **Numeric parity:** before vs after equal for lifetime, currentStrength, recent10, recent30,
+  Act e11a5, recentForm, Progress, maps, agents and Synergy. Server-vs-local `view=analysis`
+  parity reports 28/28 checks true.
+- **UI:**
+  - All 9 Profiles show the community name and the Riot account line, with no 綽號 line.
+  - The Leaderboard has 9 unique members with the new names.
+  - Dashboard, Compare and the Synergy selectors use the community names.
+- **Presentation ordering:** every production Overall is currently `unavailable` (partial
+  KAST/Opening evidence), so all 9 tie and the existing name tie-break orders them. Their row
+  order therefore changed from Riot-name order to community-name order. No score value changed.
 
 ## TASK-IDENTITY-01 contract (member-identity-v1)
 

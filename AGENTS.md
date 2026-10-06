@@ -53,7 +53,7 @@
 | TASK-DATA-FASTSYNC-02 sub-daily scheduled recent sync | NOT STARTED / OPTIONAL FUTURE |
 | TASK-DATA-FASTSYNC-01.1 known-boundary fast path | DEFERRED |
 | TASK-IDENTITY-01 member / multi-account identity | COMPLETE / ACCEPTED (2026-10-06; member-identity-v1, schema 5, migration 0008) — production 9 members × 1 account, 0 merges; see docs/MEMBER_IDENTITY.md |
-| TASK-IDENTITY-01B community names + nickname | IN PROGRESS — nickname support deployed (member-identity-v2, schema 6, migration 0009); 9 approved names PENDING maintainer `member:admin apply-names` (agent has no production DB credential); nicknames unset |
+| TASK-IDENTITY-01B community names + nickname | COMPLETE / ACCEPTED (2026-10-06; member-identity-v2, schema 6; migrations 0009 + one-time data migration 0010) — production 9 members × 1 account, 9 approved community names, nicknames unset, 0 merges |
 | TASK-ADMIN-01 authenticated browser administration | NOT STARTED (no public edit endpoint until then) |
 | TASK-WEAPON-01 member-level weapon analytics | NOT STARTED — recommended next product analytics task |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
@@ -66,6 +66,9 @@ they were written; lines marked **[SUPERSEDED]** must not be read as current sta
 
 ### Dated stage log
 
+- TASK-IDENTITY-01B COMPLETE / ACCEPTED (2026-10-06): the 9 approved community names were applied by the
+  one-time fail-closed data migration 0010 through the normal Vercel migration path; DATABASE_URL was
+  never retrieved. Never re-apply names in build logic; later edits use `member:admin`.
 - TASK-IDENTITY-01B (2026-10-06, SDD STRICT): `members.display_name` = primary community name;
   `members.nickname` = optional second name of the PERSON (NULL = unset, never ''). The Riot
   `GameName#Tag` stays on the account. Names are presentation only: never ids, routes, analytics
