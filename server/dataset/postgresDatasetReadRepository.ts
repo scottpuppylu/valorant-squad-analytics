@@ -117,9 +117,11 @@ const historyRange = `
 
 export type Query = <Row extends Record<string, unknown>>(sql: string, params?: unknown[]) => Promise<{ rows: Row[] }>;
 
-export function detailQueries(query: Query, cte: string, params: unknown[]) {
-  return [
-    query<DatasetPerformanceRow>(`${cte}
+/**
+ * The four per-match detail SELECTs (they expect an `active_players` and an `eligible_matches` CTE).
+ * TASK-DATA-03B.2D: exported once so the analysis-fact source (analysisFacts.ts) reads byte-identical rows.
+ */
+export const performanceSelect = `
         SELECT sm.id AS internal_match_id, sm.public_id AS public_match_id, sm.started_at, sm.map_name,
                sm.queue_id, sm.queue_name, sm.game_length_ms, sm.season_short,
                mp.id AS internal_participant_id, mp.player_id AS internal_player_id, mp.team_key,
@@ -136,22 +138,22 @@ export function detailQueries(query: Query, cte: string, params: unknown[]) {
         JOIN match_participants mp ON mp.source_match_id=sm.id
         JOIN active_players ap ON ap.id=mp.player_id
         LEFT JOIN match_teams mt ON mt.source_match_id=sm.id AND mt.team_key=mp.team_key
-        ORDER BY sm.started_at DESC NULLS LAST, sm.id, ap.public_id`, params),
-    query<DatasetRoundRow>(`${cte}
+        ORDER BY sm.started_at DESC NULLS LAST, sm.id, ap.public_id`;
+export const roundSelect = `
         SELECT r.source_match_id AS internal_match_id, r.id AS internal_round_id, r.round_number,
                r.winning_team, r.participants_evidence_status, r.plant_status,
                r.plant_participant_id, r.defuse_status, r.defuse_participant_id
         FROM eligible_matches em JOIN rounds r ON r.source_match_id=em.id
-        ORDER BY r.source_match_id, r.round_number`, params),
-    query<DatasetRoundParticipantRow>(`${cte}
+        ORDER BY r.source_match_id, r.round_number`;
+export const roundParticipantSelect = `
         SELECT rp.round_id AS internal_round_id, rp.match_participant_id AS internal_participant_id,
                mp.team_key, rp.present
         FROM eligible_matches em
         JOIN rounds r ON r.source_match_id=em.id
         JOIN round_participants rp ON rp.round_id=r.id
         JOIN match_participants mp ON mp.id=rp.match_participant_id
-        WHERE rp.present IS TRUE`, params),
-    query<DatasetEventRow>(`${cte}
+        WHERE rp.present IS TRUE`;
+export const eventSelect = `
         SELECT ke.source_match_id AS internal_match_id, ke.round_id AS internal_round_id,
                ke.event_sequence, ke.time_in_round_ms,
                ke.killer_participant_id, ke.victim_participant_id,
@@ -161,7 +163,14 @@ export function detailQueries(query: Query, cte: string, params: unknown[]) {
         JOIN kill_events ke ON ke.source_match_id=em.id
         JOIN match_participants killer ON killer.id=ke.killer_participant_id
         LEFT JOIN kill_assistants ka ON ka.kill_event_id=ke.id
-        ORDER BY ke.round_id, ke.time_in_round_ms, ke.event_sequence`, params),
+        ORDER BY ke.round_id, ke.time_in_round_ms, ke.event_sequence`;
+
+export function detailQueries(query: Query, cte: string, params: unknown[]) {
+  return [
+    query<DatasetPerformanceRow>(`${cte}${performanceSelect}`, params),
+    query<DatasetRoundRow>(`${cte}${roundSelect}`, params),
+    query<DatasetRoundParticipantRow>(`${cte}${roundParticipantSelect}`, params),
+    query<DatasetEventRow>(`${cte}${eventSelect}`, params),
   ] as const;
 }
 
