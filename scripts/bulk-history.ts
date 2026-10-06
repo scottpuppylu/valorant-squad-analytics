@@ -1,7 +1,7 @@
 // bulk-history-v1 maintainer CLI (TASK-DATA-BULK-01). READ-ONLY by default:
 //   npm run history:bulk -- --base-url https://valorant-squad-analytics.vercel.app --all
 // Execution needs --execute, a selector and a finite --max-provider-requests:
-//   npm run history:bulk -- --base-url <url> --account <publicAccountId> --execute --max-provider-requests 4 --lanes 1
+//   npm run history:bulk -- --base-url <url> --account <publicAccountId> --execute --max-provider-requests 4 [--lanes 1]
 // Calls ONLY the existing public routes (dataset, sync/start, sync/continue, sync/status). Needs no server
 // secret (no database, provider or cron credential) and never calls the provider directly.
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';

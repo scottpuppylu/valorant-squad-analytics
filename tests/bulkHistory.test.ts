@@ -157,7 +157,7 @@ function setup(n: number, total = 30, lanes = 1, budget = 1000, extra: Record<st
 describe('bulk-history-v1 CLI contract', () => {
   const base = ['--base-url', 'https://example.test'];
   it('defaults to read-only plan mode and requires explicit selection plus a finite budget to execute', () => {
-    expect(parseArgs([...base, '--all'])).toMatchObject({ execute: false, lanes: 1, providerRpm: 8 });
+    expect(parseArgs([...base, '--all'])).toMatchObject({ execute: false, lanes: 2, providerRpm: 8 });
     expect(() => parseArgs([...base, '--execute', '--max-provider-requests', '4'])).toThrow(/requires --all/);
     expect(() => parseArgs([...base, '--all', '--execute'])).toThrow(/max-provider-requests/);
     expect(() => parseArgs([...base, '--all', '--execute', '--max-minutes', '5'])).toThrow(/max-provider-requests/);

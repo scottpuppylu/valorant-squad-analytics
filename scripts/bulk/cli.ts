@@ -24,7 +24,7 @@ export interface CliOptions {
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 export function parseArgs(argv: string[]): CliOptions {
-  const options: CliOptions = { baseUrl: '', all: false, members: [], accounts: [], execute: false, lanes: 1, providerRpm: 8, statePath: '.local/bulk-history-state.json', json: false, stopOnRateLimit: false };
+  const options: CliOptions = { baseUrl: '', all: false, members: [], accounts: [], execute: false, lanes: 2, providerRpm: 8, statePath: '.local/bulk-history-state.json', json: false, stopOnRateLimit: false };
   const value = (index: number, flag: string) => { const next = argv[index + 1]; if (next === undefined || next.startsWith('--')) throw new Error(`${flag} requires a value.`); return next; };
   const positive = (raw: string, flag: string) => { const n = Number(raw); if (!Number.isFinite(n) || n <= 0) throw new Error(`${flag} must be a positive number.`); return n; };
   for (let i = 0; i < argv.length; i += 1) {

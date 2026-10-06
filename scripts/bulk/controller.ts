@@ -59,8 +59,9 @@ export interface BulkConfig {
   maxConsecutiveProviderErrors: number;
 }
 
+/** Two lanes are the default since the TASK-DATA-BULK-01 canary (+62% steady-state throughput at the same 8/min budget). */
 export const defaultBulkConfig: Omit<BulkConfig, 'maxProviderRequests'> = {
-  lanes: 1,
+  lanes: 2,
   providerRpm: 8,
   routeLimitsPerMinute: { start: 5, continue: 9, status: 20 },
   lockBusyRetryMs: 60_000,
