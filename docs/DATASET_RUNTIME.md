@@ -1,5 +1,7 @@
 # Durable dataset runtime
 
+> **TASK-WEAPON-01 (weapon-analytics-v1):** `DatasetContext.loadWeaponAnalytics` (PUBLIC REAL only) has a per-tab cache cleared on every snapshot reload; Demo computes from fictional facts; REAL never falls back to local data. See [WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md).
+
 > **TASK-IDENTITY-01B (member-identity-v2, schema 6):** schema 6 / `identityVersion: member-identity-v2`; the nickname is projected only when set; analytics are unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md#member-naming-model-task-identity-01b).
 
 > **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** schema 5 with `snapshot.identityVersion`; players are members aggregated over their currently public accounts; a same-match member collision withholds the match; history pages carry `identityVersion`; cursors and ordering are unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).

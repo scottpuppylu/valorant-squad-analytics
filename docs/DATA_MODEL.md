@@ -1,5 +1,7 @@
 # Data model
 
+> **TASK-WEAPON-01 (weapon-analytics-v1):** descriptive member-level weapon analytics read existing `round_participants.weapon_*` (round observation) and `kill_events.weapon_*` (kill weapon) — two separate domains; no new columns, no persisted weapon statistics; per-weapon HS%/ADR/damage/accuracy and attack/defense are unavailable. See [WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md).
+
 > **TASK-IDENTITY-01B (member-identity-v2, schema 6):** `Player.nickname?` = optional second name of the person (secondary, never an id); `handle`/`displayName` = primary community name; Riot `GameName#Tag` lives only in `accounts`. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md#member-naming-model-task-identity-01b).
 
 > **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** public `Player` = MEMBER (person) with 1..N sanitized `accounts`; `players` rows are Riot ACCOUNTS; `MatchPerformance.playerId` = member public id, `accountId` only for multi-account members. Schema 5. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).

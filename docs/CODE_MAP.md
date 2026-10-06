@@ -1,5 +1,15 @@
 # Code map
 
+## TASK-WEAPON-01 weapon analytics
+
+- src/analytics/weapons/catalog.ts (weapon-catalog-v1), engine.ts (weapon-analytics-v1: aggregates → result,
+  canonical identity, coverage, calibration, unsupported list), local.ts (Demo facts + local scopes).
+- server/dataset/weaponAnalytics.ts (parseWeaponRequest, GROUPING SETS SQL, WeaponAnalyticsService); runtime.ts;
+  api/valorant/dataset.ts dispatch.
+- src/dataSources/server/weaponContract.ts (validator); src/hooks/useWeaponAnalytics.ts; src/pages/WeaponsPage.tsx;
+  src/components/WeaponSummaryCard.tsx (Profile).
+- tests/weaponAnalytics.test.ts, tests/weaponUi.test.tsx.
+
 ## TASK-IDENTITY-01B member naming
 
 - migrations/0009_member_nickname.sql; server/identity/memberAdminService.ts `validateNickname`, `setNickname`,

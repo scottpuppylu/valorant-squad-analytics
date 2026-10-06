@@ -1,5 +1,7 @@
 # Member / multi-account identity (TASK-IDENTITY-01)
 
+> **TASK-WEAPON-01 (weapon-analytics-v1):** weapon evidence is merged across a member's eligible accounts at evidence grain (union, never an average); revoked accounts vanish; same-match collisions are withheld; an explanatory `accounts[]` breakdown shows evidence per account. See [WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md).
+
 > **Current contract: `member-identity-v2`, public schema 6** (TASK-IDENTITY-01B, migration 0009).
 > Sections below that say v1 / schema 5 describe the TASK-IDENTITY-01 state they were written for.
 

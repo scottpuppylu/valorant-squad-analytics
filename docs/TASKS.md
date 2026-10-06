@@ -4,7 +4,16 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-IDENTITY-01B (2026-10-06)
+## Current decision — TASK-WEAPON-01 (2026-10-06)
+
+**COMPLETE / ACCEPTED.** Member-level context-aware weapon analytics: `weapon-analytics-v1`,
+`weapon-catalog-v1` ([WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md)). Two evidence domains (round weapon
+observation vs kill weapon); ALL TRACKED/ACT by aggregate SQL over all eligible history; CURRENT via the
+currentStrength selection; no migration; no score/Progress/Synergy change. Unsupported: per-weapon HS%,
+ADR, damage, accuracy, attack/defense. TASK-DATA-RANK-01 NOT STARTED; DATA-03B.2C DEFERRED;
+FASTSYNC-01.1 DEFERRED; RELEASE-01 PAUSED; V1 NOT YET RELEASED.
+
+## Earlier decision — TASK-IDENTITY-01B (2026-10-06)
 
 **COMPLETE / ACCEPTED.** The 9 approved community names were applied by the one-time fail-closed data
 migration 0010 (see [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md)). Production: 9 members × 1 account,

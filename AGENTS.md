@@ -55,7 +55,7 @@
 | TASK-IDENTITY-01 member / multi-account identity | COMPLETE / ACCEPTED (2026-10-06; member-identity-v1, schema 5, migration 0008) — production 9 members × 1 account, 0 merges; see docs/MEMBER_IDENTITY.md |
 | TASK-IDENTITY-01B community names + nickname | COMPLETE / ACCEPTED (2026-10-06; member-identity-v2, schema 6; migrations 0009 + one-time data migration 0010) — production 9 members × 1 account, 9 approved community names, nicknames unset, 0 merges |
 | TASK-ADMIN-01 authenticated browser administration | NOT STARTED (no public edit endpoint until then) |
-| TASK-WEAPON-01 member-level weapon analytics | NOT STARTED — recommended next product analytics task |
+| TASK-WEAPON-01 member-level weapon analytics | COMPLETE / ACCEPTED (2026-10-06; weapon-analytics-v1, weapon-catalog-v1; no migration) — see docs/WEAPON_ANALYTICS.md |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
 | Riot ticket #139243830 | OPEN — informational / non-blocking |
@@ -65,6 +65,14 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-WEAPON-01 COMPLETE / ACCEPTED (2026-10-06, SDD STRICT): `view=analysis&feature=weaponAnalytics`
+  (same function). Two separate evidence domains: round weapon observation (`round_participants.weapon_*`)
+  and kill weapon (`kill_events.weapon_*`); never publish cross-domain efficiency or per-weapon
+  HS%/ADR/damage/accuracy/attack-defense (no durable evidence). Member-level union across eligible accounts
+  via the shared `activePlayers`; collisions withheld. ALL TRACKED/ACT = aggregate SQL over all eligible
+  history (no snapshot, no 2000 cap); CURRENT = currentStrength selection. Descriptive only — never feed
+  scores/Progress/Synergy without a separate authorized task. Read docs/WEAPON_ANALYTICS.md first.
 
 - TASK-IDENTITY-01B COMPLETE / ACCEPTED (2026-10-06): the 9 approved community names were applied by the
   one-time fail-closed data migration 0010 through the normal Vercel migration path; DATABASE_URL was

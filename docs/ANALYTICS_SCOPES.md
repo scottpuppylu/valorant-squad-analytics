@@ -1,5 +1,7 @@
 # Context-aware analytics scopes
 
+> **TASK-WEAPON-01 (weapon-analytics-v1):** weapon ALL TRACKED/ACT aggregate all eligible durable evidence via SQL; CURRENT reuses the existing currentStrength adaptive selection. The registry is unchanged (feature-scope-policy-v2). See [WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md).
+
 > **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** every scope resolves over MEMBER evidence merged across that member's currently eligible accounts (never per account then averaged). The scope versions are unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
 
 TASK-DATA-03B.2 — **Context-Aware Analytics Scope Engine** (SDD STRICT, 2026-10-05).

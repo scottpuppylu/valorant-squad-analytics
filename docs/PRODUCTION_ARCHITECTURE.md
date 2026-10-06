@@ -8,6 +8,7 @@ TASK-PROGRESS-01: Profile 進步指數 uses `view=analysis&feature=improvementIn
 TASK-DATA-FASTSYNC-01: Profile refresh-if-stale through `POST sync/start` `intent=refresh_if_stale` (FAST_RECENT_SYNC.md); cron unchanged.
 TASK-IDENTITY-01: members (people) above Riot accounts; public schema 5 `member-identity-v1`; maintainer-only `npm run member:admin` (MEMBER_IDENTITY.md).
 TASK-IDENTITY-01B: community name + optional nickname, schema 6 `member-identity-v2`; all name edits are operator-only (no public edit endpoint). The 9 approved names were applied once by data migration 0010 via `db:migrate:vercel` (secret never retrieved).
+TASK-WEAPON-01: `view=analysis&feature=weaponAnalytics` (WEAPON_ANALYTICS.md) — aggregate SQL over all eligible weapon evidence; still 12 functions; no migration.
 TASK-DATA-SEASON-01 persists provider season evidence (SEASON_EVIDENCE.md).
 DATA-04B deferred. DATA-03B.1 (history pages via `/api/valorant/dataset?view=history`,
 same function to respect the 12-function Hobby limit) is accepted. DATA-03B.2A context-aware

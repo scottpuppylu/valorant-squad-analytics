@@ -1,6 +1,11 @@
 # V1 release preflight
 
-## Current release gate — TASK-IDENTITY-01B (2026-10-06)
+## Current release gate — TASK-WEAPON-01 (2026-10-06)
+
+Member weapon analytics (weapon-analytics-v1) COMPLETE / ACCEPTED (WEAPON_ANALYTICS.md). The production SQL
+health check is still NOT VERIFIED (V1 gate). RELEASE-01 PAUSED; V1 NOT YET RELEASED.
+
+## Earlier release gate — TASK-IDENTITY-01B (2026-10-06)
 
 TASK-IDENTITY-01B COMPLETE / ACCEPTED: nickname support (schema 6, migration 0009) and the 9
 approved community names (data migration 0010). The production SQL health check is still NOT

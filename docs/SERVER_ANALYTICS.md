@@ -1,5 +1,7 @@
 # Server-side context-aware analytics
 
+> **TASK-WEAPON-01 (weapon-analytics-v1):** `feature=weaponAnalytics` is served by the same function through a separate aggregate service (4 fixed statements, GROUPING SETS) and is not subject to the 2000-match phase-2 bound. See [WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md).
+
 > **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** the `player` context is a MEMBER id; phase 1 observations carry `member_public_id` and phase 2 loads the selected matches across all of the member's accounts; populations are merged at evidence grain. No formula change. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
 
 > **TASK-DATA-FASTSYNC-01:** after a durable new match arrives from a Profile refresh, the browser
