@@ -34,7 +34,7 @@ function stateForError(error: BackendApiError): FlowState {
 }
 
 export function ConnectPage() {
-  const { dataset: activeDataset, status: datasetStatus, source: datasetSource, refresh } = useDataset();
+  const { dataset: activeDataset, status: datasetStatus, source: datasetSource, refresh, analyticsContext } = useDataset();
   const [provider, setProvider] = useState<ProviderState>('checking');
   const [flow, setFlow] = useState<FlowState>('IDLE');
   const [form, setForm] = useState<ConnectionRequest>({
@@ -293,7 +293,7 @@ export function ConnectPage() {
           <p className="metric-label">目前資料來源</p>
           <h2>已追蹤戰績{datasetStatus === 'empty' ? '目前為空' : ''}</h2>
           <p>歷史資料持續補齊中；已保存的戰績不會因資料來源視窗縮小而移除。每日自動同步已啟用，也可手動同步；歷史資料不代表完整生涯紀錄。</p>
-          <p>目前有 {activeDataset.players.length} 位有效同意玩家、{activeDataset.matches.length} 場可用戰績；完整資料集不會保存於瀏覽器，也不會與虛構示範資料混合。</p>
+          <p>目前有 {activeDataset.players.length} 位有效同意玩家、{analyticsContext ? `已追蹤 ${analyticsContext.population.trackedMatchCount} 場戰績` : '已追蹤戰績讀取中'}；完整資料集不會保存於瀏覽器，也不會與虛構示範資料混合。</p>
           <div className="connect-actions"><button className="button-primary" type="button" onClick={openImportedDataset}>查看戰績</button><button className="button-secondary" type="button" onClick={() => void refresh()}>重新整理資料</button></div>
         </section>
       ) : null}
