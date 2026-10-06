@@ -6,14 +6,15 @@
 
 ## Current decision — TASK-DATA-03B.2D (2026-10-06)
 
-**IMPLEMENTED (`full-tracked-aggregate-v1` over `analysis-match-facts-v1`, migration 0011); production acceptance: see [FULL_TRACKED_LATENCY.md](FULL_TRACKED_LATENCY.md).**
+**COMPLETE / ACCEPTED (`full-tracked-aggregate-v1` over `analysis-match-facts-v1`, migration 0011).** Production: 672 matches hydrated (1,405 facts); lifetime 5.28 → 2.78 s, map −50 %, agent −52 %, Act −58 %, synergy −49 %; 6 statements, 0 fallback, identical bytes. See [FULL_TRACKED_LATENCY.md](FULL_TRACKED_LATENCY.md).
 - Phase A: the chunked phase 2 re-scanned whole topology tables per 250-match chunk (O(n²)), and event
   reconstruction is O(n) CPU per request.
 - Option A (set-based on demand) failed: 14.4 s at 5 k. Option B (materialized per-participant facts) was chosen.
 - Full-population analysis now uses 6 statements regardless of history size. Local realistic 10 k:
   lifetime 39.9 s → 4.53 s, synergy 30.3 s → 6.27 s.
 - Byte-identical output to the previous engine. No formula, scope, mode or public-contract change.
-- TASK-DATA-BULK-01B: both known blockers resolved in code; Bulk stays NOT RUN until separately authorized.
+- TASK-DATA-BULK-01B: BOTH KNOWN BLOCKERS RESOLVED; Bulk NOT RUN until a separate explicit human authorization.
+- Next (separately authorized): a bounded Bulk continuation at 2 lanes / 6 RPM with the existing hard stops.
 
 ## Earlier decision — TASK-DATA-HISTORICAL-IDENTITY-01 (2026-10-06)
 

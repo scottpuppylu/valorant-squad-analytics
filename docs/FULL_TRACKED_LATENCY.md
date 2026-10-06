@@ -254,3 +254,45 @@ seconds.
 - 1,999 / 2,000 / 2,001 / 5,000 (`fullTrackedAnalytics`) and 100…10,000 (`serverAnalysis`): statements = 6.
 - Raw fallback equals facts byte for byte.
 - No wall-clock thresholds.
+
+## Production acceptance (2026-10-06): COMPLETE / ACCEPTED
+
+**Deployment.**
+- HEAD `d629c28` on production deployment `dpl_FWzQeCWx…`. CI, GitHub Pages and Vercel all succeeded.
+- The normal Vercel migration runner applied `0011`.
+- Deploy-time hydration: `{"scannedMatches":672,"refreshedMatches":672,"facts":1405,"withheldMatches":0,"batches":7,"durationMs":33948}`.
+- Pre-existing build behaviour, unchanged by this task: Vercel re-runs `vercel-build` once per function
+  (12×). Every later run reported "already up to date" and hydration `scannedMatches: 0` (~1 s each). The
+  same 6 bundler type warnings also appear in the previous (`a265f9e`) build.
+
+**Read-only measurements.**
+- GET only: 3 warm runs per unbounded feature, 2 per bounded control and 1 per weapon scope, the same
+  probe as the baseline.
+- No POST, no sync, no provider call, no direct SQL.
+
+| Feature | Population | Server total before → after | Δ | Wall before → after | Bytes before = after | fact read | aggregate |
+|---|---|---|---|---|---|---|---|
+| lifetimeTotals | 309 | 5.28 → **2.78 s** | −47 % | 6.43 → 3.85 s | 599,182 | 0.92 s | 0.38 s |
+| mapStats | 309 | 5.16 → **2.59 s** | −50 % | 6.28 → 3.58 s | 599,170 | 0.90 s | 0.28 s |
+| agentStats | 309 | 5.18 → **2.50 s** | −52 % | 6.07 → 3.41 s | 599,174 | 0.90 s | 0.24 s |
+| actOverview e11a5 | 226 | 4.72 → **2.00 s** | −58 % | 5.60 → 2.89 s | 582,791 | 0.46 s | 0.18 s |
+| synergy (36 pairs) | 309 | 5.27 → **2.68 s** | −49 % | 6.00 → 3.36 s | 359,801 | 0.90 s | 0.41 s |
+| currentStrength + form (bounded) | 130 | 4.04 → **1.90 s** | −53 % | 4.96 → 2.83 s | 938,655 | 0.45 s | 0.08 s |
+| improvementIndex (bounded) | 97 | 3.66 → **1.81 s** | −51 % | 4.40 → 2.53 s | 341,551 | 0.45 s | 0.01 s |
+| weapon all / current (engine unchanged) | — | 6.11 / 7.04 → 6.24 / 4.92 s | noise | — | 108,370 / 84,156 | — | — |
+
+**Results.**
+- **Statements:** every analysis response reports Server-Timing `queries=6` and `fallback=0`. The old
+  equivalent was `5 + 4·⌈n/250⌉`.
+- **Bytes:** identical to the baseline for every feature. This is consistent with the byte-parity oracle.
+- **Remaining cost:** phase 1 is still ~1.35 s, the observation statement over all 672 matches. It is now the
+  largest single component in production; the fact read is ~0.9 s for 309 matches.
+- **Integrity:**
+  - REAL, ready, schema 6, `member-identity-v2`; 9 members × 1 account.
+  - Snapshot 300 and history page 50 (`hasMore`), with 0 duplicates.
+  - 0 non-finite values, no identifier or secret leak, `lifetimeComplete=false`.
+  - `populationLimit=null`, `serverHistoryUsed=true`, `transportSnapshotUsed=false`, `populationComplete=true`.
+  - `populationMatches` equals the full Competitive population: 309, Act 226.
+  - currentStrength windows are 129 matches, all Competitive. Facets: Competitive 309, Unrated 158, other 205.
+- **Writes:** the only production writes were the normal deployment's migration 0011 and the deterministic
+  hydration of derived facts. There were 0 provider calls, 0 sync calls, 0 Bulk runs and 0 direct SQL statements.
