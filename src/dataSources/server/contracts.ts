@@ -264,7 +264,7 @@ export interface DatasetAnalyticsContextResponse {
   view: 'analytics';
   analyticsVersion: 'analytics-context-v1';
   scopeRuleVersion: 'analysis-scope-v1';
-  featurePolicyVersion: 'feature-scope-policy-v2';
+  featurePolicyVersion: 'feature-scope-policy-v3';
   adaptiveWindowVersion: 'adaptive-window-v1';
   /** snapshotWindow is the TRANSPORT bootstrap size only (never an analytics/history boundary). */
   population: { trackedMatchCount: number; snapshotWindow: number; snapshotCoversTrackedHistory: boolean; lifetimeComplete: false };
@@ -273,8 +273,13 @@ export interface DatasetAnalyticsContextResponse {
     maps: { map: string; matches: number }[];
     agents: string[];
     gameModes: string[];
+    /** Inventory: every tracked mode. */
     teamOutcome: { matches: number; wins: number };
+    /** Performance: Competitive only (mode-eligibility-policy-v1). */
+    competitiveTeamOutcome?: { matches: number; wins: number };
   };
+  /** mode-eligibility-policy-v1 aggregate counts of tracked matches. */
+  modeEligibility?: { policyVersion: 'mode-eligibility-policy-v1'; competitiveMatches: number; unratedMatches: number; otherMatches: number };
   evidence: {
     season: { status: ScopeEvidenceStatus; matchesWithSeasonId: number; matchesWithSeasonShort: number; matchesWithAct: number; matchesWithoutAct: number;
       seasonIdWithoutPublicAct: number; unrecognizedSeasonCodes: number; currentActKnown: false; latestRecordedAct?: string;

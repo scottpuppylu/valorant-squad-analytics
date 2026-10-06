@@ -59,6 +59,15 @@ export function DictionaryPage() {
         </div>
         <span className="data-pill inline-flex"><span /> {metricDefinitions.length} 項指標</span>
       </header>
+      <section className="surface-card mb-6 p-5 text-sm" aria-label="模式資格規則">
+        <h2 className="text-lg text-white">模式資格規則（mode-eligibility-policy-v1）</h2>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-300">
+          <li>排位分析：K/D、ADR、ACS、KAST、首殺／首死、殘局、各分類分數、綜合表現、目前實力、近期狀態、進步指數、地圖、特務、武器、Act 與搭檔分析，只使用排位（競技）模式。</li>
+          <li>一般模式僅用於同場相對比較（未來的同場相對評分）；不會計入任何個人平均或戰力分數。</li>
+          <li>娛樂模式（Swiftplay、死鬥、團隊死鬥、輻能搶攻戰、Premier、自訂對戰與其他或未來新模式）不納入戰力分析。</li>
+          <li>對戰紀錄會保留並顯示全部已追蹤模式。</li>
+        </ul>
+      </section>
 
       <div className="dictionary-groups" role="group" aria-label="指標群組">{['全部','基礎數據','進階證據','八維評分','搭檔分析','樣本／信心'].map((label) => <button className="button-secondary" key={label} type="button" aria-pressed={group === label} onClick={() => setGroup(label)}>{label}</button>)}</div>
       <section className="dictionary-controls mt-8" aria-label="數據字典篩選器">

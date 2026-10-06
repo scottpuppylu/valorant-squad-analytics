@@ -5,6 +5,7 @@ import { compareSeasonKeysDesc, normalizeSeasonKey, seasonLabel } from '../../sr
 import type { ScopeStatus } from '../../src/analytics/scope/types.js';
 import { ADAPTIVE_WINDOW_VERSION, ANALYSIS_SCOPE_VERSION, ANALYTICS_CONTEXT_VERSION, FEATURE_SCOPE_POLICY_VERSION } from '../../src/analytics/scope/versions.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
+import { isAbsoluteStrengthMode, isSameMatchRelativeMode, MODE_ELIGIBILITY_POLICY_VERSION } from '../../src/analytics/modeEligibility.js';
 import { activePlayers as visibleAccounts } from './postgresDatasetReadRepository.js';
 import { datasetSchemaVersion, datasetWindowSize } from './types.js';
 
@@ -32,6 +33,8 @@ interface ContextFacetRow extends Record<string, unknown> {
   agents: string[] | null;
   outcome_matches: number | null;
   outcome_wins: number | null;
+  /** Per raw queue (normalized + classified in JS by mode-eligibility-policy-v1). */
+  outcomes_by_queue: { queue_id: string | null; queue_name: string | null; matches: number; wins: number }[] | null;
 }
 
 export interface AnalyticsContextRows {
@@ -50,21 +53,25 @@ export interface AnalyticsContextRows {
 export const analyticsFacetsSql = `
   WITH active_players AS (${visibleAccounts}),
   observed AS (
-    SELECT sm.id AS match_id, COALESCE(sm.map_name, 'Unknown') AS map_name, mp.agent_name, mp.team_key, ap.public_id
+    SELECT sm.id AS match_id, COALESCE(sm.map_name, 'Unknown') AS map_name, mp.agent_name, mp.team_key, ap.public_id, sm.queue_id, sm.queue_name
     FROM source_matches sm
     JOIN match_participants mp ON mp.source_match_id=sm.id
     JOIN active_players ap ON ap.id=mp.player_id
     WHERE sm.started_at IS NOT NULL
   ),
   first_team AS (
-    SELECT DISTINCT ON (o.match_id) o.match_id, o.team_key FROM observed o ORDER BY o.match_id, o.public_id
+    SELECT DISTINCT ON (o.match_id) o.match_id, o.team_key, o.queue_id, o.queue_name FROM observed o ORDER BY o.match_id, o.public_id
   )
   SELECT
     (SELECT json_agg(json_build_object('map', m.map_name, 'matches', m.matches) ORDER BY m.map_name)
        FROM (SELECT map_name, count(DISTINCT match_id)::int AS matches FROM observed GROUP BY map_name) m) AS maps,
     (SELECT json_agg(a.agent_name ORDER BY a.agent_name) FROM (SELECT DISTINCT agent_name FROM observed WHERE agent_name IS NOT NULL) a) AS agents,
     (SELECT count(*)::int FROM first_team) AS outcome_matches,
-    (SELECT count(*)::int FROM first_team ft JOIN match_teams mt ON mt.source_match_id=ft.match_id AND mt.team_key=ft.team_key WHERE mt.won IS TRUE) AS outcome_wins`;
+    (SELECT count(*)::int FROM first_team ft JOIN match_teams mt ON mt.source_match_id=ft.match_id AND mt.team_key=ft.team_key WHERE mt.won IS TRUE) AS outcome_wins,
+    (SELECT json_agg(json_build_object('queue_id', q.queue_id, 'queue_name', q.queue_name, 'matches', q.matches, 'wins', q.wins))
+       FROM (SELECT ft.queue_id, ft.queue_name, count(*)::int AS matches, count(*) FILTER (WHERE mt.won IS TRUE)::int AS wins
+             FROM first_team ft LEFT JOIN match_teams mt ON mt.source_match_id=ft.match_id AND mt.team_key=ft.team_key
+             GROUP BY ft.queue_id, ft.queue_name) q) AS outcomes_by_queue`;
 
 export class PostgresAnalyticsContextRepository {
   constructor(private readonly database: Pick<SqlDatabase, 'query'>) {}
@@ -143,8 +150,19 @@ export function buildAnalyticsContext(rows: AnalyticsContextRows) {
       maps: (rows.facets.maps ?? []).map((item) => ({ map: item.map, matches: Number(item.matches) })),
       agents: rows.facets.agents ?? [],
       gameModes: [...queues.keys()].sort(),
+      /** INVENTORY: every tracked mode (not a performance number). */
       teamOutcome: { matches: Number(rows.facets.outcome_matches ?? 0), wins: Number(rows.facets.outcome_wins ?? 0) },
+      /** PERFORMANCE: Competitive only (mode-eligibility-policy-v1) — the Dashboard 小隊勝率. */
+      competitiveTeamOutcome: (rows.facets.outcomes_by_queue ?? []).reduce((total, item) => (isAbsoluteStrengthMode(normalizeGameMode(item.queue_id, item.queue_name))
+        ? { matches: total.matches + Number(item.matches), wins: total.wins + Number(item.wins) } : total), { matches: 0, wins: 0 }),
     } } : {}),
+    /** mode-eligibility-policy-v1 aggregate counts (tracked matches with a start time); no identifiers. */
+    modeEligibility: {
+      policyVersion: MODE_ELIGIBILITY_POLICY_VERSION,
+      competitiveMatches: [...queues].reduce((sum, [mode, matches]) => sum + (isAbsoluteStrengthMode(mode) ? matches : 0), 0),
+      unratedMatches: [...queues].reduce((sum, [mode, matches]) => sum + (!isAbsoluteStrengthMode(mode) && isSameMatchRelativeMode(mode) ? matches : 0), 0),
+      otherMatches: [...queues].reduce((sum, [mode, matches]) => sum + (isSameMatchRelativeMode(mode) ? 0 : matches), 0),
+    },
     evidence: {
       season: {
         status: ratioStatus(withSeason, trackedMatchCount),

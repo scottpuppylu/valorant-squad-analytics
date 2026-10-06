@@ -4,7 +4,10 @@ import { seasonLabel } from './scope/season';
 import type { ScopeKind, ScopeReason, ScopeStatus, WindowSample } from './scope/types';
 import { formatAcs, formatAdr, formatCount, formatPercent, formatRatio, formatScore } from '../utils/format';
 
-export const periodLabels = { current: '目前實力（自適應）', all: '全部已追蹤', act: '指定 Act', recent10: '最近 10 場', recent30: '最近 30 場', custom: '自訂日期' } as const;
+/** Strength analytics labels (mode-eligibility-policy-v1: Competitive only). */
+export const periodLabels = { current: '目前實力（自適應・排位）', all: '全部已追蹤排位', act: '指定 Act（排位）', recent10: '最近 10 場排位', recent30: '最近 30 場排位', custom: '自訂日期（排位）' } as const;
+/** Match History browsing labels: every tracked mode. */
+export const browsePeriodLabels = { current: '全部已追蹤', all: '全部已追蹤', act: '指定 Act', recent10: '最近 10 場', recent30: '最近 30 場', custom: '自訂日期' } as const;
 
 export const gameModeLabels: Record<string, string> = {
   Competitive: '競技模式',
@@ -40,7 +43,7 @@ export function formatRankingValue(metric: RankingMetric, value: number): string
 export const scopeStatusLabels: Record<ScopeStatus, string> = { available: '樣本充足', partial: '部分樣本', unavailable: '資料不足' };
 
 export const scopeKindLabels: Record<ScopeKind, string> = {
-  LIFETIME: '全部已追蹤', ACT: '指定 Act', RECENT: '最近 N 場', ADAPTIVE: '自適應觀察區間', PAIR: '搭檔情境',
+  LIFETIME: '全部已追蹤排位', ACT: '指定 Act（排位）', RECENT: '最近 N 場', ADAPTIVE: '自適應觀察區間', PAIR: '搭檔情境',
 };
 
 export const scopeReasonLabels: Record<ScopeReason, string> = {
@@ -59,8 +62,8 @@ export const scopeReasonLabels: Record<ScopeReason, string> = {
   insufficient_sample: '場數或回合數未達最低門檻',
   insufficient_active_days: '活躍天數未達最低門檻',
   insufficient_baseline: '基準區間樣本不足',
-  queue_restricted_by_policy: '僅使用競技模式',
-  queue_excluded_by_policy: '此範圍僅包含競技模式，目前模式篩選不適用',
+  queue_restricted_by_policy: '僅使用排位模式；一般與娛樂模式不納入戰力分析',
+  queue_excluded_by_policy: '此分析僅使用排位模式；指定的模式不納入戰力分析',
   transport_window_truncated: '已追蹤戰績多於目前載入的分析快照，較舊資料未納入',
   population_coverage_unverified: '尚未確認快照是否涵蓋全部已追蹤戰績',
   no_matching_evidence: '沒有符合條件的對戰',
@@ -99,7 +102,7 @@ export const recentRefreshLabels = {
 } as const;
 
 /** TASK-WEAPON-01 weapon-analytics-v1 copy. Never claims complete lifetime, causality or per-weapon HS%/ADR. */
-export const weaponScopeLabels = { all: '全部已追蹤', current: '目前實力區間', act: '指定 Act' } as const;
+export const weaponScopeLabels = { all: '全部已追蹤排位', current: '目前實力區間（排位）', act: '指定 Act（排位）' } as const;
 export const weaponEvidenceLabels = { available: '證據充足', partial: '部分證據', unavailable: '資料不足' } as const;
 export const weaponReasonLabels: Record<string, string> = {
   small_sample: '樣本少，僅供參考',

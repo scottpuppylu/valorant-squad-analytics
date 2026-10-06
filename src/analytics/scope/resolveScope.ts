@@ -5,6 +5,17 @@ import { sampleOf, toObservation } from './observations.js';
 import { policyFor } from './policies.js';
 import type { FeatureId, PlayerScope, ScopeKind, ScopePopulation, ScopeReason, ScopeStatus, ScopeSummary } from './types.js';
 import { ANALYSIS_SCOPE_VERSION, FEATURE_SCOPE_POLICY_VERSION } from './versions.js';
+import { isAbsoluteStrengthMode, MODE_ELIGIBILITY_POLICY_VERSION } from '../modeEligibility.js';
+
+/** Feature a request represents (before resolving), so its queue policy can be enforced up-front. */
+function featureOf(request: ScopeRequest): FeatureId {
+  if (request.choice === 'current') return 'currentStrength';
+  if (request.choice === 'act') return 'actOverview';
+  if (request.choice === 'recent10' || request.choice === 'recent30') return request.lifetimeFeature === 'matchHistory' ? 'matchHistory' : 'fixedRecent';
+  return request.lifetimeFeature ?? 'lifetimeTotals';
+}
+
+const queueAllowed = (queues: 'all' | string[], mode: string) => queues === 'all' || queues.includes(mode);
 
 /** User-facing scope choices. 'all' keeps its historical URL value and means 全部已追蹤. */
 export type ScopeChoice = 'current' | 'all' | 'act' | 'recent10' | 'recent30' | 'custom';
@@ -29,7 +40,10 @@ export interface ScopedSelection {
 export function populationFromMatches(matches: MatchRecord[], complete: ScopePopulation['complete']): ScopePopulation {
   let anchor: string | undefined;
   let floor: string | undefined;
+  // mode-eligibility-policy-v1: the adaptive anchor/floor come from absolute-strength (Competitive)
+  // evidence only, so Unrated/entertainment activity can never shift a strength window's freshness.
   for (const match of matches) {
+    if (!isAbsoluteStrengthMode(match.gameMode)) continue;
     if (!anchor || match.playedAt > anchor) anchor = match.playedAt;
     if (!floor || match.playedAt < floor) floor = match.playedAt;
   }
@@ -62,9 +76,16 @@ function coverageStatus(population: ScopePopulation, reasons: Set<ScopeReason>):
  * (player/map/agent/role/queue) are applied BEFORE this function; it decides only the horizon.
  * No horizon ever falls back to another (ACT never becomes LIFETIME).
  */
-export function resolveScopeSelection(contextual: PerformanceEntry[], request: ScopeRequest, population: ScopePopulation): ScopedSelection {
+export function resolveScopeSelection(contextualInput: PerformanceEntry[], request: ScopeRequest, population: ScopePopulation): ScopedSelection {
   const reasons = new Set<ScopeReason>();
-  const grouped = groupByPlayer(contextual);
+  // mode-eligibility-policy-v1 (feature-scope-policy-v3): the feature's queue policy is applied BEFORE
+  // every horizon. An explicitly requested ineligible mode never computes (all players unavailable).
+  const queues = policyFor(featureOf(request)).queues;
+  const modeExcluded = request.gameMode !== 'all' && !queueAllowed(queues, request.gameMode);
+  if (modeExcluded) reasons.add('queue_excluded_by_policy');
+  const contextual = modeExcluded ? [] : contextualInput.filter((entry) => queueAllowed(queues, entry.match.gameMode));
+  if (queues !== 'all' && contextual.length < contextualInput.length) reasons.add('queue_restricted_by_policy');
+  const grouped = groupByPlayer(modeExcluded ? contextualInput : contextual);
   const players = new Map<string, PlayerScope>();
   const byPlayer = new Map<string, PerformanceEntry[]>();
   let feature: FeatureId = request.lifetimeFeature ?? 'lifetimeTotals';
@@ -78,8 +99,7 @@ export function resolveScopeSelection(contextual: PerformanceEntry[], request: S
   if (request.choice === 'current') {
     feature = 'currentStrength'; kind = 'ADAPTIVE';
     const policy = policyFor(feature);
-    const excluded = request.gameMode !== 'all' && policy.queues !== 'all' && !policy.queues.includes(request.gameMode);
-    if (excluded) reasons.add('queue_excluded_by_policy');
+    const excluded = modeExcluded;
     for (const [playerId, entries] of grouped) {
       if (excluded) { players.set(playerId, { playerId, status: 'unavailable', sample: sampleOf([]), reasons: ['queue_excluded_by_policy'] }); continue; }
       const window = resolveAdaptiveWindow(entries, policy, { population, ...(request.rank ? { rank: request.rank } : {}) });
@@ -91,6 +111,11 @@ export function resolveScopeSelection(contextual: PerformanceEntry[], request: S
       : statuses.every((item) => item === 'available') ? 'available' : 'partial';
     if (population.seasonStatus === 'unavailable') reasons.add('season_evidence_unavailable');
     if (population.rankStatus !== 'available') reasons.add('rank_evidence_unavailable');
+  } else if (modeExcluded) {
+    feature = featureOf(request);
+    kind = request.choice === 'act' ? 'ACT' : request.choice === 'recent10' || request.choice === 'recent30' ? 'RECENT' : 'LIFETIME';
+    status = 'unavailable';
+    for (const playerId of grouped.keys()) players.set(playerId, { playerId, status: 'unavailable', sample: sampleOf([]), reasons: ['queue_excluded_by_policy'] });
   } else if (request.choice === 'act') {
     feature = 'actOverview'; kind = 'ACT';
     if (!request.act || !population.seasonKeys.includes(request.act)) {
@@ -104,7 +129,7 @@ export function resolveScopeSelection(contextual: PerformanceEntry[], request: S
       for (const [playerId, entries] of grouped) record(playerId, [...entries].sort(legacyOrder).filter((entry) => entry.match.seasonKey === request.act), status);
     }
   } else if (request.choice === 'recent10' || request.choice === 'recent30') {
-    feature = 'fixedRecent'; kind = 'RECENT';
+    feature = featureOf(request); kind = 'RECENT';
     const limit = request.choice === 'recent10' ? 10 : 30;
     for (const [playerId, entries] of grouped) record(playerId, [...entries].sort(legacyOrder).slice(0, limit), 'available');
   } else {
@@ -117,6 +142,12 @@ export function resolveScopeSelection(contextual: PerformanceEntry[], request: S
     for (const [playerId, entries] of grouped) record(playerId, [...entries].sort(legacyOrder).filter(inRange), status);
   }
 
+  // Players whose context evidence is entirely outside the queue policy stay listed (unavailable, with why).
+  if (!modeExcluded && queues !== 'all') {
+    for (const playerId of groupByPlayer(contextualInput).keys()) {
+      if (!players.has(playerId)) players.set(playerId, { playerId, status: 'unavailable', sample: sampleOf([]), reasons: ['queue_restricted_by_policy'] });
+    }
+  }
   const selected = [...byPlayer.values()].flat();
   const policy = policyFor(feature);
   return {
@@ -124,6 +155,7 @@ export function resolveScopeSelection(contextual: PerformanceEntry[], request: S
     summary: {
       scopeRuleVersion: ANALYSIS_SCOPE_VERSION,
       featurePolicyVersion: FEATURE_SCOPE_POLICY_VERSION,
+      modeEligibilityPolicyVersion: MODE_ELIGIBILITY_POLICY_VERSION,
       feature, kind, status,
       queues: policy.queues,
       ...(request.choice === 'act' && request.act ? { seasonKey: request.act } : {}),
@@ -140,7 +172,12 @@ export interface PairContext { act?: string; from?: string; to?: string; map: st
 
 export function matchesInPairContext(matches: MatchRecord[], context: PairContext): MatchRecord[] {
   const seen = new Set<string>();
+  // duo-synergy-v1 compares Overall across DIFFERENT matches, so it is an absolute-strength consumer:
+  // Competitive only (mode-eligibility-policy-v1). An explicit ineligible mode yields no pair population.
+  const queues = policyFor('synergy').queues;
+  if (context.gameMode !== 'all' && !queueAllowed(queues, context.gameMode)) return [];
   return matches.filter((match) => {
+    if (!queueAllowed(queues, match.gameMode)) return false;
     if (seen.has(match.id)) return false;
     seen.add(match.id);
     const date = match.playedAt.slice(0, 10);

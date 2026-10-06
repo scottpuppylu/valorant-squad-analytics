@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { defaultAnalysisFilters } from '../analytics/filters';
 import { compareScoreResults } from '../scoring/calculateScores';
+import { isAbsoluteStrengthMode } from '../analytics/modeEligibility';
 import { AnalysisStatusNotice } from '../components/AnalysisStatusNotice';
 import { useScopedAnalysis } from '../hooks/useScopedAnalysis';
 import { Link } from 'react-router-dom';
@@ -33,10 +34,12 @@ export function DashboardPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState(playerAnalytics[0]?.player.id ?? '');
   const selected = playerAnalytics.find(({ player }) => player.id === selectedPlayerId) ?? playerAnalytics[0];
   const leader = playerAnalytics[0];
-  // REAL: all tracked matches (view=analytics); the transport snapshot is never a population. Demo: local data.
-  const outcome = analyticsContext?.facets?.teamOutcome;
-  const teamWinRate = outcome ? (outcome.matches ? outcome.wins / outcome.matches : Number.NaN)
-    : activeDataset.matches.filter((match) => match.won).length / activeDataset.matches.length;
+  // 小隊勝率 is a PERFORMANCE number → Competitive only (mode-eligibility-policy-v1), for REAL (server facts)
+  // and Demo (same policy locally). The tracked count below stays an all-mode INVENTORY number.
+  const outcome = analyticsContext?.facets?.competitiveTeamOutcome;
+  const competitiveLocal = activeDataset.matches.filter((match) => isAbsoluteStrengthMode(match.gameMode));
+  const teamWinRate = analyticsContext ? (outcome && outcome.matches ? outcome.wins / outcome.matches : Number.NaN)
+    : competitiveLocal.filter((match) => match.won).length / competitiveLocal.length;
   const trackedMatches = analyticsContext?.population.trackedMatchCount ?? (activeDataset.mode === 'REAL' ? undefined : activeDataset.matches.length);
   const withoutWindow = [...(currentStrength.selection.scope?.players.values() ?? [])].filter((item) => item.status === 'unavailable')
     .map((item) => activeDataset.players.find((player) => player.id === item.playerId)?.handle).filter(Boolean);
@@ -46,7 +49,7 @@ export function DashboardPage() {
   }
   if (!leader || !selected) {
     return <div className="space-y-6">
-      <EmptyState page title="目前實力資料不足" description="沒有玩家達到「目前實力」的最低樣本（近期 5 場競技、100 回合、2 個活躍日）。不會改用其他範圍補值；可在戰力排名切換「全部已追蹤」。" actions={<Link className="button-primary" to="/leaderboard?period=all">查看全部已追蹤</Link>} />
+      <EmptyState page title="目前實力資料不足" description="沒有玩家達到「目前實力」的最低樣本（近期 5 場競技、100 回合、2 個活躍日）。不會改用其他範圍補值；可在戰力排名切換「全部已追蹤排位」。" actions={<Link className="button-primary" to="/leaderboard?period=all">查看全部已追蹤</Link>} />
       <ScopeExplanation scope={currentStrength.selection.scope} players={activeDataset.players} />
     </div>;
   }
@@ -84,7 +87,7 @@ export function DashboardPage() {
           <div className="relative z-10 mt-5 grid grid-cols-3 gap-3 border-t border-white/10 pt-5">
             <div><p className="metric-label"><MetricInfo metricId="kd" /></p><p className="stat-value">{formatRatio(leader.stats.kd)}</p></div>
             <div><p className="metric-label"><MetricInfo metricId="kast" /></p><p className="stat-value">{(leader.stats.kast === undefined ? '—' : formatPercent(leader.stats.kast))}</p></div>
-            <div><p className="metric-label"><MetricInfo metricId="win-rate" label="小隊勝率" /></p><p className="stat-value">{formatPercent(teamWinRate)}</p></div>
+            <div><p className="metric-label"><MetricInfo metricId="win-rate" label="小隊排位勝率" /></p><p className="stat-value">{formatPercent(teamWinRate)}</p></div>
           </div>
         </article>
       </section>

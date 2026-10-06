@@ -14,6 +14,7 @@ import type { PerformanceEntry, SelectionResult } from '../../src/analytics/type
 import { summarizeSelection } from '../../src/analytics/summary.js';
 import { buildSynergy, defaultSynergyFilters } from '../../src/synergy/analytics.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
+import { MODE_ELIGIBILITY_POLICY_VERSION } from '../../src/analytics/modeEligibility.js';
 import { buildAnalyticsContext, PostgresAnalyticsContextRepository } from './analyticsContext.js';
 import { hasMemberCollision, membersFromRows, type DatasetProjectionService } from './datasetProjectionService.js';
 import { activePlayers, detailQueries, playersQuery, selectedMatches } from './postgresDatasetReadRepository.js';
@@ -396,6 +397,8 @@ export class ServerAnalysisService {
         analysisVersion: SERVER_ANALYSIS_VERSION,
         scopeRuleVersion: ANALYSIS_SCOPE_VERSION,
         featurePolicyVersion: FEATURE_SCOPE_POLICY_VERSION,
+        /** TASK-DATA-MODE-POLICY-01: additive; strength populations are Competitive only. */
+        modeEligibilityPolicyVersion: MODE_ELIGIBILITY_POLICY_VERSION,
         adaptiveWindowVersion: ADAPTIVE_WINDOW_VERSION,
         scoreVersion: 'community-score-v2' as const,
         ...(request.feature === 'synergy' ? { synergyVersion: 'duo-synergy-v1' as const } : {}),

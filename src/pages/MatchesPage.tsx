@@ -50,7 +50,7 @@ export function MatchesPage() {
   return <div className="space-y-9">
     <header className="page-heading"><div><p className="metric-label">出賽紀錄</p><h1>對戰紀錄</h1><p>依日期、地圖、模式與玩家篩選；展開後只呈現資料集確實擁有的玩家表現。</p></div><div className="data-pill"><span /> {matches.length} 場符合</div></header>
     {history.status === 'unavailable' ? null : <HistoryScope history={history} snapshotCount={activeDataset.matches.length} />}
-    <AnalysisFilterBar filters={filters} onChange={changeFilters} onReset={reset} players={browseDataset.players} maps={browseOptions.maps} agents={browseOptions.agents} gameModes={browseOptions.gameModes} includeSamples={false} periods={['all', 'act', 'recent10', 'recent30', 'custom']} seasonKeys={population.seasonKeys} />
+    <AnalysisFilterBar filters={filters} onChange={changeFilters} onReset={reset} players={browseDataset.players} maps={browseOptions.maps} agents={browseOptions.agents} gameModes={browseOptions.gameModes} browse includeSamples={false} periods={['all', 'act', 'recent10', 'recent30', 'custom']} seasonKeys={population.seasonKeys} />
     {visible.length === 0 ? <div className="empty-panel surface-card">無符合條件的對戰。請調整篩選器。</div> : <section className="match-history" aria-label="對戰清單">
       {visible.map((match) => <details className="surface-card match-detail" key={match.id}>
         <summary>

@@ -84,6 +84,8 @@ export interface PlayerScope {
 export interface ScopeSummary {
   scopeRuleVersion: typeof ANALYSIS_SCOPE_VERSION;
   featurePolicyVersion: typeof FEATURE_SCOPE_POLICY_VERSION;
+  /** TASK-DATA-MODE-POLICY-01: queue eligibility rules applied to this population. */
+  modeEligibilityPolicyVersion: 'mode-eligibility-policy-v1';
   feature: FeatureId;
   kind: ScopeKind;
   status: ScopeStatus;

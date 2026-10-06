@@ -42,7 +42,9 @@ export interface DatasetAnalysisResponse {
   view: 'analysis';
   analysisVersion: 'server-analysis-v2';
   scopeRuleVersion: 'analysis-scope-v1';
-  featurePolicyVersion: 'feature-scope-policy-v2';
+  featurePolicyVersion: 'feature-scope-policy-v3';
+  /** TASK-DATA-MODE-POLICY-01 (additive): strength populations are Competitive only. */
+  modeEligibilityPolicyVersion?: 'mode-eligibility-policy-v1';
   adaptiveWindowVersion: 'adaptive-window-v1';
   scoreVersion: 'community-score-v2';
   synergyVersion?: 'duo-synergy-v1';
@@ -88,7 +90,7 @@ export function isDatasetAnalysisResponse(value: unknown): value is DatasetAnaly
   if (!isRecord(value)) return false;
   const c = value as Partial<DatasetAnalysisResponse>;
   if (!(c.ok === true && c.schemaVersion === 6 && c.view === 'analysis' && c.analysisVersion === 'server-analysis-v2'
-    && c.scopeRuleVersion === 'analysis-scope-v1' && c.featurePolicyVersion === 'feature-scope-policy-v2'
+    && c.scopeRuleVersion === 'analysis-scope-v1' && c.featurePolicyVersion === 'feature-scope-policy-v3'
     && c.adaptiveWindowVersion === 'adaptive-window-v1' && c.scoreVersion === 'community-score-v2'
     && isRecord(c.coverage) && c.coverage.lifetimeComplete === false && c.coverage.serverHistoryUsed === true
     && c.coverage.transportSnapshotUsed === false && c.coverage.populationLimit === null && typeof c.coverage.populationComplete === 'boolean'
