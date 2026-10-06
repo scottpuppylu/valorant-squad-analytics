@@ -1,6 +1,6 @@
 # Stable historical account identity — `historical-identity-v1` (TASK-DATA-HISTORICAL-IDENTITY-01)
 
-**Status:** IMPLEMENTED (2026-10-06). Production acceptance is recorded at the end of this file.
+**Status:** COMPLETE / ACCEPTED (2026-10-06). The production acceptance is recorded at the end of this file.
 
 ## Problem
 
@@ -132,3 +132,50 @@ Consent semantics are unchanged:
   - True absence → `MALFORMED_RESPONSE` with the cursor kept.
   - The incremental path, and privacy of logs and status.
 - `tests/syncDatabaseFailure.test.ts`: C1a is now characterized as fixed.
+
+## Production acceptance (2026-10-06): COMPLETE / ACCEPTED
+
+**Authorization:** explicit human authorization for EXACTLY ONE `POST /api/valorant/sync/continue` for 滑板車's existing
+failed deep_backfill run.
+
+**Setup:**
+- HEAD `76e751f`, on production deployment `dpl_BehWkmR8…` (CI, Pages and Vercel green).
+- No bulk worker was running.
+- Gitignored one-shot script with a single-POST guard; the run id was held in memory only.
+
+**Pre-state** (one status read):
+- failed / DATABASE_ERROR, live_v4.
+- Pages 54, provider requests 57, retries 3.
+- Coverage from 2026-05-18T14:45:28Z.
+- Tracked 671.
+
+**The one POST:** 2026-10-06T14:31:04.729Z → 14:31:20.096Z (15.4 s) → **HTTP 200**, no error code.
+
+| Counter | Before → after | Delta |
+|---|---|---|
+| status / error | failed / DATABASE_ERROR → paused (between chunks) / none | identity failure cleared |
+| pages | 54 → 55 | +1 |
+| provider requests | 57 → 58 | +1 (≤ 1 logical) |
+| run retries | 3 → 3 | +0 |
+| matches seen / persisted / overlaps | 162/162/67 → 165/165/69 | +3 / +3 / +2 |
+| coverage from | 2026-05-18T14:45Z → 2026-04-16T15:41Z | cursor advanced |
+| tracked matches | 671 → 672 | +1 unique, no duplicates |
+
+**Log check** (Vercel request log, read-only CLI):
+- One `deep_history_chunk`: live_v4, 3 returned, 3 persisted, 2 overlaps, 1 provider request.
+- **No `sync_database_failure`.**
+- Lease released; `nextAttemptAt` none.
+
+**Public integrity** (read-only):
+- REAL, ready, schema 6, `member-identity-v2`; 9 members × 1 account.
+- Snapshot 300 and history page 50 with 0 duplicates; 0 non-finite values; no identifier or secret leak.
+- `lifetimeComplete=false`.
+
+**Mode-policy smoke checks:**
+- `mode-eligibility-policy-v1`, `feature-scope-policy-v3`, `server-analysis-v2`.
+- `currentStrength` selects 129 matches, all Competitive.
+- Facets: Competitive 309, Unrated 158, other 205; the one new match is Unrated.
+
+**What did not run:**
+- 0 direct DB reads or writes.
+- No second POST, no bulk, no other account.

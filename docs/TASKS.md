@@ -6,13 +6,13 @@
 
 ## Current decision — TASK-DATA-HISTORICAL-IDENTITY-01 (2026-10-06)
 
-**IMPLEMENTED (`historical-identity-v1`); production acceptance: see [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md).**
+**COMPLETE / ACCEPTED (`historical-identity-v1`).** The one acceptance POST returned HTTP 200: pages +1, provider +1, cursor advanced, tracked 671 → 672, no `sync_database_failure`. See [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md).
 - The consenting participant is identified by `providerIdentityHmac('HenrikDev', affinity, players[].puuid)` equal to the
   account's durable `provider_identities.lookup_hmac`, exactly one per match. The Riot name/tag is never used.
 - Static gate: `PROVIDER_IDENTITY_DOMAIN_COMPATIBLE = YES`.
 - Identity failures are `MALFORMED_RESPONSE`, never DATABASE_ERROR, and emit no `sync_database_failure`.
 - No migration; schema 6 and `durable-evidence-v2` unchanged.
-- TASK-DATA-BULK-01B: IDENTITY BLOCKER RESOLVED in code; bulk remains PAUSED pending DATA-03B.2D.
+- TASK-DATA-BULK-01B: IDENTITY BLOCKER RESOLVED, but BULK REMAINS PAUSED pending DATA-03B.2D (full-tracked analysis latency).
 
 ## Earlier decision — TASK-DATA-BULK-01D (2026-10-06)
 
