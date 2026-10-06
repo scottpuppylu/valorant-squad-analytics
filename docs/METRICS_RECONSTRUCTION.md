@@ -1,5 +1,7 @@
 # Versioned metric reconstruction
 
+> **TASK-DATA-PERFORMANCE-SCORE-01:** event-metrics-v1 is unchanged. Reconstructed evidence must never be labelled as, or used to approximate, the official Performance Score. See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
+
 Status: **COMPLETE — SDD STRICT; non-empty production metric path NOT VERIFIED**
 
 `event-metrics-v1` reconstructs evidence at player-match grain. It does not create a new Overall formula, an Impact Score, an Economy Score, a Role Value Score, MMR or Elo. Provider schema (`HenrikDev v4`), durable normalization (`durable-evidence-v2`), public projection (`event-metrics-projection-v1`) and future scoring versions are separate contracts.

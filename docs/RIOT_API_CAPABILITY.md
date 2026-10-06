@@ -1,5 +1,7 @@
 # Riot VALORANT API capability matrix
 
+> **Performance Score (Riot Patch 13.06, 0–500, Competitive/Unrated/Swiftplay/Premier; it replaces ACS for scoreboard/MVP).** The formula is NOT PUBLICLY DOCUMENTED and retroactive availability is NOT DOCUMENTED. The Henrik provider field is NOT VERIFIED. See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
+
 Research date: 2026-09-29
 
 This document maps the product's desired evidence to Riot's current official VALORANT documentation. It is a readiness study, not a live integration. No key, OAuth client, request code, or unofficial API dependency is included.

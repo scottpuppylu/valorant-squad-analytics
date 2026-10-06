@@ -64,6 +64,8 @@
 | TASK-DATA-BULK-01A production bulk crawl Phase 1 | EVIDENCE ACCEPTED / STOPPED ON PROVIDER 429 (2026-10-06): 84 charged / 77 actual provider requests; tracked 213 → 332 — see docs/BULK_HISTORY.md |
 | TASK-DATA-BULK-01B bulk crawl Phase 2 | NOT STARTED — may resume at the separately approved lower provider RPM |
 | TASK-SCORING-RANK-01 | NOT STARTED |
+| TASK-DATA-PERFORMANCE-SCORE-01 official Performance Score evidence | AUDIT COMPLETE / PHASE B BLOCKED (2026-10-06): provider field NOT VERIFIED (outcome D); `stats.score` = legacy combat-score total → ACS_SAFE; nothing ingested — see docs/PERFORMANCE_SCORE.md |
+| TASK-SCORING-SHARED-MATCH-01 shared-match relative rating | NOT STARTED |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
 | Riot ticket #139243830 | OPEN — informational / non-blocking |
@@ -73,6 +75,14 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-DATA-PERFORMANCE-SCORE-01 (2026-10-06, SDD STRICT): rules.
+  - Never treat Henrik `stats.score` as Performance Score, and never reuse `match_participants.score` for it.
+  - Never approximate or reconstruct the official score, and never set missing values to 0.
+  - Never feed Performance Score into community-score-v2, Progress or Synergy without a separate scoring task.
+  - The provider audit stays production-disabled; the `performance-score` mode is shape-only (≤ 2 logical requests).
+  - Re-run the shape audit before trusting any provider release that changes match-player stats.
+  - Read docs/PERFORMANCE_SCORE.md first.
 
 - TASK-DATA-03B.2C (2026-10-06, SDD STRICT) — COMPLETE / ACCEPTED. Rules:
   - The REAL website has NO match-count product ceiling.

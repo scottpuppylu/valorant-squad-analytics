@@ -1,5 +1,10 @@
 # Code map
 
+## TASK-DATA-PERFORMANCE-SCORE-01
+
+- `server/evidence/shapeInspector.ts` (provider-shape-inspector-v1): value-free path discovery. `HenrikDataProvider.auditPerformanceScoreShape` plus `mode: "performance-score"` on `api/valorant/provider/audit.ts` (non-production only, ≤ 2 logical requests). Tests: `tests/providerShapeInspector.test.ts`. See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
+
+
 ## TASK-DATA-03B.2C full-tracked analytics
 
 - `src/analytics/summary.ts` (selection-summary-v1, `summarizeSelection`): the page aggregates. It is

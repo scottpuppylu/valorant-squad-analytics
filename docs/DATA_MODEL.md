@@ -1,5 +1,7 @@
 # Data model
 
+> **TASK-DATA-PERFORMANCE-SCORE-01:** no `performanceScore` field exists; `MatchPerformance.acs` remains legacy ACS. A future separate nullable field is specified in See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
+
 > **TASK-DATA-BULK-01 (`bulk-history-v1`):** no schema, migration or public contract change. The controller's local
 > state (`.local/bulk-history-state.json`, gitignored) holds public account and run ids only. See [BULK_HISTORY.md](BULK_HISTORY.md).
 

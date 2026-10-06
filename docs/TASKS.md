@@ -4,7 +4,22 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-03B.2C (2026-10-06)
+## Current decision — TASK-DATA-PERFORMANCE-SCORE-01 (2026-10-06)
+
+**AUDIT COMPLETE / PHASE B BLOCKED — the provider Performance Score field is NOT VERIFIED (Phase-A outcome D).**
+- Riot: Performance Score (0–500) replaces ACS for scoreboard/MVP; the formula is not published.
+- Henrik: public OpenAPI 4.6.0 has no field; v4.10.0 BETA announces "performance scores" without a schema.
+- A live audit was not possible without weakening the boundary (HENRIK_API_KEY is Production-only; the audit is
+  production-disabled). 0 provider calls.
+- `stats.score` is still the legacy combat-score total → **ACS_SAFE**, so no hotfix was needed.
+- Added `provider-shape-inspector-v1` and a ≤ 2-request `performance-score` audit mode (non-production).
+- Nothing ingested; no migration or scoring change.
+- Next: TASK-DATA-PERFORMANCE-SCORE-01B (one Preview audit after a maintainer decision to grant Preview provider
+  access, or after Henrik publishes the v4.10.0 schema).
+- TASK-SCORING-SHARED-MATCH-01, TASK-DATA-RANK-01 and TASK-DATA-BULK-01B are NOT STARTED. See
+  [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
+
+## Earlier decision — TASK-DATA-03B.2C (2026-10-06)
 
 **COMPLETE / ACCEPTED.**
 - The website 300-match functional ceiling is REMOVED; the transport snapshot is a bounded internal

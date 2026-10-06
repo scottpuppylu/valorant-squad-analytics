@@ -1,5 +1,7 @@
 # Durable database foundation
 
+> **TASK-DATA-PERFORMANCE-SCORE-01:** no migration. `match_participants.score` = legacy combat-score total and must never be reused for Performance Score. A future `performance_score` column needs migration 0011 under a separate task. See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
+
 > **TASK-IDENTITY-01B data migration 0010:** a one-time, fail-closed assignment of the 9 approved community names (members.display_name/source only; scoped no-op on databases without any approved name).
 
 > **TASK-IDENTITY-01B (member-identity-v2, schema 6):** migration 0009 adds `members.nickname` (NULL = unset; CHECK forbids '' and padded values). No data moved. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md#member-naming-model-task-identity-01b).

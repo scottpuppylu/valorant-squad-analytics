@@ -1,5 +1,7 @@
 # Real data field audit
 
+> **TASK-DATA-PERFORMANCE-SCORE-01 (2026-10-06): post-13.06 legacy score semantics.** Henrik `players[].stats.score` is still the legacy combat-score TOTAL. Post-patch stored totals have median 3,720, max 10,499, and 98.3% > 500, so they are not the 0–500 Performance Score. ACS = score ÷ rounds stays **ACS_SAFE**. A Performance Score field is NOT VERIFIED (public OpenAPI 4.6.0 has none; v4.10.0 BETA announces "performance scores" without a schema). See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
+
 Audit date: 2026-09-30
 
 Task: TASK-API-02.1

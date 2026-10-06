@@ -1,5 +1,7 @@
 # Evidence-aware community scoring
 
+> **TASK-DATA-PERFORMANCE-SCORE-01:** the official VALORANT Performance Score is **NOT part of community-score-v2** and is not ingested. Firepower/Consistency keep using ACS = legacy combat-score total ÷ rounds, which was verified unchanged after Patch 13.06 (ACS_SAFE). No formula changed. See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
+
 Versions: `community-score-v2`, `community-benchmarks-v1`, `overall-profile-v1`.
 This is not Riot MMR, Elo, an official rank or a replacement for ranked matchmaking. Benchmark ranges are transparent product-design calibration, not global population percentiles. Scores are calculated in the frontend from sanitized selected evidence; never persisted in Neon. Migration: NONE.
 
