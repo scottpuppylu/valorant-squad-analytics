@@ -55,7 +55,10 @@
 | TASK-IDENTITY-01 member / multi-account identity | COMPLETE / ACCEPTED (2026-10-06; member-identity-v1, schema 5, migration 0008) — production 9 members × 1 account, 0 merges; see docs/MEMBER_IDENTITY.md |
 | TASK-IDENTITY-01B community names + nickname | COMPLETE / ACCEPTED (2026-10-06; member-identity-v2, schema 6; migrations 0009 + one-time data migration 0010) — production 9 members × 1 account, 9 approved community names, nicknames unset, 0 merges |
 | TASK-ADMIN-01 authenticated browser administration | NOT STARTED (no public edit endpoint until then) |
-| TASK-WEAPON-01 member-level weapon analytics | COMPLETE / ACCEPTED (2026-10-06; weapon-analytics-v1, weapon-catalog-v1; no migration) — see docs/WEAPON_ANALYTICS.md |
+| TASK-WEAPON-01 member-level weapon analytics | COMPLETE / ACCEPTED (2026-10-06; weapon-analytics-v1; no migration) — see docs/WEAPON_ANALYTICS.md |
+| TASK-WEAPON-01.1 Warden catalog correction | COMPLETE / ACCEPTED (2026-10-06; weapon-catalog-v2: Warden → Rifle per Riot Patch 13.06; classification only) |
+| TASK-DATA-FASTSYNC-01.2 FASTSYNC UI navigation regression test repair | NOT STARTED |
+| Full npm audit drift (8: 2 moderate, 6 high; dev/build-only; production audit 0) | NEEDS DISPOSITION beyond SEC-2026-001 — do not force-fix |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
 | Riot ticket #139243830 | OPEN — informational / non-blocking |
@@ -65,6 +68,11 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-WEAPON-01.1 COMPLETE / ACCEPTED (2026-10-06): `weapon-catalog-v2` adds Warden as a Rifle firearm (Riot
+  VALORANT Patch Notes 13.06). Classification only: never change weapon-analytics-v1 formulas or durable evidence
+  for catalog fixes, never guess provider weapon ids, and keep unknown names and abilities as Other. Bump the
+  catalog version for any classification change.
 
 - TASK-WEAPON-01 COMPLETE / ACCEPTED (2026-10-06, SDD STRICT): `view=analysis&feature=weaponAnalytics`
   (same function). Two separate evidence domains: round weapon observation (`round_participants.weapon_*`)

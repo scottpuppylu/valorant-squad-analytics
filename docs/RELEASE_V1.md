@@ -1,6 +1,12 @@
 # V1 release preflight
 
-## Current release gate — TASK-WEAPON-01 (2026-10-06)
+## Current release gate — TASK-WEAPON-01.1 (2026-10-06)
+
+`weapon-catalog-v2` (Warden → Rifle) COMPLETE / ACCEPTED. The production SQL health check is still NOT VERIFIED
+(V1 gate). The full `npm audit` drifted upstream from 5 high to 8 (2 moderate, 6 high; dev/build-only, production
+audit 0). It needs a separate security disposition beyond SEC-2026-001. RELEASE-01 PAUSED; V1 NOT YET RELEASED.
+
+## Earlier release gate — TASK-WEAPON-01 (2026-10-06)
 
 Member weapon analytics (weapon-analytics-v1) COMPLETE / ACCEPTED (WEAPON_ANALYTICS.md). The production SQL
 health check is still NOT VERIFIED (V1 gate). RELEASE-01 PAUSED; V1 NOT YET RELEASED.

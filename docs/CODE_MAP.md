@@ -2,7 +2,7 @@
 
 ## TASK-WEAPON-01 weapon analytics
 
-- src/analytics/weapons/catalog.ts (weapon-catalog-v1), engine.ts (weapon-analytics-v1: aggregates → result,
+- src/analytics/weapons/catalog.ts (weapon-catalog-v2; v2 adds Warden → Rifle; tests/weaponCatalog.test.ts), engine.ts (weapon-analytics-v1: aggregates → result,
   canonical identity, coverage, calibration, unsupported list), local.ts (Demo facts + local scopes).
 - server/dataset/weaponAnalytics.ts (parseWeaponRequest, GROUPING SETS SQL, WeaponAnalyticsService); runtime.ts;
   api/valorant/dataset.ts dispatch.

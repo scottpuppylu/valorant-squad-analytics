@@ -4,7 +4,18 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-WEAPON-01 (2026-10-06)
+## Current decision — TASK-WEAPON-01.1 (2026-10-06)
+
+**COMPLETE / ACCEPTED.** Warden catalog correctness hotfix: `weapon-catalog-v2` (Warden → Rifle, firearm; Riot
+Patch Notes 13.06). `weapon-analytics-v1` is unchanged; no numeric change, no migration, no provider calls.
+
+- TASK-DATA-FASTSYNC-01.2 (FASTSYNC UI Navigation Regression Test Repair): NOT STARTED. Some older FASTSYNC UI tests
+  do not actually navigate under HashRouter/happy-dom.
+- Security follow-up: the full `npm audit` now reports 8 (2 moderate, 6 high), with new dev/build-only advisories in
+  source-map-js and postcss-selector-parser. The production audit is still 0. This needs a disposition beyond
+  SEC-2026-001; not force-fixed.
+
+## Earlier decision — TASK-WEAPON-01 (2026-10-06)
 
 **COMPLETE / ACCEPTED.** Member-level context-aware weapon analytics: `weapon-analytics-v1`,
 `weapon-catalog-v1` ([WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md)). Two evidence domains (round weapon

@@ -1,5 +1,11 @@
 # Member weapon analytics (TASK-WEAPON-01)
 
+> **Current catalog: `weapon-catalog-v2`** (TASK-WEAPON-01.1, 2026-10-06). Warden is classified as a
+> **Rifle** (`isFirearm: true`, public key `warden`). Official basis: Riot VALORANT Patch Notes 13.06
+> (Weapon Class: Rifle). This is a classification-only correction: `weapon-analytics-v1` formulas,
+> evidence, coverage, scopes and aggregation are unchanged, with no migration and no provider calls.
+> v1 text below that says Warden is Other / Unknown is **[SUPERSEDED]**.
+
 Versions: **`weapon-analytics-v1`** (metrics, calibration, contract) and **`weapon-catalog-v1`**
 (classification). SDD STRICT, 2026-10-06. Starting HEAD `e0ca2db83befa0984a92bad736013e77ba239a9f`;
 checkpoint `checkpoint-before-weapon-01`.
@@ -233,6 +239,46 @@ account and an Operator-heavy alt, merged in every view. Pages makes 0 `/api` ca
 - **Regression:** all 191 matches are byte-identical. Numeric parity holds for lifetime,
   currentStrength, recent10, recent30, Act, recentForm, Progress, maps, agents and Synergy.
   Server-vs-local `view=analysis` parity reports 28/28 checks true.
+
+## TASK-WEAPON-01.1 Warden correction (weapon-catalog-v2)
+
+**Reproduced first.** A focused test written against v1 failed: catalog v1, an opaque `x-…` key and
+an unnamed display.
+
+The production baseline (read-only) matched:
+- Warden was `Other` / `isFirearm: false` with key `x-007m3r2`.
+- It appeared for 3 members, in 7 scope views (ALL TRACKED, CURRENT, Act e11a5), plus map, agent
+  and Act breakdowns and cohort rows.
+- Its evidence resolves through the normal catalog path (provider id plus the name `Warden`).
+
+**Change.** One entry in the central catalog (`['warden', 'Warden', 'Rifle']`) and the version marker
+moved to v2 in `catalog.ts` and the response validator.
+- No provider id is hard-coded.
+- No special-case code: id+name, name-only and case/space variants resolve through the same
+  canonicalization.
+- Other catalog entries, unknown names and ability kill methods (Blade Storm, Hot Hands, Paint
+  Shells) are unchanged, and tested.
+
+**Public key change (documented).** Warden's key went from opaque `x-007m3r2` (unknown in v1) to the
+catalog slug `warden`. Any bookmarked `?weapon=x-007m3r2` URL falls back to the default weapon.
+
+**Production acceptance (read-only, 0 provider calls).**
+- **Versions:** `weapon-analytics-v1` / `weapon-catalog-v2`.
+- **Classification:** every Warden row is `Rifle`, firearm, key `warden`, including breakdowns and
+  cohort rows.
+- **Numbers:** all 12 numeric fields of every Warden row are byte-identical to the baseline.
+- **Category totals:** per scope, Rifle gained and Other lost exactly the Warden contribution (for
+  example one member: +36 rounds / +15 kills). All other categories and member totals are unchanged.
+- **Population:** tracked matches 191 → 191; 0 leaks; 0 NaN.
+- **Regression:** existing analytics are numerically identical (10 categories, 191/191 matches), and
+  server/local parity reports 28/28 checks true.
+- **UI:** the Weapons page shows Warden as 步槍 for all three members with Warden evidence (table,
+  detail, breakdowns, cohort), with no console errors and no mobile overflow. Warden is not in any
+  Profile top-5 card, and was not forced there.
+
+**Pre-existing limitation, not changed.** If the same weapon appears with a provider id in some rows
+and name-only in others, distinct-match counts across those raw groups use the maximum rather than
+the true union. Production weapon evidence carries ids, so this does not occur there.
 
 ## Known limitations
 
