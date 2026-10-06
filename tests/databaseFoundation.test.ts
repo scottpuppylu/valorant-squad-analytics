@@ -120,6 +120,7 @@ describe('durable database and consent foundation', () => {
       { version: '0007', applied: '1' },
       { version: '0008', applied: '1' },
       { version: '0009', applied: '1' },
+      { version: '0010', applied: '1' },
     ]);
     const cursorColumns = await database.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name='sync_cursors'`,
@@ -167,7 +168,7 @@ describe('durable database and consent foundation', () => {
         VALUES ('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000102','Upgrade','TW')`);
       await existing.query(`INSERT INTO consents (id,player_id,status,consent_method,privacy_version,consented_at)
         VALUES ('00000000-0000-4000-8000-000000000103','00000000-0000-4000-8000-000000000101','active','self_asserted','old-v1',now())`);
-      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006', '0007', '0008', '0009']);
+      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006', '0007', '0008', '0009', '0010']);
       expect(await applyMigrations(existing, migrations)).toEqual([]);
     } finally {
       await existing.close();
@@ -186,7 +187,7 @@ describe('durable database and consent foundation', () => {
         SELECT '00000000-0000-4000-8000-000000000121',id,'HenrikDev','ap','backfill',159,2 FROM players LIMIT 1`);
       await existing.query(`INSERT INTO sync_runs (id,squad_id,player_id,provider,trigger_kind,status,started_at,sync_kind,matches_seen)
         SELECT '00000000-0000-4000-8000-000000000122',squad_id,player_id,'HenrikDev','manual','paused',now(),'backfill',159 FROM squad_memberships LIMIT 1`);
-      expect(await applyMigrations(existing, migrations)).toEqual(['0007', '0008', '0009']);
+      expect(await applyMigrations(existing, migrations)).toEqual(['0007', '0008', '0009', '0010']);
       expect(await applyMigrations(existing, migrations)).toEqual([]);
       expect((await existing.query('SELECT sync_kind,next_start,retry_count,stored_page,stored_item_index FROM sync_cursors')).rows[0]).toEqual({ sync_kind: 'backfill', next_start: 159, retry_count: 2, stored_page: 1, stored_item_index: 0 });
       expect((await existing.query('SELECT sync_kind,status,matches_seen FROM sync_runs')).rows[0]).toEqual({ sync_kind: 'backfill', status: 'paused', matches_seen: 159 });

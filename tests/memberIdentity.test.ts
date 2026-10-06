@@ -139,7 +139,7 @@ describe('migration 0008 member-identity-v1', () => {
     const dump = async () => Object.fromEntries(await Promise.all(tables.map(async (table) => [table, (await db.query(`SELECT * FROM ${table} ORDER BY id`)).rows] as const)));
     const before = await dump();
 
-    expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual(['0008', '0009']);
+    expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual(['0008', '0009', '0010']);
     expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual([]);
     const after = await dump();
     for (const table of tables.filter((name) => name !== 'players')) expect(after[table], table).toEqual(before[table]);
@@ -155,7 +155,7 @@ describe('migration 0008 member-identity-v1', () => {
       { id: uuid(1, 3), public_id: uuid(2, 3), display_name: 'Account3', display_name_source: 'legacy_account', archived: false },
       { id: uuid(1, 9), public_id: uuid(2, 9), display_name: '已刪除成員', display_name_source: 'legacy_account', archived: true },
     ]);
-    expect((await db.query('SELECT version FROM schema_migrations ORDER BY version')).rows.slice(-2)).toEqual([{ version: '0008' }, { version: '0009' }]);
+    expect((await db.query('SELECT version FROM schema_migrations ORDER BY version')).rows.slice(-3)).toEqual([{ version: '0008' }, { version: '0009' }, { version: '0010' }]);
     expect(await new MemberAdminService(db).invariants()).toMatchObject({
       members: 4, archivedMembers: 1, accounts: 4, liveAccounts: 3, accountsWithoutMember: 0, membersWithMultiplePrimaries: 0,
       activeMembersWithoutLiveAccount: 0, liveAccountsOnArchivedMember: 0, sameMatchMemberCollisions: 0, accountsPerMember: { 1: 3 },
