@@ -1,10 +1,23 @@
 # V1 release preflight
 
+## Current dependency security gate — TASK-SECURITY-02 (2026-10-06)
+
+Dependency security gate disposition updated.
+- Full `npm audit` = 7: 5 high (GHSA-vfj7, SEC-2026-001 original subset) + 2 moderate (GHSA-rj75, SEC-2026-002).
+- GHSA-68fv (source-map-js) is FIXED.
+- Production audit = 0.
+- Older lines in this file saying "full audit = exactly five high" or "SEC-2026-001 resolves the dependency gate" are
+  historical. See SECURITY_EXCEPTIONS.md.
+
+Production DB health is a separate gate and is still NOT VERIFIED. V1 NOT YET RELEASED.
+
 ## Current release gate — TASK-WEAPON-01.1 (2026-10-06)
 
 `weapon-catalog-v2` (Warden → Rifle) COMPLETE / ACCEPTED. The production SQL health check is still NOT VERIFIED
-(V1 gate). The full `npm audit` drifted upstream from 5 high to 8 (2 moderate, 6 high; dev/build-only, production
-audit 0). It needs a separate security disposition beyond SEC-2026-001. RELEASE-01 PAUSED; V1 NOT YET RELEASED.
+(V1 gate). [SUPERSEDED by TASK-SECURITY-02: the full audit drifted to 8. One high (source-map-js) was fixed by a
+compatible lockfile patch; the full audit is now 7 (5 high braces chain under SEC-2026-001 original subset + 2 moderate
+under SEC-2026-002); production audit 0. Dependency security gate disposition updated — not "all vulnerabilities fixed".]
+RELEASE-01 PAUSED; V1 NOT YET RELEASED.
 
 ## Earlier release gate — TASK-WEAPON-01 (2026-10-06)
 

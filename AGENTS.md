@@ -58,7 +58,8 @@
 | TASK-WEAPON-01 member-level weapon analytics | COMPLETE / ACCEPTED (2026-10-06; weapon-analytics-v1; no migration) — see docs/WEAPON_ANALYTICS.md |
 | TASK-WEAPON-01.1 Warden catalog correction | COMPLETE / ACCEPTED (2026-10-06; weapon-catalog-v2: Warden → Rifle per Riot Patch 13.06; classification only) |
 | TASK-DATA-FASTSYNC-01.2 FASTSYNC UI navigation regression test repair | NOT STARTED |
-| Full npm audit drift (8: 2 moderate, 6 high; dev/build-only; production audit 0) | NEEDS DISPOSITION beyond SEC-2026-001 — do not force-fix |
+| TASK-SECURITY-02 dependency audit drift reassessment | COMPLETE / SECURITY DISPOSITION ACCEPTED (2026-10-06): full audit 7 (5 high GHSA-vfj7 → SEC-2026-001 original subset only; 2 moderate GHSA-rj75 → SEC-2026-002, review 2026-11-03); source-map-js GHSA-68fv FIXED; production audit 0 — see docs/SECURITY_EXCEPTIONS.md |
+| TASK-SECURITY-03 Tailwind 4 / build toolchain security migration | NOT STARTED — needs explicit authorization |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
 | Riot ticket #139243830 | OPEN — informational / non-blocking |
@@ -68,6 +69,10 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-SECURITY-02 (2026-10-06): never reuse a SEC record beyond its exact findings. Every advisory maps to FIXED,
+  TEMPORARILY ACCEPTED (exact SEC id) or BLOCKING. Production audit must stay 0. Never force-fix, override, patch
+  node_modules or suppress audit output. A Tailwind 4 migration needs TASK-SECURITY-03 authorization.
 
 - TASK-WEAPON-01.1 COMPLETE / ACCEPTED (2026-10-06): `weapon-catalog-v2` adds Warden as a Rifle firearm (Riot
   VALORANT Patch Notes 13.06). Classification only: never change weapon-analytics-v1 formulas or durable evidence

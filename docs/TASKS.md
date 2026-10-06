@@ -4,7 +4,17 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-WEAPON-01.1 (2026-10-06)
+## Current decision — TASK-SECURITY-02 (2026-10-06)
+
+**COMPLETE / SECURITY DISPOSITION ACCEPTED.** The full audit drifted from 5 → 8.
+- source-map-js GHSA-68fv: FIXED by a compatible lockfile patch (`d021e5e`).
+- postcss-selector-parser GHSA-rj75 (2 moderate): temporarily accepted under SEC-2026-002.
+- braces GHSA-vfj7 (5 high): SEC-2026-001, original subset only.
+- Full audit 7, production audit 0. Evidence: [TASK_SECURITY_02.md](TASK_SECURITY_02.md).
+- TASK-SECURITY-03 (Tailwind 4 / build toolchain security migration): NOT STARTED, recommended. It is the only path that
+  clears the remaining advisories (isolated lockfile audit = 0) and needs explicit authorization.
+
+## Earlier decision — TASK-WEAPON-01.1 (2026-10-06)
 
 **COMPLETE / ACCEPTED.** Warden catalog correctness hotfix: `weapon-catalog-v2` (Warden → Rifle, firearm; Riot
 Patch Notes 13.06). `weapon-analytics-v1` is unchanged; no numeric change, no migration, no provider calls.

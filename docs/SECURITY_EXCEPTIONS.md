@@ -1,8 +1,80 @@
 # Security exceptions
 
+## Current dependency audit state (TASK-SECURITY-02, 2026-10-06) — read this first
+
+**Current audits:**
+- Full `npm audit`: **7 findings** (0 critical, 5 high, 2 moderate) from 2 underlying advisories.
+- `npm audit --omit=dev`: **0**.
+- Evidence: [TASK_SECURITY_02.md](TASK_SECURITY_02.md).
+
+| Underlying advisory | npm findings | Decision |
+|---|---|---|
+| GHSA-vfj7-8cjw-p6xm (braces, high) | braces, chokidar, micromatch, fast-glob, tailwindcss | TEMPORARILY ACCEPTED: **SEC-2026-001, original subset only** (unchanged; no patched braces) |
+| GHSA-rj75-hqrm-r3gf (postcss-selector-parser, moderate) | postcss-selector-parser, postcss-nested (also feeds the tailwindcss row) | TEMPORARILY ACCEPTED: **SEC-2026-002** (new) |
+| GHSA-68fv-2mgg-jv7q (source-map-js, high) | source-map-js | **FIXED** in `d021e5e` (lockfile 1.2.1 → 1.2.2) |
+
+**SEC-2026-001 status: STILL VALID FOR ITS ORIGINAL SUBSET ONLY.** The original five findings and
+GHSA-vfj7 are unchanged. On 2026-10-06 the full audit grew to 8, which invalidated SEC-2026-001 as
+the *whole* full-audit gate. It is not extended to the new scope; the history below is unedited.
+
+## SEC-2026-002 — postcss-selector-parser quadratic parsing (dev/build only)
+
+- **Decision date:** 2026-10-06. **Governance:** SDD STRICT, TASK-SECURITY-02.
+- **Owner:** site operator / repository maintainer.
+- **Decision:** temporary accepted dev-tooling risk. It is not a V1 release authorization and does
+  not mean the vulnerability is fixed.
+
+**Exact scope.** GHSA-rj75-hqrm-r3gf / CVE-2026-104844 (moderate, CVSS 5.9, CWE-400/407):
+- postcss-selector-parser 6.1.4 (vulnerable `<7.1.6`);
+- postcss-nested 6.2.0 (propagated);
+- its contribution to the tailwindcss 3.4.19 row.
+
+**Paths:**
+- `tailwindcss → postcss-selector-parser`
+- `tailwindcss → postcss-nested → postcss-selector-parser`
+
+**Risk and attack precondition.** CPU-exhaustion denial of service while parsing an
+attacker-controlled, very long flat selector. Here, selectors are parsed only during `vite
+build`/dev, from reviewed repository CSS and Tailwind content globs (`./index.html`, `./src/**`).
+
+**Boundary evidence (2026-10-06).**
+- **Production install:** physically absent from `npm ci --omit=dev`.
+- **Production audit:** 0.
+- **Browser closure:** 0 of 496 module records.
+- **API closure:** 0 of 65 inputs across 12 entries.
+- **Source:** no PostCSS/selector/CSS compilation in any runtime code.
+- **Runtime data:** never reaches build-time CSS.
+- **CI:** read-only, with no secrets.
+
+**Not verified.** Remote Vercel function artifact bytes, and Vercel preview builds of untrusted PRs.
+
+**Why no fix is adopted.**
+- The only patched line is 7.x. tailwindcss 3.4.19 (final v3 LTS) declares `^6.1.2`, and
+  postcss-nested 6.x declares `^6.1.1`.
+- An override would break the declared semver range, and isn't authorized.
+- Tailwind 4 resolves it (isolated lockfile audit = 0) but is a build migration →
+  **TASK-SECURITY-03** (not authorized).
+
+**Expiry and invalidation.**
+- Review required **2026-11-03** (aligned with SEC-2026-001), or immediately upon: a patched v6
+  release; changed audit scope or count; any new high or critical; runtime or production promotion;
+  a new runtime CSS, selector or glob input path; a Tailwind/PostCSS config change; any dependency
+  update; or a build-pipeline change.
+- No automatic renewal.
+- An expired or invalidated record blocks release until it is reviewed.
+
+**Release gate.**
+- Production audit must stay 0, and the full audit is reported honestly as nonzero.
+- Each advisory is matched to an exact SEC record. There is no blanket rule.
+- The CI gate is unchanged because audit results are non-deterministic per commit (see
+  TASK_SECURITY_02.md).
+
+
 These are explicit temporary risk decisions, not fixes or audit suppression. Re-evaluate on dependency, import, build configuration or input-boundary changes.
 
 ## SEC-2026-001 — temporary dev-tooling risk
+
+> **Current status (2026-10-06): STILL VALID FOR ORIGINAL SUBSET ONLY** — see the current state above. The text below is the unedited 2026-10-03 record.
 
 Decision date: 2026-10-03. Governance: SDD STRICT; authorized by TASK-RELEASE-01A.3's accepted-risk path. Exposure: DEV/BUILD ONLY for application-controlled code. Owner: site operator / repository maintainer. Decision: temporary accepted dev-tooling risk for V1 preflight, not a V1 release authorization.
 
