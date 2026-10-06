@@ -1,5 +1,6 @@
 import type { ApiRequest, ApiResponse } from '../../server/contracts.js';
-import { createAnalyticsContextRepository, createDatasetProjectionService, createServerAnalysisService, datasetReadMode } from '../../server/dataset/runtime.js';
+import { createAnalyticsContextRepository, createDatasetProjectionService, createServerAnalysisService, createWeaponAnalyticsService, datasetReadMode } from '../../server/dataset/runtime.js';
+import { parseWeaponRequest } from '../../server/dataset/weaponAnalytics.js';
 import { parseAnalysisRequest } from '../../server/dataset/analysisService.js';
 import { buildAnalyticsContext } from '../../server/dataset/analyticsContext.js';
 import { parseDatasetView, parseHistoryRequest } from '../../server/dataset/historyCursor.js';
@@ -12,7 +13,8 @@ import { clientKey } from '../../server/http.js';
  * Absent `view`: unchanged schema 4 newest-300 snapshot.
  * `view=history`: DATA-03B.1 bounded keyset page (browse only).
  * `view=analytics`: DATA-03B.2A aggregate population/evidence facts for scope labels.
- * `view=analysis`: DATA-03B.2B server-resolved feature population over all durable history.
+ * `view=analysis`: DATA-03B.2B server-resolved feature population over all durable history;
+ *   `feature=weaponAnalytics` (TASK-WEAPON-01) is aggregate weapon evidence over all eligible history.
  * All served by this same function to stay within the 12-function Vercel Hobby limit.
  */
 export default async function handler(request: ApiRequest, response: ApiResponse) {
@@ -23,6 +25,13 @@ export default async function handler(request: ApiRequest, response: ApiResponse
     enforceRateLimit(`dataset-${view === 'snapshot' ? 'read' : view}:${clientKey(request)}`, Date.now(), view === 'analysis' ? 60 : 30);
     if (datasetReadMode() !== 'public') {
       response.status(200).json({ ok: true, schemaVersion: datasetSchemaVersion, state: 'disabled', source: 'REAL_SERVER' });
+      return;
+    }
+    if (view === 'analysis' && request.query?.feature === 'weaponAnalytics') {
+      // TASK-WEAPON-01: aggregate weapon evidence (same function; no new Vercel Function).
+      const { payload, metrics } = await createWeaponAnalyticsService().analyze(parseWeaponRequest(request.query));
+      response.setHeader('Server-Timing', `weapon;dur=${metrics.totalMs}`);
+      response.status(200).json(payload);
       return;
     }
     if (view === 'analysis') {

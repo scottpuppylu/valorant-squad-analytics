@@ -1,4 +1,5 @@
 import { createNeonDatabase } from '../db/neon.js';
+import { WeaponAnalyticsService } from './weaponAnalytics.js';
 import { DatasetProjectionService } from './datasetProjectionService.js';
 import { PostgresDatasetReadRepository } from './postgresDatasetReadRepository.js';
 import { PostgresAnalyticsContextRepository } from './analyticsContext.js';
@@ -20,6 +21,17 @@ export function createServerAnalysisService(): ServerAnalysisService {
   if (!database) throw new Error('Dataset database is unavailable.');
   analysisSingleton = new ServerAnalysisService(database, new DatasetProjectionService(new PostgresDatasetReadRepository(database)));
   return analysisSingleton;
+}
+
+let weaponSingleton: WeaponAnalyticsService | undefined;
+/** TASK-WEAPON-01 view=analysis&feature=weaponAnalytics (same function; reuses the analysis service for CURRENT). */
+export function createWeaponAnalyticsService(): WeaponAnalyticsService {
+  if (datasetReadMode() !== 'public') throw new Error('Dataset read mode is disabled.');
+  if (weaponSingleton) return weaponSingleton;
+  const database = createNeonDatabase();
+  if (!database) throw new Error('Dataset database is unavailable.');
+  weaponSingleton = new WeaponAnalyticsService(database, createServerAnalysisService());
+  return weaponSingleton;
 }
 
 /** DATA-03B.2A aggregate population/evidence facts for view=analytics. */
