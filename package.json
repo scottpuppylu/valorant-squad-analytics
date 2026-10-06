@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build && node scripts/assert-secret-boundary.mjs --dist",
     "db:migrate": "tsx scripts/migrate.ts",
     "db:migrate:vercel": "tsx scripts/migrate-vercel.ts",
+    "db:hydrate-facts:vercel": "tsx scripts/hydrate-analysis-facts-vercel.ts",
     "db:validate": "vitest run tests/databaseFoundation.test.ts",
     "consent:provision": "tsx scripts/provision-consent-management.ts",
     "deletion:retention": "tsx scripts/purge-expired-deletion-audits.ts",
@@ -17,7 +18,7 @@
     "preview": "vite preview",
     "test": "vitest run && node scripts/assert-secret-boundary.mjs",
     "test:watch": "vitest",
-    "vercel-build": "npm run db:migrate:vercel && npm run build"
+    "vercel-build": "npm run db:migrate:vercel && npm run db:hydrate-facts:vercel && npm run build"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

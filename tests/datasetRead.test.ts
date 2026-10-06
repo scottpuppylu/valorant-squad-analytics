@@ -190,7 +190,7 @@ describe('dataset runtime migrations', () => {
     await existing.query(`INSERT INTO source_matches (id,squad_id,provider,provider_match_lookup_hmac,provider_schema_version,normalization_version,affinity,first_observed_at,last_observed_at)
       VALUES ($1,$2,'HenrikDev',$3,'v4','durable-evidence-v1','ap',now(),now())`, [uuid(5, 999), squadId, lookup(999)]);
     const all = await loadMigrations(migrationsPath);
-    expect(await applyMigrations(existing, all)).toEqual(['0004', '0005', '0006', '0007', '0008', '0009', '0010']);
+    expect(await applyMigrations(existing, all)).toEqual(['0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011']);
     const before = (await existing.query<{ public_id: string }>('SELECT public_id FROM source_matches')).rows[0]!.public_id;
     expect(before).toMatch(/^[0-9a-f-]{36}$/u);
     expect(await applyMigrations(existing, all)).toEqual([]);

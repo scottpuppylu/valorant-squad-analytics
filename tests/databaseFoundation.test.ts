@@ -122,6 +122,7 @@ describe('durable database and consent foundation', () => {
       { version: '0008', applied: '1' },
       { version: '0009', applied: '1' },
       { version: '0010', applied: '1' },
+      { version: '0011', applied: '1' },
     ]);
     const cursorColumns = await database.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name='sync_cursors'`,
@@ -169,7 +170,7 @@ describe('durable database and consent foundation', () => {
         VALUES ('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000102','Upgrade','TW')`);
       await existing.query(`INSERT INTO consents (id,player_id,status,consent_method,privacy_version,consented_at)
         VALUES ('00000000-0000-4000-8000-000000000103','00000000-0000-4000-8000-000000000101','active','self_asserted','old-v1',now())`);
-      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006', '0007', '0008', '0009', '0010']);
+      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006', '0007', '0008', '0009', '0010', '0011']);
       expect(await applyMigrations(existing, migrations)).toEqual([]);
     } finally {
       await existing.close();
@@ -180,7 +181,9 @@ describe('durable database and consent foundation', () => {
     const existing = new PGliteDatabase(new PGlite());
     try {
       const migrations = await loadMigrations(resolve('migrations'));
-      await applyMigrations(existing, migrations.slice(0, 6));
+      // The CURRENT writer also maintains analysis-match-facts-v1 (0011, independent of 0007–0010), so the
+      // populated pre-0007 state is written with that additive table present.
+      await applyMigrations(existing, [...migrations.slice(0, 6), migrations.find((migration) => migration.version === '0011')!]);
       const writer = new DurableEvidenceService(existing, hmacKey);
       const connected = await writer.persistConnection(input, 'consenting-puuid');
       await writer.persistMatches({ ...input, playerId: connected.publicPlayerId! }, rawPayload());
@@ -260,7 +263,7 @@ describe('durable database and consent foundation', () => {
     );
     expect(correctedRow.rows[0]).toEqual({ ability_1_casts: 4, spent_total: 5000 });
     expect(summary.performance).toMatchObject({
-      sqlQueryCount: 15, // + import gate, identity resolution and participant-conflict check (historical-identity-v1)
+      sqlQueryCount: 17, // + import gate, identity resolution, participant-conflict check (historical-identity-v1) and the analysis-fact source read + write (analysis-match-facts-v1)
       evidenceCounts: { participants: 3, teams: 2, rounds: 1, roundParticipants: 3, kills: 1, assistants: 1, locations: 2 },
     });
     const orphaned = await database.query<{ count: string }>(`

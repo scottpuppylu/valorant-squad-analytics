@@ -232,6 +232,8 @@ export class RevocationDeletionService {
             [participant.id],
           );
           await transaction.query('DELETE FROM event_player_locations WHERE match_participant_id=$1', [participant.id]);
+          // TASK-DATA-03B.2D: derived analysis facts of the anonymized participant go with its evidence.
+          await transaction.query('DELETE FROM analysis_participant_facts WHERE match_participant_id=$1', [participant.id]);
           participants += 1;
         }
         shared += 1;

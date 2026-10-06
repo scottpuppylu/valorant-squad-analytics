@@ -102,7 +102,7 @@ describe('migration 0010 approved community names', () => {
     const beforeDump = await dump(db);
     const beforeMembers = await members(db);
     const before = await snapshot(db);
-    expect(await apply(db)).toEqual(['0010']);
+    expect(await apply(db)).toEqual(['0010', '0011']);
     expect(await apply(db)).toEqual([]);
     expect(await dump(db)).toEqual(beforeDump);
     const after = await members(db);
@@ -142,16 +142,16 @@ describe('migration 0010 approved community names', () => {
   it('is safe when a member already carries exactly the approved community name', async () => {
     const db = await pre0010(gameNames());
     await new MemberAdminService(db).renameMember(uuid(2, 2), 'jack');
-    expect(await apply(db)).toEqual(['0010']);
+    expect(await apply(db)).toEqual(['0010', '0011']);
     expect((await db.query('SELECT count(*)::int AS n FROM members WHERE display_name_source=$1', ['community'])).rows).toEqual([{ n: 9 }]);
   }, 60_000);
 
   it('is a recorded no-op on databases that are not the production identity set (none of the approved names)', async () => {
     const empty = await pre0010([]);
-    expect(await apply(empty)).toEqual(['0010']);
+    expect(await apply(empty)).toEqual(['0010', '0011']);
     const other = await pre0010(['FictionalA', 'FictionalB']);
     const before = await members(other);
-    expect(await apply(other)).toEqual(['0010']);
+    expect(await apply(other)).toEqual(['0010', '0011']);
     expect(await members(other)).toEqual(before);
   }, 60_000);
 

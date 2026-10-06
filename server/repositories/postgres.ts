@@ -4,6 +4,7 @@ import type { DurableMatchEvidence } from '../evidence/types.js';
 import type { ConnectedPlayerInput, ConnectedPlayerRecord, ConsentRepository, MatchEvidenceRepository, PlayerRepository, RankRepository, SyncRepository } from './contracts.js';
 import { PUBLIC_DATASET_CONSENT_METHOD } from '../../shared/privacyPolicy.js';
 import { ParticipantAccountConflictError, ProviderIdentityUnresolvedError } from '../persistence/errors.js';
+import { refreshAnalysisFacts } from '../dataset/analysisFacts.js';
 
 export const DEFAULT_SQUAD_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -285,6 +286,8 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
         flattenRows(locationRows),
       );
     }
+    // TASK-DATA-03B.2D analysis-match-facts-v1: facts commit with the evidence in this same transaction.
+    await refreshAnalysisFacts(transaction, [sourceMatchId]);
     return sourceMatchId;
   }
 }

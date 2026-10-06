@@ -80,7 +80,7 @@ describe('migration 0009 member nickname', () => {
     const tables = ['members', 'players', 'consents', 'sync_cursors', 'sync_runs', 'match_participants', 'source_matches'];
     const dump = async () => Object.fromEntries(await Promise.all(tables.map(async (t) => [t, (await db.query(`SELECT * FROM ${t} ORDER BY id`)).rows] as const)));
     const before = await dump();
-    expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual(['0009', '0010']);
+    expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual(['0009', '0010', '0011']);
     expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual([]);
     const after = await dump();
     for (const table of tables.filter((t) => t !== 'members')) expect(after[table], table).toEqual(before[table]);
