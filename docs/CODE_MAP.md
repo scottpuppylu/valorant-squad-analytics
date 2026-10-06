@@ -1,5 +1,14 @@
 # Code map
 
+## TASK-DATA-HISTORICAL-IDENTITY-01 stable historical identity
+
+- `server/evidence/normalizeHenrikEvidence.ts`: pure; takes `expectedProviderIdentityHmac` and marks participants whose `providerIdentityHmac(puuid)` equals it.
+- `server/repositories/postgres.ts`: `resolveProviderIdentityHmac` (exact account and affinity → `lookup_hmac` only; 0 or >1 rows fail closed) and the `upsertMatch` different-account conflict guard.
+- `server/persistence/durableEvidenceService.ts`: `persistSyncPage` and `persistMatches` resolve the identity, then require exactly one consenting participant per match.
+- `server/persistence/errors.ts`: the `HistoricalIdentityError` family plus `identityFailure()` (502 `MALFORMED_PROVIDER_RESPONSE`).
+- `server/sync/deepHistoryChunk.ts`, `server/sync/historicalSyncService.ts`, `server/henrikDataProvider.ts`: identity failures are never DATABASE_ERROR.
+- Tests: `tests/historicalIdentity.test.ts`. Docs: [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md).
+
 ## TASK-DATA-MODE-POLICY-01
 
 - `src/analytics/modeEligibility.ts` (mode-eligibility-policy-v1) is the only queue rule. It is enforced in `src/analytics/scope/resolveScope.ts` (`resolveScopeSelection`, `matchesInPairContext`, `populationFromMatches`) via `policies.ts` (feature-scope-policy-v3), in `server/dataset/weaponAnalytics.ts` and in `src/analytics/weapons/local.ts`. `server/dataset/analyticsContext.ts` adds the eligibility counts. Tests: `tests/modeEligibility.test.ts`. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).

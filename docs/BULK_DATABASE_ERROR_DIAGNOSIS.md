@@ -2,6 +2,10 @@
 
 SDD STRICT, 2026-10-06. Starting HEAD `78e5f64`; checkpoint `checkpoint-before-bulk-db-diagnosis-01`.
 
+> **Record:** 01B stopped on an apparent DATABASE_ERROR → 01C narrowed it to three candidates → 01D verified the identity
+> cause (C1a) → **TASK-DATA-HISTORICAL-IDENTITY-01 fixed it** (`historical-identity-v1`, see [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md)). The DATABASE_ERROR
+> wording below is historical and **superseded**: the failure was an identity failure, now reported as MALFORMED_RESPONSE.
+
 > **Superseded by TASK-DATA-BULK-01D below: ROOT CAUSE VERIFIED. It is C1a, a historical Riot-ID identity mismatch, and not a
 > database fault.** The analysis below is the original 01C record and is unchanged.
 

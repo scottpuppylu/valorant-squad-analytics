@@ -4,7 +4,17 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-BULK-01D (2026-10-06)
+## Current decision — TASK-DATA-HISTORICAL-IDENTITY-01 (2026-10-06)
+
+**IMPLEMENTED (`historical-identity-v1`); production acceptance: see [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md).**
+- The consenting participant is identified by `providerIdentityHmac('HenrikDev', affinity, players[].puuid)` equal to the
+  account's durable `provider_identities.lookup_hmac`, exactly one per match. The Riot name/tag is never used.
+- Static gate: `PROVIDER_IDENTITY_DOMAIN_COMPATIBLE = YES`.
+- Identity failures are `MALFORMED_RESPONSE`, never DATABASE_ERROR, and emit no `sync_database_failure`.
+- No migration; schema 6 and `durable-evidence-v2` unchanged.
+- TASK-DATA-BULK-01B: IDENTITY BLOCKER RESOLVED in code; bulk remains PAUSED pending DATA-03B.2D.
+
+## Earlier decision — TASK-DATA-BULK-01D (2026-10-06)
 
 **COMPLETE / ROOT CAUSE VERIFIED (C1a).**
 - Exactly one controlled `sync/continue` returned 503 DATABASE_ERROR with telemetry `persist_sync_page` /
@@ -14,7 +24,7 @@
   name+tag. The database is not at fault.
 - TASK-DATA-BULK-01B is **BLOCKED ON IDENTITY FIX**.
 - Next: TASK-DATA-HISTORICAL-IDENTITY-01 (SDD STRICT), which identifies the consenting participant by durable provider
-  identity instead of the current Riot ID. NOT STARTED.
+  identity instead of the current Riot ID. [SUPERSEDED: implemented, see above.]
 - See [BULK_DATABASE_ERROR_DIAGNOSIS.md](BULK_DATABASE_ERROR_DIAGNOSIS.md).
 
 ## Earlier decision — TASK-DATA-BULK-01C (2026-10-06)

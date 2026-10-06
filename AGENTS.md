@@ -69,7 +69,7 @@
 | TASK-SCORING-SHARED-MATCH-01 shared-match relative rating (Competitive + Unrated, within-match) | NOT STARTED |
 | TASK-DATA-BULK-01C Phase-2 DATABASE_ERROR diagnosis | DIAGNOSIS BLOCKED BY OBSERVABILITY (superseded by 01D) |
 | TASK-DATA-BULK-01D controlled reproduction | COMPLETE / ROOT CAUSE VERIFIED (2026-10-06): one POST → persist_sync_page / consenting_participant_absent; deterministic historical Riot-ID identity mismatch, not a DB fault — see docs/BULK_DATABASE_ERROR_DIAGNOSIS.md |
-| TASK-DATA-HISTORICAL-IDENTITY-01 identity-safe historical participant matching | NOT STARTED — required before bulk resumes |
+| TASK-DATA-HISTORICAL-IDENTITY-01 stable provider identity for historical matches | IMPLEMENTED (2026-10-06; historical-identity-v1; no migration; durable-evidence-v2 unchanged) — production acceptance PENDING — see docs/HISTORICAL_IDENTITY.md |
 | TASK-DATA-03B.2D full-tracked analysis latency | NOT STARTED |
 | TASK-DATA-MODE-POLICY-01 mode eligibility | COMPLETE / ACCEPTED (2026-10-06): mode-eligibility-policy-v1; strength analytics Competitive only; Unrated = future same-match only; other modes browse-only; feature-scope-policy-v3, weapon-analytics-v2; formulas unchanged — see docs/MODE_ELIGIBILITY.md |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
@@ -82,6 +82,7 @@ they were written; lines marked **[SUPERSEDED]** must not be read as current sta
 
 ### Dated stage log
 
+- TASK-DATA-HISTORICAL-IDENTITY-01 (2026-10-06): identify the consenting participant ONLY by `providerIdentityHmac('HenrikDev', affinity, players[].puuid)` == the exact account's `provider_identities.lookup_hmac` (exactly one per match). Never use Riot name/tag as identity, never persist raw PUUIDs, never add rename aliases, and never use `participantHmac` for cross-match identity. Identity failures are MALFORMED_RESPONSE, never DATABASE_ERROR. Read docs/HISTORICAL_IDENTITY.md first.
 - TASK-DATA-BULK-01D (2026-10-06): the Phase-2 DATABASE_ERROR is VERIFIED to be `consenting_participant_absent`, a historical Riot-ID identity mismatch. Never treat it as a DB fault, retry it, or resume bulk before TASK-DATA-HISTORICAL-IDENTITY-01.
 - TASK-DATA-BULK-01C (2026-10-06): rules.
   - DATABASE_ERROR from sync is NOT necessarily a database fault. `persistSyncPage` failures, including

@@ -24,6 +24,8 @@ Versioned SQL lives in `migrations/`. `npm run db:migrate` creates `schema_migra
 
 Non-consenting participants receive a match-scoped HMAC. The same provider participant therefore has a different pseudonym in a different match, and appearance in evidence never creates a `players`, membership, provider identity, or consent row.
 
+**Consenting participant identity (`historical-identity-v1`):** `match_participants.player_id` is set only for the participant whose `providerIdentityHmac('HenrikDev', affinity, puuid)` equals the syncing account's `provider_identities.lookup_hmac` (exactly one per match). The Riot name/tag is never used. A row already linked to a different account is never re-linked (fail closed). There is no migration and no new column. See [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md).
+
 ## Consent and retention
 
 The current connection is unofficial HenrikDev data access, not Riot RSO ownership verification. Consent is stored as `self_asserted`; the schema separately allows a future `riot_rso_verified` method. The current public-display policy is `2026-10-02-public-v1`, defined once in `shared/privacyPolicy.ts`. An active record includes policy version and `consented_at`; revoked records require `revoked_at`. A player may have at most one active consent across all versions. An explicit current-policy connection reuses an already-current consent or transactionally revokes the older active consent and creates one new current consent with a new one-time management credential. Background sync, dataset reads and retries never upgrade policy.

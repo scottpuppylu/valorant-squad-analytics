@@ -1,5 +1,7 @@
 # Production data connection architecture
 
+> **TASK-DATA-HISTORICAL-IDENTITY-01 (`historical-identity-v1`, 2026-10-06):** the consenting participant is now identified by the stable provider identity HMAC (`providerIdentityHmac(players[].puuid)` == the account's `provider_identities.lookup_hmac`), never by the current Riot name/tag. Identity failures are `MALFORMED_RESPONSE`, never DATABASE_ERROR, and emit no `sync_database_failure`. See [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md).
+
 ## Current acquisition direction — DATA-05A
 
 Tracker-style persistent Henrik accumulation is primary; Riot ticket is informational,

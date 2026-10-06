@@ -51,6 +51,10 @@ The raw player-match grain. Required fields are kills, deaths, assists, ACS, ADR
 
 `src/scoring/` converts aggregated statistics into the initial 0–100 Firepower, Entry, Teamplay, Clutch, and Consistency categories. Overall is a weighted combination of those categories. Confidence is stored alongside the scores but is never included in Overall.
 
+### Consenting-participant identity
+
+Server-side only, never public: a durable match participant belongs to an account when its stable provider identity HMAC equals that account's `provider_identities.lookup_hmac` (`historical-identity-v1`). A Riot ID change does not break historical matching. See [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md).
+
 ## Data flow
 
 ```text

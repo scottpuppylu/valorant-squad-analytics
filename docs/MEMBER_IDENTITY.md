@@ -1,5 +1,7 @@
 # Member / multi-account identity (TASK-IDENTITY-01)
 
+> **TASK-DATA-HISTORICAL-IDENTITY-01 (`historical-identity-v1`, 2026-10-06):** the consenting participant is now identified by the stable provider identity HMAC (`providerIdentityHmac(players[].puuid)` == the account's `provider_identities.lookup_hmac`), never by the current Riot name/tag. Identity failures are `MALFORMED_RESPONSE`, never DATABASE_ERROR, and emit no `sync_database_failure`. See [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md). Linking stays account-scoped: a sibling account of the same member is never linked by another account's sync.
+
 > **TASK-WEAPON-01 (weapon-analytics-v1):** weapon evidence is merged across a member's eligible accounts at evidence grain (union, never an average); revoked accounts vanish; same-match collisions are withheld; an explanatory `accounts[]` breakdown shows evidence per account. See [WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md).
 
 > **Current contract: `member-identity-v2`, public schema 6** (TASK-IDENTITY-01B, migration 0009).

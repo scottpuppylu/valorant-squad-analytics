@@ -1,5 +1,7 @@
 # V1 release preflight
 
+> **TASK-DATA-HISTORICAL-IDENTITY-01 (`historical-identity-v1`, 2026-10-06):** the consenting participant is now identified by the stable provider identity HMAC (`providerIdentityHmac(players[].puuid)` == the account's `provider_identities.lookup_hmac`), never by the current Riot name/tag. Identity failures are `MALFORMED_RESPONSE`, never DATABASE_ERROR, and emit no `sync_database_failure`. See [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md). Not a release action; V1 is NOT YET RELEASED.
+
 > **TASK-DATA-BULK-01C (2026-10-06):** Phase-2 DATABASE_ERROR diagnosis is blocked by observability; stage telemetry is deployed and the root cause is NOT VERIFIED. Bulk remains STOPPED / BLOCKED. V1 NOT YET RELEASED. See [BULK_DATABASE_ERROR_DIAGNOSIS.md](BULK_DATABASE_ERROR_DIAGNOSIS.md).
 
 > **TASK-DATA-MODE-POLICY-01 (2026-10-06):** Competitive-only strength analytics are active and verified read-only in production. This is not a release action; V1 is NOT YET RELEASED. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
