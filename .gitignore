@@ -35,5 +35,6 @@ Desktop.ini
 *.local
 *.tmp
 tmp/
+.local/
 temp/
 spike-output/
