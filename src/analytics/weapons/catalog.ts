@@ -1,9 +1,11 @@
 /**
- * weapon-catalog-v1 — classifies/canonicalizes OBSERVED weapon evidence only. A catalog entry never
+ * weapon-catalog-v2 — classifies/canonicalizes OBSERVED weapon evidence only.
+ * v2 (TASK-WEAPON-01.1): adds Warden as a Rifle (Riot VALORANT Patch Notes 13.06, Weapon Class: Rifle).
+ * Classification only; weapon-analytics-v1 formulas are unchanged. A catalog entry never
  * manufactures evidence; unknown provider ids/names stay explicit as Other / Unknown.
  * Server-safe module (`.js`-free, no browser APIs).
  */
-export const WEAPON_CATALOG_VERSION = 'weapon-catalog-v1' as const;
+export const WEAPON_CATALOG_VERSION = 'weapon-catalog-v2' as const;
 
 export type WeaponCategory = 'Sidearm' | 'SMG' | 'Shotgun' | 'Rifle' | 'Sniper' | 'MachineGun' | 'Melee' | 'Other';
 
@@ -20,6 +22,7 @@ const entries: CatalogEntry[] = [
   ['stinger', 'Stinger', 'SMG'], ['spectre', 'Spectre', 'SMG'],
   ['bucky', 'Bucky', 'Shotgun'], ['judge', 'Judge', 'Shotgun'],
   ['bulldog', 'Bulldog', 'Rifle'], ['guardian', 'Guardian', 'Rifle'], ['phantom', 'Phantom', 'Rifle'], ['vandal', 'Vandal', 'Rifle'],
+  ['warden', 'Warden', 'Rifle'],
   ['marshal', 'Marshal', 'Sniper'], ['outlaw', 'Outlaw', 'Sniper'], ['operator', 'Operator', 'Sniper'],
   ['ares', 'Ares', 'MachineGun'], ['odin', 'Odin', 'MachineGun'],
   ['melee', 'Melee', 'Melee'], ['knife', 'Melee', 'Melee'], ['tactical knife', 'Melee', 'Melee'],

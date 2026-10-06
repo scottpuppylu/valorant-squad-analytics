@@ -1,6 +1,6 @@
 import type { WeaponAnalyticsResult } from '../../analytics/weapons/engine';
 
-/** TASK-WEAPON-01 `view=analysis&feature=weaponAnalytics` response (schema 6, weapon-analytics-v1). */
+/** TASK-WEAPON-01 `view=analysis&feature=weaponAnalytics` response (schema 6, weapon-analytics-v1, weapon-catalog-v2). */
 export type WeaponAnalyticsResponse = WeaponAnalyticsResult & { ok: true; schemaVersion: 6; view: 'analysis'; feature: 'weaponAnalytics' };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -20,7 +20,7 @@ function validGroup(value: unknown): boolean {
 /** Rejects other versions, lifetime-completeness claims, unsupported per-weapon metrics and non-finite numbers. */
 export function isWeaponAnalyticsResponse(value: unknown): value is WeaponAnalyticsResponse {
   if (!isRecord(value) || value.ok !== true || value.schemaVersion !== 6 || value.view !== 'analysis' || value.feature !== 'weaponAnalytics') return false;
-  if (value.weaponAnalyticsVersion !== 'weapon-analytics-v1' || value.weaponCatalogVersion !== 'weapon-catalog-v1') return false;
+  if (value.weaponAnalyticsVersion !== 'weapon-analytics-v1' || value.weaponCatalogVersion !== 'weapon-catalog-v2') return false;
   if (!isRecord(value.scope) || !['all', 'current', 'act'].includes(String(value.scope.mode))) return false;
   if (!Array.isArray(value.members) || !value.members.every((member) => validGroup(member) && typeof member.memberId === 'string')) return false;
   if (value.member !== undefined) {
