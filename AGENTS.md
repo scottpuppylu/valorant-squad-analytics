@@ -70,7 +70,7 @@
 | TASK-DATA-BULK-01C Phase-2 DATABASE_ERROR diagnosis | DIAGNOSIS BLOCKED BY OBSERVABILITY (superseded by 01D) |
 | TASK-DATA-BULK-01D controlled reproduction | COMPLETE / ROOT CAUSE VERIFIED (2026-10-06): one POST → persist_sync_page / consenting_participant_absent; deterministic historical Riot-ID identity mismatch, not a DB fault — see docs/BULK_DATABASE_ERROR_DIAGNOSIS.md |
 | TASK-DATA-HISTORICAL-IDENTITY-01 stable provider identity for historical matches | COMPLETE / ACCEPTED (2026-10-06; historical-identity-v1; no migration; durable-evidence-v2 unchanged; one acceptance POST → HTTP 200, cursor advanced, no sync_database_failure) — see docs/HISTORICAL_IDENTITY.md |
-| TASK-DATA-03B.2D full-tracked analysis latency | NOT STARTED |
+| TASK-DATA-03B.2D full-tracked analysis latency | IMPLEMENTED (2026-10-06; full-tracked-aggregate-v1 over analysis-match-facts-v1, migration 0011; 6 constant statements; byte-identical to the previous engine) — production acceptance PENDING — see docs/FULL_TRACKED_LATENCY.md |
 | TASK-DATA-MODE-POLICY-01 mode eligibility | COMPLETE / ACCEPTED (2026-10-06): mode-eligibility-policy-v1; strength analytics Competitive only; Unrated = future same-match only; other modes browse-only; feature-scope-policy-v3, weapon-analytics-v2; formulas unchanged — see docs/MODE_ELIGIBILITY.md |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
@@ -82,6 +82,13 @@ they were written; lines marked **[SUPERSEDED]** must not be read as current sta
 
 ### Dated stage log
 
+- TASK-DATA-03B.2D (2026-10-06): full-population analysis must stay constant-statement. Rules:
+  - `analysis_participant_facts` (analysis-match-facts-v1) holds only the exact output of `reconstructMatchFacts`
+    (server/dataset/matchAssembly.ts, THE per-match projection). Never store scores, identifiers or member aggregates there.
+  - Every durable match write must refresh facts in the same transaction (`upsertMatch` → `refreshAnalysisFacts`).
+  - Bump `ANALYSIS_FACTS_VERSION` on any fact-contract change; the engine key already includes event-metrics and normalization versions.
+  - A non-fresh fact is never trusted: that match is reconstructed from raw evidence. Never fall back to a sample or a cap.
+  - Read docs/FULL_TRACKED_LATENCY.md first.
 - TASK-DATA-HISTORICAL-IDENTITY-01 (2026-10-06): identify the consenting participant ONLY by `providerIdentityHmac('HenrikDev', affinity, players[].puuid)` == the exact account's `provider_identities.lookup_hmac` (exactly one per match). Never use Riot name/tag as identity, never persist raw PUUIDs, never add rename aliases, and never use `participantHmac` for cross-match identity. Identity failures are MALFORMED_RESPONSE, never DATABASE_ERROR. Read docs/HISTORICAL_IDENTITY.md first.
 - TASK-DATA-BULK-01D (2026-10-06): the Phase-2 DATABASE_ERROR is VERIFIED to be `consenting_participant_absent`, a historical Riot-ID identity mismatch. Never treat it as a DB fault, retry it, or resume bulk before TASK-DATA-HISTORICAL-IDENTITY-01.
 - TASK-DATA-BULK-01C (2026-10-06): rules.

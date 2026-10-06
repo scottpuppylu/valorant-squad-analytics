@@ -1,5 +1,7 @@
 # Durable database foundation
 
+> **TASK-DATA-03B.2D migration 0011 (`analysis_participant_facts`, additive):** derived analysis facts per LINKED match participant (FK cascades to `match_participants` and `source_matches`): `engine_key`, `source_observed_at`, round coverage, the event-metrics-v1 reconstruction (`metrics` json) and direct trade edges. No scores, provider identifiers, HMACs or names. Written in the same per-match transaction as the evidence (`upsertMatch` → `refreshAnalysisFacts`), deleted with an anonymized participant, hydrated deterministically by the Vercel Production build after migrations. Older application code ignores the table. See [FULL_TRACKED_LATENCY.md](FULL_TRACKED_LATENCY.md).
+
 > **TASK-DATA-PERFORMANCE-SCORE-01:** no migration. `match_participants.score` = legacy combat-score total and must never be reused for Performance Score. A future `performance_score` column needs migration 0011 under a separate task. See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
 
 > **TASK-IDENTITY-01B data migration 0010:** a one-time, fail-closed assignment of the 9 approved community names (members.display_name/source only; scoped no-op on databases without any approved name).

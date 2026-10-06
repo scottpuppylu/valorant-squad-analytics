@@ -4,7 +4,18 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-HISTORICAL-IDENTITY-01 (2026-10-06)
+## Current decision — TASK-DATA-03B.2D (2026-10-06)
+
+**IMPLEMENTED (`full-tracked-aggregate-v1` over `analysis-match-facts-v1`, migration 0011); production acceptance: see [FULL_TRACKED_LATENCY.md](FULL_TRACKED_LATENCY.md).**
+- Phase A: the chunked phase 2 re-scanned whole topology tables per 250-match chunk (O(n²)), and event
+  reconstruction is O(n) CPU per request.
+- Option A (set-based on demand) failed: 14.4 s at 5 k. Option B (materialized per-participant facts) was chosen.
+- Full-population analysis now uses 6 statements regardless of history size. Local realistic 10 k:
+  lifetime 39.9 s → 4.53 s, synergy 30.3 s → 6.27 s.
+- Byte-identical output to the previous engine. No formula, scope, mode or public-contract change.
+- TASK-DATA-BULK-01B: both known blockers resolved in code; Bulk stays NOT RUN until separately authorized.
+
+## Earlier decision — TASK-DATA-HISTORICAL-IDENTITY-01 (2026-10-06)
 
 **COMPLETE / ACCEPTED (`historical-identity-v1`).** The one acceptance POST returned HTTP 200: pages +1, provider +1, cursor advanced, tracked 671 → 672, no `sync_database_failure`. See [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md).
 - The consenting participant is identified by `providerIdentityHmac('HenrikDev', affinity, players[].puuid)` equal to the

@@ -1,5 +1,7 @@
 # Production data connection architecture
 
+> **TASK-DATA-03B.2D (2026-10-06, `full-tracked-aggregate-v1` over `analysis-match-facts-v1`, migration 0011):** full-population analysis reads one fact row per visible performance in ONE statement (6 statements total, independent of history size; was `5 + 4·⌈n/250⌉`). Facts are the exact event-metrics-v1 reconstruction, refreshed in the same per-match transaction as every evidence write and trusted only while fresh; otherwise that match is reconstructed from raw evidence. Public contract, scope semantics and every formula are unchanged (byte-identical to the previous engine). See [FULL_TRACKED_LATENCY.md](FULL_TRACKED_LATENCY.md).
+
 > **TASK-DATA-HISTORICAL-IDENTITY-01 (`historical-identity-v1`, 2026-10-06):** the consenting participant is now identified by the stable provider identity HMAC (`providerIdentityHmac(players[].puuid)` == the account's `provider_identities.lookup_hmac`), never by the current Riot name/tag. Identity failures are `MALFORMED_RESPONSE`, never DATABASE_ERROR, and emit no `sync_database_failure`. See [HISTORICAL_IDENTITY.md](HISTORICAL_IDENTITY.md).
 
 ## Current acquisition direction — DATA-05A

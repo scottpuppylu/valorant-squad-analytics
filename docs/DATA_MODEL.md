@@ -1,5 +1,7 @@
 # Data model
 
+> **TASK-DATA-03B.2D (`analysis-match-facts-v1`):** server-only derived facts (one per linked participant × match) feed the full-tracked analysis read; they never reach the browser and are not scores. `MatchRecord`/`MatchPerformance` shapes and values are unchanged. See [FULL_TRACKED_LATENCY.md](FULL_TRACKED_LATENCY.md).
+
 > **TASK-DATA-PERFORMANCE-SCORE-01:** no `performanceScore` field exists; `MatchPerformance.acs` remains legacy ACS. A future separate nullable field is specified in See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
 
 > **TASK-DATA-BULK-01 (`bulk-history-v1`):** no schema, migration or public contract change. The controller's local

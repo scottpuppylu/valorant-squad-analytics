@@ -1,5 +1,7 @@
 # Full-tracked analytics — TASK-DATA-03B.2C (2026-10-06)
 
+> **TASK-DATA-03B.2D (2026-10-06, `full-tracked-aggregate-v1` over `analysis-match-facts-v1`, migration 0011):** full-population analysis reads one fact row per visible performance in ONE statement (6 statements total, independent of history size; was `5 + 4·⌈n/250⌉`). Facts are the exact event-metrics-v1 reconstruction, refreshed in the same per-match transaction as every evidence write and trusted only while fresh; otherwise that match is reconstructed from raw evidence. Public contract, scope semantics and every formula are unchanged (byte-identical to the previous engine). See [FULL_TRACKED_LATENCY.md](FULL_TRACKED_LATENCY.md).
+
 > **TASK-DATA-MODE-POLICY-01:** 全部已追蹤 for strength features now means all tracked **Competitive** matches (全部已追蹤排位). Inventory counts stay all-mode. There is still no match-count cap. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
 
 Status: **COMPLETE / ACCEPTED**. The REAL website has **no 300-match functional ceiling** and **no generic
