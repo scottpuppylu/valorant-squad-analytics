@@ -1,5 +1,8 @@
 # V1 release preflight
 
+> **TASK-DATA-BULK-01 (2026-10-06):** the bulk backfill canary passed (≤ 12 provider requests); the full crawl is NOT
+> STARTED. This is not a release action, and V1 is NOT YET RELEASED. See [BULK_HISTORY.md](BULK_HISTORY.md).
+
 ## Current dependency security gate — TASK-SECURITY-02 (2026-10-06)
 
 Dependency security gate disposition updated.

@@ -1,5 +1,8 @@
 # Durable historical synchronization
 
+> **TASK-DATA-BULK-01 (`bulk-history-v1`):** the local `npm run history:bulk` controller only invokes the existing
+> start/continue/status routes. Chunk semantics, page size 3, leases, backoff and consent are unchanged. See [BULK_HISTORY.md](BULK_HISTORY.md).
+
 ## Current extension — TASK-DATA-FASTSYNC-01
 
 `HistoricalSyncService.refreshIfStale` reuses `executeChunk`, the cursor lease, the consent checks,

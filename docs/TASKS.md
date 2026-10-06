@@ -4,7 +4,15 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-SECURITY-02 (2026-10-06)
+## Current decision — TASK-DATA-BULK-01 (2026-10-06)
+
+**IMPLEMENTED / CANARY PASSED.** `bulk-history-v1` (`npm run history:bulk`) is a local maintainer controller.
+- It drives the existing account-scoped deep_backfill through the public sync routes only, with no secrets and no new endpoint.
+- Production canary: 12 provider requests charged, 10 actual, 0 errors. Tracked matches went from 191 to 213.
+- Two lanes are now the default (+62% steady-state throughput).
+- **Full crawl: NOT STARTED** — it needs explicit human authorization. See [BULK_HISTORY.md](BULK_HISTORY.md).
+
+## Earlier decision — TASK-SECURITY-02 (2026-10-06)
 
 **COMPLETE / SECURITY DISPOSITION ACCEPTED.** The full audit drifted from 5 → 8.
 - source-map-js GHSA-68fv: FIXED by a compatible lockfile patch (`d021e5e`).

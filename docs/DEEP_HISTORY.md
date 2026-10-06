@@ -1,5 +1,9 @@
 # Deep historical acquisition
 
+> **TASK-DATA-BULK-01 (`bulk-history-v1`):** deep_backfill can be driven continuously by the local maintainer
+> controller (≤ 2 accounts in flight, ≤ 8 provider requests/min, never two requests per account). deep-history-v1 is
+> unchanged and the server cursor stays authoritative. See [BULK_HISTORY.md](BULK_HISTORY.md).
+
 ## Current acquisition decision — DATA-05A (2026-10-05)
 
 Explicit human decision supersedes the following Riot-response freeze. DATA-03A

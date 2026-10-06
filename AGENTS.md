@@ -60,6 +60,8 @@
 | TASK-DATA-FASTSYNC-01.2 FASTSYNC UI navigation regression test repair | NOT STARTED |
 | TASK-SECURITY-02 dependency audit drift reassessment | COMPLETE / SECURITY DISPOSITION ACCEPTED (2026-10-06): full audit 7 (5 high GHSA-vfj7 → SEC-2026-001 original subset only; 2 moderate GHSA-rj75 → SEC-2026-002, review 2026-11-03); source-map-js GHSA-68fv FIXED; production audit 0 — see docs/SECURITY_EXCEPTIONS.md |
 | TASK-SECURITY-03 Tailwind 4 / build toolchain security migration | NOT STARTED — needs explicit authorization |
+| TASK-DATA-BULK-01 multi-account bulk historical backfill accelerator | IMPLEMENTED / CANARY PASSED (2026-10-06; bulk-history-v1; 12 charged / 10 actual provider requests; 2 lanes default) — see docs/BULK_HISTORY.md |
+| TASK-DATA-BULK-01 full historical crawl | NOT STARTED — needs explicit human authorization |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
 | Riot ticket #139243830 | OPEN — informational / non-blocking |
@@ -69,6 +71,15 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-DATA-BULK-01 (2026-10-06, SDD STRICT): `bulk-history-v1` = `npm run history:bulk` (scripts/bulk-history.ts,
+  scripts/bulk/). Rules:
+  - Local maintainer controller only. It calls only the existing public dataset and sync start/continue/status routes.
+  - Never add secrets, DB access, provider calls, admin or bulk endpoints, new functions, or raised rate limits.
+  - Never import it from src/api/server/shared.
+  - Plan mode (0 POSTs) is the default. Execute needs a selector and a finite --max-provider-requests.
+  - ≤ 2 lanes, never two requests per account, ≤ 8 provider requests per minute.
+  - Never run the full crawl or leave a worker running without explicit authorization. Read docs/BULK_HISTORY.md first.
 
 - TASK-SECURITY-02 (2026-10-06): never reuse a SEC record beyond its exact findings. Every advisory maps to FIXED,
   TEMPORARILY ACCEPTED (exact SEC id) or BLOCKING. Production audit must stay 0. Never force-fix, override, patch

@@ -1,5 +1,8 @@
 # Tracker-style persistent scheduled sync
 
+> **TASK-DATA-BULK-01 (2026-10-06):** cron cadence is unchanged. The local `bulk-history-v1` controller is an
+> additional maintainer-run, bounded accelerator for deep_backfill and is never unattended. See [BULK_HISTORY.md](BULK_HISTORY.md).
+
 > **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** scheduled sync stays ACCOUNT-scoped (cursors, runs, eligibility per Riot account). Cron is unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
 
 > **TASK-DATA-FASTSYNC-01 (2026-10-06):** the daily `recent`/`history` crons are unchanged and

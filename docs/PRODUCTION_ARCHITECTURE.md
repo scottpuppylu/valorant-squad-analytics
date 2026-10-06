@@ -10,6 +10,7 @@ TASK-IDENTITY-01: members (people) above Riot accounts; public schema 5 `member-
 TASK-IDENTITY-01B: community name + optional nickname, schema 6 `member-identity-v2`; all name edits are operator-only (no public edit endpoint). The 9 approved names were applied once by data migration 0010 via `db:migrate:vercel` (secret never retrieved).
 TASK-WEAPON-01: `view=analysis&feature=weaponAnalytics` (WEAPON_ANALYTICS.md) — aggregate SQL over all eligible weapon evidence; still 12 functions; no migration.
 TASK-WEAPON-01.1: `weapon-catalog-v2` (Warden → Rifle); classification only.
+TASK-DATA-BULK-01: local `bulk-history-v1` maintainer controller calls only the existing public sync routes. There are no new functions (still 12), no raised rate limits and no secrets; see BULK_HISTORY.md.
 TASK-SECURITY-02: dev/build dependency audit re-verified — production install, browser and API closures contain no affected package; see SECURITY_EXCEPTIONS.md / TASK_SECURITY_02.md.
 TASK-DATA-SEASON-01 persists provider season evidence (SEASON_EVIDENCE.md).
 DATA-04B deferred. DATA-03B.1 (history pages via `/api/valorant/dataset?view=history`,

@@ -1,5 +1,8 @@
 # Data model
 
+> **TASK-DATA-BULK-01 (`bulk-history-v1`):** no schema, migration or public contract change. The controller's local
+> state (`.local/bulk-history-state.json`, gitignored) holds public account and run ids only. See [BULK_HISTORY.md](BULK_HISTORY.md).
+
 > **TASK-WEAPON-01.1:** `weapon-catalog-v2` classifies Warden as Rifle (Riot Patch 13.06); classification only, no data change.
 
 > **TASK-WEAPON-01 (weapon-analytics-v1):** descriptive member-level weapon analytics read existing `round_participants.weapon_*` (round observation) and `kill_events.weapon_*` (kill weapon) — two separate domains; no new columns, no persisted weapon statistics; per-weapon HS%/ADR/damage/accuracy and attack/defense are unavailable. See [WEAPON_ANALYTICS.md](WEAPON_ANALYTICS.md).
