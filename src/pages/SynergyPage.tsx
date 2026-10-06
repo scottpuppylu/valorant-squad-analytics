@@ -6,28 +6,29 @@ import { PlayerAvatar } from '../components/PlayerAvatar';
 import { SynergyDetail } from '../components/SynergyDetail';
 import { StatusBadge } from '../components/StatusBadge';
 import { useDataset } from '../hooks/useDataset';
-import { useSynergyDataset } from '../hooks/useScopedAnalysis';
-import { buildSynergy, canonicalPair, defaultSynergyFilters } from '../synergy/analytics';
+import { useSynergyResults } from '../hooks/useScopedAnalysis';
+import { canonicalPair } from '../synergy/analytics';
 import { formatPercent, formatScore } from '../utils/format';
 import { actOptionLabel, compareSeasonKeysDesc } from '../analytics/scope/season';
 
 const dateValue = (value: string | null) => value && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) ? value : '';
 
 export function SynergyPage() {
-  const { dataset: snapshotDataset, analytics: { population } } = useDataset();
+  // TASK-DATA-03B.2C: map/mode options come from all tracked facts (view=analytics), never the transport snapshot.
+  const { dataset: snapshotDataset, analytics: { population, availableMaps: maps, availableGameModes: modes }, analyticsContext } = useDataset();
   const [params, setParams] = useSearchParams();
-  const maps = [...new Set(snapshotDataset.matches.map((m) => m.map))].sort();
-  const modes = [...new Set(snapshotDataset.matches.map((m) => m.gameMode))].sort();
   const map = maps.includes(params.get('map') ?? '') ? params.get('map')! : 'all';
   const gameMode = modes.includes(params.get('mode') ?? '') ? params.get('mode')! : 'all';
   const from = dateValue(params.get('from')); const to = dateValue(params.get('to'));
   const act = population.seasonKeys.includes(params.get('act') ?? '') ? params.get('act')! : '';
+  // No artificial ceiling: any non-negative safe integer (values above the tracked population simply match no pair).
   const minimum = Number(params.get('min') ?? 0);
-  const minimumShared = Number.isSafeInteger(minimum) && minimum >= 0 && minimum <= 300 ? minimum : 0;
-  // DATA-03B.2B: pair sample and baselines come from the server pair context over all durable history.
-  const pairPopulation = useSynergyDataset({ map, mode: gameMode, ...(act ? { act } : {}), ...(from ? { from } : {}), ...(to ? { to } : {}) });
-  const dataset = useMemo(() => ({ ...pairPopulation.dataset, players: snapshotDataset.players }), [pairPopulation.dataset, snapshotDataset.players]);
-  const results = useMemo(() => buildSynergy(dataset, { ...defaultSynergyFilters, map, gameMode, from, to, ...(act ? { act } : {}) }), [dataset,map,gameMode,from,to,act]);
+  const minimumShared = Number.isSafeInteger(minimum) && minimum >= 0 ? minimum : 0;
+  const trackedMatches = analyticsContext?.population.trackedMatchCount;
+  // Pair sample and baselines come from the server pair context over all durable history (duo-synergy-v1 server-side).
+  const pairPopulation = useSynergyResults({ map, mode: gameMode, ...(act ? { act } : {}), ...(from ? { from } : {}), ...(to ? { to } : {}) });
+  const dataset = useMemo(() => ({ isDemo: snapshotDataset.isDemo, players: snapshotDataset.players }), [snapshotDataset.isDemo, snapshotDataset.players]);
+  const results = pairPopulation.results;
   const shortlist = results.filter((r) => r.sharedSample.matches >= minimumShared);
   const validId = (id: string | null) => typeof id === 'string' && dataset.players.some((p) => p.id === id) ? id : undefined;
   const a = validId(params.get('a')) ?? shortlist[0]?.pair.playerAId ?? dataset.players[0]?.id;
@@ -59,13 +60,13 @@ export function SynergyPage() {
         <label>模式<select aria-label="模式" className={inputClass} value={gameMode} onChange={(e) => update({mode:e.target.value})}><option value="all">全部模式</option>{modes.map((m) => <option key={m}>{m}</option>)}</select></label>
         <label>開始日期<input aria-label="開始日期" className={inputClass} type="date" value={from} onChange={(e) => update({from:e.target.value})} /></label>
         <label>結束日期<input aria-label="結束日期" className={inputClass} type="date" value={to} onChange={(e) => update({to:e.target.value})} /></label>
-        <label>排行最少共同場次<input aria-label="排行最少共同場次" className={inputClass} type="number" min="0" max="300" value={minimumShared} onChange={(e) => update({min:e.target.value})} /></label>
+        <label>排行最少共同場次<input aria-label="排行最少共同場次" className={inputClass} type="number" min="0" step="1" {...(trackedMatches ? { max: String(trackedMatches) } : {})} value={minimumShared} onChange={(e) => update({min:e.target.value})} /></label>
         <button className="button-secondary self-end" type="button" onClick={() => setParams({})}>重設條件</button>
       </section>
       <p className="text-sm text-slate-400">資料範圍（全部已追蹤或指定 Act）、日期、地圖與模式同時套用共同場次及雙方基準（analysis-scope-v1 搭檔情境）；不使用全域特務／角色或最近 N 場篩選，避免拆散配對。</p>
       {pairPopulation.status === 'loading' ? <p className="sample-warning" role="status">正在以伺服器完整已追蹤歷史計算共同場次與雙方基準…</p>
         : pairPopulation.status === 'error' ? <p className="sample-warning" role="alert">伺服器搭檔分析暫時無法取得；為避免改用其他資料範圍，此處不顯示替代結果。</p>
-        : <p className="text-sm text-slate-400">{pairPopulation.source === 'server' ? `共同場次與雙方基準由伺服器依完整已追蹤歷史（${pairPopulation.trackedMatchCount ?? '—'} 場）選取，不受瀏覽器 300 場快照限制。` : '示範資料：在瀏覽器內以固定虛構資料計算。'}</p>}
+        : <p className="text-sm text-slate-400">{pairPopulation.source === 'server' ? `共同場次與雙方基準由伺服器依全部已追蹤戰績（${pairPopulation.trackedMatchCount ?? '—'} 場）計算；此情境共 ${pairPopulation.populationMatches ?? '—'} 場。歷史資料持續補齊中。` : '示範資料：在瀏覽器內以固定虛構資料計算。'}</p>}
       {pairPopulation.status === 'loading' || pairPopulation.status === 'error' ? null : selected ? <SynergyDetail result={selected} /> : <div id="pair-detail"><EmptyState title="沒有共同同隊樣本" description="請選擇其他搭檔，或放寬日期、地圖與模式條件。" actions={<button type="button" className="button-secondary" onClick={() => setParams({})}>重設條件</button>} /></div>}
       <section><h2 className="mb-4 text-xl text-white">目前樣本搭檔關聯</h2><div className="grid gap-3 md:grid-cols-2">
         {shortlist.map((r) => <button key={r.pair.key} type="button" onClick={() => choose(r.pair.playerAId,r.pair.playerBId)} className="surface-card min-w-0 p-4 text-left">

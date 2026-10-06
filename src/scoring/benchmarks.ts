@@ -1,6 +1,6 @@
-import type { PlayerRole } from '../types/valorant';
-import type { Benchmark } from './types';
-import { BENCHMARK_VERSION } from './versions';
+import type { PlayerRole } from '../types/valorant.js';
+import type { Benchmark } from './types.js';
+import { BENCHMARK_VERSION } from './versions.js';
 export type ScoredMetric = 'acs' | 'adr' | 'kd' | 'kpr' | 'apr' | 'kast' | 'firstKillsPerRound';
 export const roleBenchmarks: Record<PlayerRole, Record<ScoredMetric, readonly [number, number]>> = {
   Duelist: { acs: [175,275], adr:[120,175], kd:[.78,1.35], kpr:[.58,.9], apr:[.12,.32], kast:[.64,.8], firstKillsPerRound:[.08,.2] },

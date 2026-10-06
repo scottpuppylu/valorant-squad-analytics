@@ -1,7 +1,7 @@
-import { clamp } from '../utils/number';
-import { SCORING_RULE_VERSION, BENCHMARK_VERSION } from './versions';
-import type { Dimension } from './versions';
-import type { ComponentTrace, ScoreResult } from './types';
+import { clamp } from '../utils/number.js';
+import { SCORING_RULE_VERSION, BENCHMARK_VERSION } from './versions.js';
+import type { Dimension } from './versions.js';
+import type { ComponentTrace, ScoreResult } from './types.js';
 
 export function calculateConfidence(matches: number, rounds: number, coverage: number): number {
   return clamp(100 * Math.sqrt(Math.min(Math.max(matches, 0) / 30, 1) * Math.min(Math.max(rounds, 0) / 600, 1)) * clamp(coverage, 0, 1));

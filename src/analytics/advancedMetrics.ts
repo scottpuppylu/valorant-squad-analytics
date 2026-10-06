@@ -1,5 +1,5 @@
-import type { MetricCoverage, MetricEvidence, MetricEvidenceStatus, TradeMetrics, KastMetrics, ClutchMetrics, ObjectiveMetrics, AbilityCastMetrics, EconomyMetrics, ImpactContextMetrics, AdvancedMetrics } from '../types/advancedMetrics';
-import type { MatchPerformance } from '../types/valorant';
+import type { MetricCoverage, MetricEvidence, MetricEvidenceStatus, TradeMetrics, KastMetrics, ClutchMetrics, ObjectiveMetrics, AbilityCastMetrics, EconomyMetrics, ImpactContextMetrics, AdvancedMetrics } from '../types/advancedMetrics.js';
+import type { MatchPerformance } from '../types/valorant.js';
 
 export interface AggregatedAdvancedMetrics {
   ruleVersion?: string; coverage: MetricCoverage;

@@ -1,7 +1,7 @@
-import type { PlayerEmoji } from './avatar';
-import type { ScoreResult } from '../scoring/types';
-import type { Dimension } from '../scoring/versions';
-import type { AdvancedMetrics } from './advancedMetrics';
+import type { PlayerEmoji } from './avatar.js';
+import type { ScoreResult } from '../scoring/types.js';
+import type { Dimension } from '../scoring/versions.js';
+import type { AdvancedMetrics } from './advancedMetrics.js';
 
 export type PlayerRole = 'Duelist' | 'Initiator' | 'Controller' | 'Sentinel';
 

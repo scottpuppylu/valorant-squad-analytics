@@ -1,16 +1,16 @@
-import { agentRoles } from '../utils/agentRoles';
-import { dimensions } from '../scoring/versions';
-import { zhTW } from '../i18n/zhTW';
-import { calculatePlayerScores } from '../scoring/calculateScores';
-import type { AgentName, MapName, MatchRecord, Player, PlayerAnalytics, PlayerRole } from '../types/valorant';
-import { aggregatePlayerStats } from '../utils/aggregateStats';
-import { safeDivide } from '../utils/number';
-import type { BadgeAward, GroupSummary, PerformanceEntry, RecentForm, SelectionResult } from './types';
-import { resolveAdaptiveWindow } from './scope/adaptiveWindow';
-import { policyFor } from './scope/policies';
-import { populationFromMatches } from './scope/resolveScope';
-import type { AdaptiveWindowResult, ScopePopulation } from './scope/types';
-import { aggregateSelection } from './rankings';
+import { agentRoles } from '../utils/agentRoles.js';
+import { dimensions } from '../scoring/versions.js';
+import { zhTW } from '../i18n/zhTW.js';
+import { calculatePlayerScores } from '../scoring/calculateScores.js';
+import type { AgentName, MapName, MatchRecord, Player, PlayerAnalytics, PlayerRole } from '../types/valorant.js';
+import { aggregatePlayerStats } from '../utils/aggregateStats.js';
+import { safeDivide } from '../utils/number.js';
+import type { BadgeAward, GroupSummary, PerformanceEntry, RecentForm, SelectionResult } from './types.js';
+import { resolveAdaptiveWindow } from './scope/adaptiveWindow.js';
+import { policyFor } from './scope/policies.js';
+import { populationFromMatches } from './scope/resolveScope.js';
+import type { AdaptiveWindowResult, ScopePopulation } from './scope/types.js';
+import { summarizeSelection, type SelectionSummary } from './summary.js';
 
 function summarize(id: string, label: string, entries: PerformanceEntry[]): GroupSummary {
   const rounds = entries.reduce((sum, entry) => sum + entry.rounds, 0);
@@ -33,7 +33,7 @@ function summarize(id: string, label: string, entries: PerformanceEntry[]): Grou
   };
 }
 
-function groupEntries<T extends string>(entries: PerformanceEntry[], key: (entry: PerformanceEntry) => T): Map<T, PerformanceEntry[]> {
+export function groupEntries<T extends string>(entries: PerformanceEntry[], key: (entry: PerformanceEntry) => T): Map<T, PerformanceEntry[]> {
   const groups = new Map<T, PerformanceEntry[]>();
   for (const entry of entries) groups.set(key(entry), [...(groups.get(key(entry)) ?? []), entry]);
   return groups;
@@ -58,7 +58,7 @@ export function comparePlayers(analytics: PlayerAnalytics[], playerIds: string[]
   return unique.flatMap((id) => byId.get(id) ?? []);
 }
 
-function analyticsFromEntries(player: Player, entries: PerformanceEntry[]): PlayerAnalytics | undefined {
+export function analyticsFromEntries(player: Player, entries: PerformanceEntry[]): PlayerAnalytics | undefined {
   if (entries.length === 0) return undefined;
   const matches: MatchRecord[] = entries.map(({ match, performance }) => ({ ...match, performances: [performance] }));
   const stats = aggregatePlayerStats(player, matches);
@@ -118,7 +118,21 @@ export function resolveWinners(values: Array<{ playerId: string; value: number }
  * recentForm policy chooses its own windows (defaults to `selection` for compatibility).
  */
 export function computeBadges(selection: SelectionResult, minMatches = 5, minRounds = 100, formSelection: SelectionResult = selection, population?: ScopePopulation, formWindows?: Map<string, AdaptiveWindowResult>): BadgeAward[] {
-  const eligible = aggregateSelection(selection).filter(({ stats }) => stats.matches >= minMatches && stats.rounds >= minRounds);
+  const forms = [...formSelection.byPlayer.values()].flatMap((entries) => {
+    const player = entries[0]?.player;
+    if (!player) return [];
+    const window = formWindows?.get(player.id);
+    return [{ playerId: player.id, form: window ? recentFormFromWindow(player, window) : calculateRecentForm(player, entries, population) }];
+  });
+  return computeBadgesFromSummary(summarizeSelection(selection), minMatches, minRounds, forms);
+}
+
+/**
+ * TASK-DATA-03B.2C: badges from a selection summary (server or local) — identical rules: eligible
+ * analytics, 地圖王 over each player's maps with >= 3 appearances, 近期進步最多 from recent forms.
+ */
+export function computeBadgesFromSummary(summary: SelectionSummary, minMatches = 5, minRounds = 100, forms: { playerId: string; form: RecentForm }[] = []): BadgeAward[] {
+  const eligible = summary.analytics.filter(({ stats }) => stats.matches >= minMatches && stats.rounds >= minRounds);
   const specifications = [
     ...dimensions.map((key) => [key, zhTW.scores[key]+'領先', '🏅', key, (a: PlayerAnalytics) => a.scores[key].value ?? Number.NaN] as const),
     ['headshot', '爆頭王', '🎯', 'HS%', (a: PlayerAnalytics) => a.stats.headshotPercentage ?? Number.NaN],
@@ -128,23 +142,13 @@ export function computeBadges(selection: SelectionResult, minMatches = 5, minRou
     return result ? [{ id, label, emoji, metricBasis: basis, minMatches, minRounds, ...result, tieRule: '最高值 0.1 以內並列' }] : [];
   });
 
-  const mapCandidates = [...new Set(selection.entries.map((entry) => entry.playerId))].flatMap((playerId) => {
-    const playerEntries = selection.byPlayer.get(playerId) ?? [];
-    const player = playerEntries[0]?.player;
-    if (!player) return [];
-    return [...groupEntries(playerEntries, (entry) => entry.match.map)]
-      .filter(([, group]) => group.length >= 3)
-      .map(([, group]) => ({ playerId, value: analyticsFromEntries(player, group)!.scores.overall.value ?? Number.NaN }));
-  });
+  const mapCandidates = summary.players.flatMap(({ playerId, maps }) => maps
+    .filter((map) => map.appearances >= 3)
+    .map((map) => ({ playerId, value: map.overall ?? Number.NaN })));
   const mapWinner = resolveWinners(mapCandidates);
   if (mapWinner) awards.push({ id: 'map', label: '地圖王', emoji: '🗺️', metricBasis: '單一地圖 Overall', minMatches: 3, minRounds: 0, ...mapWinner, tieRule: '最高值 0.1 以內並列' });
 
-  const formWinner = resolveWinners([...formSelection.byPlayer.values()].flatMap((entries) => {
-    const player = entries[0]?.player;
-    const window = player ? formWindows?.get(player.id) : undefined;
-    const form = player ? (window ? recentFormFromWindow(player, window) : calculateRecentForm(player, entries, population)) : undefined;
-    return form?.delta === undefined ? [] : [{ playerId: player!.id, value: form.delta }];
-  }));
+  const formWinner = resolveWinners(forms.flatMap(({ playerId, form }) => (form.delta === undefined ? [] : [{ playerId, value: form.delta }])));
   if (formWinner) awards.push({ id: 'form', label: '近期進步最多', emoji: '📈', metricBasis: '自適應現況區間 Overall − 不重疊基準區間 Overall（僅競技模式，adaptive-window-v1）', minMatches: 6, minRounds: 0, ...formWinner, tieRule: '最高變化 0.1 分以內並列' });
   return awards;
 }

@@ -1,13 +1,13 @@
-import type { NormalizedAnalyticsDataset } from '../dataSources/types';
-import type { MatchPerformance, MatchRecord, Player } from '../types/valorant';
-import { calculatePlayerScores } from '../scoring/calculateScores';
-import { aggregatePlayerStats } from '../utils/aggregateStats';
-import { agentRoles } from '../utils/agentRoles';
-import { calculateSynergyIndex } from './index';
-import { SYNERGY_BENCHMARK_VERSION, SYNERGY_RULE_VERSION, synergyCoverageGate, synergyPriorStrength } from './benchmarks';
-import type { DuoSynergyResult, PairMember, PairWindow, SynergyFilters } from './types';
-import { pairTradeEvidence } from './tradeEvidence';
-import { matchesInPairContext } from '../analytics/scope/resolveScope';
+import type { NormalizedAnalyticsDataset } from '../dataSources/types.js';
+import type { MatchPerformance, MatchRecord, Player } from '../types/valorant.js';
+import { calculatePlayerScores } from '../scoring/calculateScores.js';
+import { aggregatePlayerStats } from '../utils/aggregateStats.js';
+import { agentRoles } from '../utils/agentRoles.js';
+import { calculateSynergyIndex } from './index.js';
+import { SYNERGY_BENCHMARK_VERSION, SYNERGY_RULE_VERSION, synergyCoverageGate, synergyPriorStrength } from './benchmarks.js';
+import type { DuoSynergyResult, PairMember, PairWindow, SynergyFilters } from './types.js';
+import { pairTradeEvidence } from './tradeEvidence.js';
+import { matchesInPairContext } from '../analytics/scope/resolveScope.js';
 
 export const defaultSynergyFilters: SynergyFilters = { from: '', to: '', map: 'all', gameMode: 'all', minimumShared: 0 };
 export const canonicalPair = (a: string, b: string) => {

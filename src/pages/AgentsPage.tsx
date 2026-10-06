@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
-import { groupByAgent, groupByRole } from '../analytics/analysis';
-import { rankPlayers } from '../analytics/rankings';
+import { rankAnalytics } from '../analytics/rankings';
 import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
 import { PlayerRankingTable } from '../components/PlayerRankingTable';
 import { SectionHeading } from '../components/SectionHeading';
@@ -21,12 +20,12 @@ export function AgentsPage() {
   const baseFilters = useMemo(() => ({ ...filters, agent: 'all' as const, role: 'all' as const }), [filters]);
   const baseAnalysis = useScopedAnalysis(baseFilters, { lifetimeFeature: 'agentStats' });
   const baseSelection = baseAnalysis.selection;
-  const summaries = useMemo(() => view === 'agent' ? groupByAgent(baseSelection.entries) : groupByRole(baseSelection.entries), [baseSelection.entries, view]);
+  const summaries = view === 'agent' ? baseAnalysis.summary.groups.agents : baseAnalysis.summary.groups.roles;
   const selectedId = view === 'agent' ? (filters.agent === 'all' ? summaries[0]?.id : filters.agent) : (filters.role === 'all' ? summaries[0]?.id : filters.role);
   const selectedFilters = useMemo(() => ({ ...filters, agent: view === 'agent' ? selectedId as typeof filters.agent : 'all' as const, role: view === 'role' ? selectedId as PlayerRole : 'all' as const }), [filters, selectedId, view]);
   const selectedAnalysis = useScopedAnalysis(selectedFilters, { lifetimeFeature: 'agentStats' });
-  const selected = selectedAnalysis.selection;
-  const rows = useMemo(() => rankPlayers(selected, filters, 'overall'), [filters, selected]);
+  const selectedSummary = selectedAnalysis.summary;
+  const rows = useMemo(() => rankAnalytics(selectedSummary.analytics, filters, 'overall'), [filters, selectedSummary]);
 
   function changeView(nextView: string) {
     const next = new URLSearchParams(params);

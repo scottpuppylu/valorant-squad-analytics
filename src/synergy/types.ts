@@ -1,6 +1,6 @@
-import type { ScoreResult } from '../scoring/types';
+import type { ScoreResult } from '../scoring/types.js';
 export type ScoreStatus = ScoreResult['status'];
-import type { Player, PlayerRole } from '../types/valorant';
+import type { Player, PlayerRole } from '../types/valorant.js';
 
 /** PAIR context (feature-scope-policy-v1 `synergy`): optional public Act key plus date/map/mode. */
 export interface SynergyFilters { from: string; to: string; map: string; gameMode: string; minimumShared: number; act?: string }

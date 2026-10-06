@@ -1,5 +1,5 @@
-import type { MatchRecord, Player, RawPlayerStats, RecentPerformance } from '../types/valorant';
-import { safeDivide } from './number';
+import type { MatchRecord, Player, RawPlayerStats, RecentPerformance } from '../types/valorant.js';
+import { safeDivide } from './number.js';
 
 interface PlayerMatchEntry {
   match: MatchRecord;

@@ -14,6 +14,10 @@ export interface AnalyticsPopulationFacts {
   seasonKeys: string[];
   seasonStatus: ScopeStatus;
   rankStatus: ScopeStatus;
+  /** TASK-DATA-03B.2C: filter options over ALL tracked matches (never the transport snapshot). */
+  maps?: string[];
+  agents?: string[];
+  gameModes?: string[];
 }
 
 export interface DatasetAnalytics {
@@ -48,9 +52,9 @@ export function buildAnalytics(activeDataset: NormalizedAnalyticsDataset, facts?
     activeDataset,
     playerAnalytics,
     performanceEntries,
-    availableMaps: [...new Set(activeDataset.matches.map((match) => match.map))].sort(),
-    availableGameModes: [...new Set(activeDataset.matches.map((match) => match.gameMode))].sort(),
-    availableAgents: [...new Set(activeDataset.matches.flatMap((match) => match.performances.map((performance) => performance.agent)))].sort(),
+    availableMaps: [...new Set([...activeDataset.matches.map((match) => match.map), ...(facts?.maps ?? [])])].sort(),
+    availableGameModes: [...new Set([...activeDataset.matches.map((match) => match.gameMode), ...(facts?.gameModes ?? [])])].sort(),
+    availableAgents: [...new Set([...activeDataset.matches.flatMap((match) => match.performances.map((performance) => performance.agent)), ...(facts?.agents ?? [])])].sort(),
     population,
     currentStrength: { analytics: currentAnalytics, selection: currentSelection },
     getPlayerAnalytics: (playerId: string) => playerAnalytics.find(({ player }) => player.id === playerId),

@@ -1,6 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { defaultAnalysisFilters } from '../analytics/filters';
-import { aggregateSelection } from '../analytics/rankings';
 import { compareScoreResults } from '../scoring/calculateScores';
 import { AnalysisStatusNotice } from '../components/AnalysisStatusNotice';
 import { useScopedAnalysis } from '../hooks/useScopedAnalysis';
@@ -22,19 +21,23 @@ import { MemberNickname } from '../components/MemberNickname';
 const ScoreRadar = lazy(() => import('../components/ScoreRadar').then((module) => ({ default: module.ScoreRadar })));
 
 export function DashboardPage() {
-  const { analytics: { activeDataset } } = useDataset();
+  const { analytics: { activeDataset }, analyticsContext } = useDataset();
   // Community ranking population = feature currentStrength, resolved by the server over all durable
   // history (DATA-03B.2B) or locally for Demo; adaptive-window-v1, Competitive only.
   const currentFilters = useMemo(() => ({ ...defaultAnalysisFilters, period: 'current' as const }), []);
   // form: true shares the prefetched default request with the Leaderboard.
   const analysis = useScopedAnalysis(currentFilters, { form: true });
-  const currentStrength = useMemo(() => ({ selection: analysis.selection, analytics: aggregateSelection(analysis.selection)
-    .sort((a, b) => compareScoreResults(a.scores.overall, b.scores.overall) || a.player.handle.localeCompare(b.player.handle)) }), [analysis.selection]);
+  const currentStrength = useMemo(() => ({ selection: analysis.selection, analytics: [...analysis.summary.analytics]
+    .sort((a, b) => compareScoreResults(a.scores.overall, b.scores.overall) || a.player.handle.localeCompare(b.player.handle)) }), [analysis.selection, analysis.summary.analytics]);
   const playerAnalytics = currentStrength.analytics;
   const [selectedPlayerId, setSelectedPlayerId] = useState(playerAnalytics[0]?.player.id ?? '');
   const selected = playerAnalytics.find(({ player }) => player.id === selectedPlayerId) ?? playerAnalytics[0];
   const leader = playerAnalytics[0];
-  const teamWinRate = activeDataset.matches.filter((match) => match.won).length / activeDataset.matches.length;
+  // REAL: all tracked matches (view=analytics); the transport snapshot is never a population. Demo: local data.
+  const outcome = analyticsContext?.facets?.teamOutcome;
+  const teamWinRate = outcome ? (outcome.matches ? outcome.wins / outcome.matches : Number.NaN)
+    : activeDataset.matches.filter((match) => match.won).length / activeDataset.matches.length;
+  const trackedMatches = analyticsContext?.population.trackedMatchCount ?? (activeDataset.mode === 'REAL' ? undefined : activeDataset.matches.length);
   const withoutWindow = [...(currentStrength.selection.scope?.players.values() ?? [])].filter((item) => item.status === 'unavailable')
     .map((item) => activeDataset.players.find((player) => player.id === item.playerId)?.handle).filter(Boolean);
 
@@ -52,7 +55,7 @@ export function DashboardPage() {
     <div className="space-y-14">
       <section className="hero-grid">
         <div className="max-w-3xl">
-          <span className="data-pill mb-5 inline-flex"><span /> {activeDataset.matches.length} 場{activeDataset.mode === 'REAL' ? '真實' : '虛構'}對戰 · {activeDataset.players.length} 位玩家</span>
+          <span className="data-pill mb-5 inline-flex"><span /> {activeDataset.mode === 'REAL' ? `已追蹤 ${trackedMatches ?? '—'} 場真實對戰` : `${trackedMatches} 場虛構對戰`} · {activeDataset.players.length} 位玩家</span>
           <h1 className="font-display text-4xl font-semibold leading-[1.04] tracking-[-0.035em] text-white sm:text-4xl lg:text-5xl">
             小隊表現總覽
           </h1>
@@ -89,7 +92,7 @@ export function DashboardPage() {
       <section>
         <SectionHeading
           eyebrow="綜合排名"
-          title="小隊快照"
+          title="小隊概況"
           description="依「目前實力」範圍（近期競技、自適應觀察區間）排序；樣本信心獨立呈現，永遠不會提高表現分數。"
           action={<Link className="text-link" to="/leaderboard">完整排名 →</Link>}
         />

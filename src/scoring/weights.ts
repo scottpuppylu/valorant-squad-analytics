@@ -1,6 +1,6 @@
-import type { Dimension } from './versions';
-import type { ComponentMetric } from './benchmarks';
-import type { PlayerRole } from '../types/valorant';
+import type { Dimension } from './versions.js';
+import type { ComponentMetric } from './benchmarks.js';
+import type { PlayerRole } from '../types/valorant.js';
 export type MetricWeight = readonly [ComponentMetric, number];
 export const categoryMetricWeights: Record<Exclude<Dimension,'roleValue'>, readonly MetricWeight[]> = {
   firepower:[['acs',.35],['adr',.30],['kpr',.20],['kd',.15]],

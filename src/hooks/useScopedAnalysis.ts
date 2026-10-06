@@ -9,6 +9,9 @@ import { useDataset } from './useDataset';
 import { computeImprovementIndex, type ImprovementResult } from '../analytics/progress/improvementIndex';
 import { resolveProgressWindows } from '../analytics/progress/windows';
 import type { Player } from '../types/valorant';
+import { summarizeSelection, type SelectionSummary } from '../analytics/summary';
+import { buildSynergy, defaultSynergyFilters } from '../synergy/analytics';
+import type { DuoSynergyResult } from '../synergy/types';
 
 export type ScopedAnalysisStatus = 'local' | 'loading' | 'ready' | 'stale' | 'error';
 
@@ -16,14 +19,24 @@ export interface ScopedAnalysis {
   status: ScopedAnalysisStatus;
   /** 'server' = full durable history (DATA-03B.2B); 'snapshot' = local analysis of the loaded dataset (Demo/tests). */
   source: 'server' | 'snapshot';
+  /** Scope + hydrated bounded windows. With the server the population entries are NOT shipped. */
   selection: SelectionResult;
-  /** Dataset whose players/matches back `selection` (server population or the local snapshot). */
+  /**
+   * TASK-DATA-03B.2C: every page aggregate of the feature population (selection-summary-v1), computed
+   * by the server over all tracked history, or locally from `selection` for Demo/tests.
+   */
+  summary: SelectionSummary;
+  /** Players + matches referenced by bounded windows (server) or the local snapshot (Demo). */
   dataset: NormalizedAnalyticsDataset;
   formWindows?: Map<string, AdaptiveWindowResult>;
   trackedMatchCount?: number;
+  /** Matches the feature population aggregated (server only). */
+  populationMatches?: number;
+  populationComplete?: boolean;
 }
 
 const emptySelection: SelectionResult = { entries: [], byPlayer: new Map() };
+const emptySummary = summarizeSelection(emptySelection);
 
 /**
  * DATA-03B.2B: analytics populations come from the server over ALL eligible durable history.
@@ -34,6 +47,7 @@ export function useScopedAnalysis(filters: AnalysisFilters, options: { lifetimeF
   const { analytics: { activeDataset, performanceEntries, population }, loadAnalysis, snapshot } = useDataset();
   const lifetimeFeature = options.lifetimeFeature ?? 'lifetimeTotals';
   const local = useMemo(() => selectPerformances(performanceEntries, filters, { population, lifetimeFeature }), [filters, lifetimeFeature, performanceEntries, population]);
+  const localSummary = useMemo(() => (loadAnalysis ? emptySummary : summarizeSelection(local)), [loadAnalysis, local]);
   const query = useMemo(() => analysisQueryFor(filters, lifetimeFeature, options.form === true), [filters, lifetimeFeature, options.form]);
   // Snapshot version in the key: a data refresh re-runs server analysis.
   const key = query ? JSON.stringify([query, snapshot?.version ?? null]) : undefined;
@@ -56,24 +70,31 @@ export function useScopedAnalysis(filters: AnalysisFilters, options: { lifetimeF
 
   const server = useMemo(() => (settled?.response && settled.key === key ? {
     selection: selectionFromAnalysis(settled.response),
+    // A scope feature without a summary is not a usable v2 answer (never re-derived from a snapshot).
+    summary: settled.response.summary ?? emptySummary,
     formWindows: formWindowsFromAnalysis(settled.response),
     dataset: settled.response.dataset,
     trackedMatchCount: settled.response.coverage.trackedMatchCount,
+    populationMatches: settled.response.coverage.populationMatches,
+    populationComplete: settled.response.coverage.populationComplete,
   } : undefined), [key, settled]);
 
   // Local analysis: Demo/tests, or a request that needs no data (e.g. 指定 Act with no Act chosen).
-  if (!loadAnalysis || !query) return { status: 'local', source: 'snapshot', selection: local, dataset: activeDataset };
+  if (!loadAnalysis) return { status: 'local', source: 'snapshot', selection: local, summary: localSummary, dataset: activeDataset };
+  // REAL with no request (指定 Act not chosen yet): an explicit empty population, never the snapshot.
+  if (!query) return { status: 'local', source: 'server', selection: emptySelection, summary: emptySummary, dataset: { ...activeDataset, matches: [] } };
   if (server) return { status: 'ready', source: 'server', ...server };
-  return { status: settled?.failed && settled.key === key ? 'error' : 'loading', source: 'server', selection: emptySelection, dataset: { ...activeDataset, matches: [] } };
+  return { status: settled?.failed && settled.key === key ? 'error' : 'loading', source: 'server', selection: emptySelection, summary: emptySummary, dataset: { ...activeDataset, matches: [] } };
 }
 
 export interface SynergyContext { act?: string; from?: string; to?: string; map: string; mode: string }
 
 /**
- * DATA-03B.2B PAIR population: shared appearances AND both baselines come from the same server
- * context over all durable history (never the snapshot). duo-synergy-v1 itself runs unchanged in the browser.
+ * PAIR population: shared appearances AND both baselines come from the same server context over all
+ * durable history (never the snapshot). TASK-DATA-03B.2C: duo-synergy-v1 runs unchanged on the server
+ * over the full pair population and only its results are shipped; Demo runs the same code locally.
  */
-export function useSynergyDataset(context: SynergyContext): { status: ScopedAnalysisStatus; source: 'server' | 'snapshot'; dataset: NormalizedAnalyticsDataset; trackedMatchCount?: number } {
+export function useSynergyResults(context: SynergyContext): { status: ScopedAnalysisStatus; source: 'server' | 'snapshot'; results: DuoSynergyResult[]; players: Player[]; trackedMatchCount?: number; populationMatches?: number } {
   const { dataset, loadAnalysis, snapshot } = useDataset();
   const query = useMemo<AnalysisQuery>(() => ({ feature: 'synergy', map: context.map, mode: context.mode,
     ...(context.act ? { act: context.act } : {}), ...(context.from ? { from: context.from } : {}), ...(context.to ? { to: context.to } : {}) }),
@@ -90,9 +111,12 @@ export function useSynergyDataset(context: SynergyContext): { status: ScopedAnal
     }).catch(() => { if (!abort.signal.aborted) setSettled({ key, failed: true }); });
     return () => abort.abort();
   }, [key, loadAnalysis, query]);
-  if (!loadAnalysis) return { status: 'local', source: 'snapshot', dataset };
-  if (settled?.response && settled.key === key) return { status: 'ready', source: 'server', dataset: settled.response.dataset, trackedMatchCount: settled.response.coverage.trackedMatchCount };
-  return { status: settled?.failed && settled.key === key ? 'error' : 'loading', source: 'server', dataset: { ...dataset, matches: [] } };
+  const local = useMemo(() => (loadAnalysis ? [] : buildSynergy(dataset, { ...defaultSynergyFilters, map: context.map, gameMode: context.mode,
+    from: context.from ?? '', to: context.to ?? '', ...(context.act ? { act: context.act } : {}) })), [context.act, context.from, context.map, context.mode, context.to, dataset, loadAnalysis]);
+  if (!loadAnalysis) return { status: 'local', source: 'snapshot', results: local, players: dataset.players };
+  if (settled?.response && settled.key === key) return { status: 'ready', source: 'server', results: settled.response.synergy ?? [], players: settled.response.dataset.players,
+    trackedMatchCount: settled.response.coverage.trackedMatchCount, populationMatches: settled.response.coverage.populationMatches };
+  return { status: settled?.failed && settled.key === key ? 'error' : 'loading', source: 'server', results: [], players: dataset.players };
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { PlayerRole, ScoreCategory } from '../types/valorant';
+import type { PlayerRole, ScoreCategory } from '../types/valorant.js';
 
 export const zhTW = {
   brand: {

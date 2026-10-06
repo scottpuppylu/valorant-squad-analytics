@@ -1,5 +1,5 @@
-import { dimensions, OVERALL_PROFILE_VERSION } from './versions';
-import type { ScoringProfile } from './types';
+import { dimensions, OVERALL_PROFILE_VERSION } from './versions.js';
+import type { ScoringProfile } from './types.js';
 export const defaultProfile: ScoringProfile = {
   version: OVERALL_PROFILE_VERSION,
   weights: { firepower: .18, roundImpact: .16, entry: .12, teamplay: .16, clutch: .10, economy: .10, consistency: .10, roleValue: .08 },

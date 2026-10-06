@@ -1,5 +1,5 @@
-import { synergyBenchmarks, synergyCoverageGate, synergyPriorStrength } from './benchmarks';
-import type { ScoreStatus, SynergyComponentKey, SynergyIndex } from './types';
+import { synergyBenchmarks, synergyCoverageGate, synergyPriorStrength } from './benchmarks.js';
+import type { ScoreStatus, SynergyComponentKey, SynergyIndex } from './types.js';
 
 export interface PairSignal { a?: number; b?: number; status: ScoreStatus }
 export const mutualLift = (a?: number, b?: number): number | undefined =>

@@ -182,6 +182,7 @@ export interface DatasetCoverageContract {
   to?: string;
   lastSyncedAt?: string;
   completeForProviderWindow: boolean;
+  /** Transport snapshot size only; never total tracked history, analysis completeness or maximum browsable history. */
   boundedMatchLimit: number;
   lifetimeComplete: false;
 }
@@ -265,7 +266,15 @@ export interface DatasetAnalyticsContextResponse {
   scopeRuleVersion: 'analysis-scope-v1';
   featurePolicyVersion: 'feature-scope-policy-v2';
   adaptiveWindowVersion: 'adaptive-window-v1';
+  /** snapshotWindow is the TRANSPORT bootstrap size only (never an analytics/history boundary). */
   population: { trackedMatchCount: number; snapshotWindow: number; snapshotCoversTrackedHistory: boolean; lifetimeComplete: false };
+  /** TASK-DATA-03B.2C all-tracked facets (filter options, team outcome); identifier-free. */
+  facets?: {
+    maps: { map: string; matches: number }[];
+    agents: string[];
+    gameModes: string[];
+    teamOutcome: { matches: number; wins: number };
+  };
   evidence: {
     season: { status: ScopeEvidenceStatus; matchesWithSeasonId: number; matchesWithSeasonShort: number; matchesWithAct: number; matchesWithoutAct: number;
       seasonIdWithoutPublicAct: number; unrecognizedSeasonCodes: number; currentActKnown: false; latestRecordedAct?: string;

@@ -157,7 +157,7 @@ export class WeaponAnalyticsService {
     let pairs: string[] | null = null;
     let scopeStatus: EvidenceState | undefined;
     if (current) {
-      const selection = current.payload.selection;
+      const selection = current.selection;
       pairs = Object.entries(selection).flatMap(([memberId, matchIds]) => matchIds.map((matchId) => `${memberId}|${matchId}`));
       const scope = current.payload.scope;
       if (scope) { scopeStatus = scope.status; reasons.push(...scope.reasons); }

@@ -5,6 +5,7 @@ import { compareSeasonKeysDesc, normalizeSeasonKey, seasonLabel } from '../../sr
 import type { ScopeStatus } from '../../src/analytics/scope/types.js';
 import { ADAPTIVE_WINDOW_VERSION, ANALYSIS_SCOPE_VERSION, ANALYTICS_CONTEXT_VERSION, FEATURE_SCOPE_POLICY_VERSION } from '../../src/analytics/scope/versions.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
+import { activePlayers as visibleAccounts } from './postgresDatasetReadRepository.js';
 import { datasetSchemaVersion, datasetWindowSize } from './types.js';
 
 /** Same CURRENT visibility rule as the snapshot/history (re-evaluated every request). */
@@ -26,18 +27,51 @@ interface ContextGroupRow extends Record<string, unknown> {
   matches: number;
 }
 
+interface ContextFacetRow extends Record<string, unknown> {
+  maps: { map: string; matches: number }[] | null;
+  agents: string[] | null;
+  outcome_matches: number | null;
+  outcome_wins: number | null;
+}
+
 export interface AnalyticsContextRows {
   groups: ContextGroupRow[];
   rankObservations: number;
+  /** TASK-DATA-03B.2C all-tracked facets (absent in older test fixtures). */
+  facets?: ContextFacetRow;
   sqlQueryCount: number;
 }
+
+/**
+ * TASK-DATA-03B.2C: filter options and the team outcome over ALL eligible tracked matches (never the
+ * transport snapshot). One aggregate statement; no identifiers of any kind leave this view.
+ * Team outcome uses the projection's rule: the lowest-public-id visible participant's team.
+ */
+export const analyticsFacetsSql = `
+  WITH active_players AS (${visibleAccounts}),
+  observed AS (
+    SELECT sm.id AS match_id, COALESCE(sm.map_name, 'Unknown') AS map_name, mp.agent_name, mp.team_key, ap.public_id
+    FROM source_matches sm
+    JOIN match_participants mp ON mp.source_match_id=sm.id
+    JOIN active_players ap ON ap.id=mp.player_id
+    WHERE sm.started_at IS NOT NULL
+  ),
+  first_team AS (
+    SELECT DISTINCT ON (o.match_id) o.match_id, o.team_key FROM observed o ORDER BY o.match_id, o.public_id
+  )
+  SELECT
+    (SELECT json_agg(json_build_object('map', m.map_name, 'matches', m.matches) ORDER BY m.map_name)
+       FROM (SELECT map_name, count(DISTINCT match_id)::int AS matches FROM observed GROUP BY map_name) m) AS maps,
+    (SELECT json_agg(a.agent_name ORDER BY a.agent_name) FROM (SELECT DISTINCT agent_name FROM observed WHERE agent_name IS NOT NULL) a) AS agents,
+    (SELECT count(*)::int FROM first_team) AS outcome_matches,
+    (SELECT count(*)::int FROM first_team ft JOIN match_teams mt ON mt.source_match_id=ft.match_id AND mt.team_key=ft.team_key WHERE mt.won IS TRUE) AS outcome_wins`;
 
 export class PostgresAnalyticsContextRepository {
   constructor(private readonly database: Pick<SqlDatabase, 'query'>) {}
 
   /** Two aggregate statements; no identifiers, no per-match rows. */
   async readContextRows(): Promise<AnalyticsContextRows> {
-    const [groups, rank] = await Promise.all([
+    const [groups, rank, facets] = await Promise.all([
       this.database.query<ContextGroupRow>(`WITH active_players AS (${activePlayers}),
         eligible AS (
           SELECT DISTINCT sm.id, sm.started_at, sm.season_id, sm.season_short, sm.game_length_ms, sm.queue_id, sm.queue_name
@@ -53,8 +87,9 @@ export class PostgresAnalyticsContextRepository {
         FROM eligible GROUP BY 1,2,3,4,5,6`),
       this.database.query<{ observations: number }>(`WITH active_players AS (${activePlayers})
         SELECT count(*)::int AS observations FROM rank_observations ro JOIN active_players ap ON ap.id=ro.player_id`),
+      this.database.query<ContextFacetRow>(analyticsFacetsSql),
     ]);
-    return { groups: groups.rows, rankObservations: Number(rank.rows[0]?.observations ?? 0), sqlQueryCount: 2 };
+    return { groups: groups.rows, rankObservations: Number(rank.rows[0]?.observations ?? 0), ...(facets.rows[0] ? { facets: facets.rows[0] } : {}), sqlQueryCount: 3 };
   }
 }
 
@@ -97,11 +132,19 @@ export function buildAnalyticsContext(rows: AnalyticsContextRows) {
     population: {
       /** Eligible durable matches with a start time; never a Riot lifetime total. */
       trackedMatchCount,
+      /** TRANSPORT bootstrap size only — never an analytics, history or completeness boundary. */
       snapshotWindow: datasetWindowSize,
-      /** True when the newest-300 snapshot holds every eligible tracked match. */
+      /** True when the transport snapshot happens to hold every eligible tracked match (informational). */
       snapshotCoversTrackedHistory: eligibleMatches <= datasetWindowSize,
       lifetimeComplete: false as const,
     },
+    ...(rows.facets ? { facets: {
+      /** All tracked matches: filter options are never derived from the transport snapshot. */
+      maps: (rows.facets.maps ?? []).map((item) => ({ map: item.map, matches: Number(item.matches) })),
+      agents: rows.facets.agents ?? [],
+      gameModes: [...queues.keys()].sort(),
+      teamOutcome: { matches: Number(rows.facets.outcome_matches ?? 0), wins: Number(rows.facets.outcome_wins ?? 0) },
+    } } : {}),
     evidence: {
       season: {
         status: ratioStatus(withSeason, trackedMatchCount),

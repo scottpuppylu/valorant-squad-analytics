@@ -166,6 +166,7 @@ export function DatasetProvider({ children, client = serverDatasetApiClient, for
     seasonKeys: activeContext.evidence.season.acts.map((act) => act.key),
     seasonStatus: activeContext.evidence.season.status,
     rankStatus: activeContext.evidence.rank.status,
+    ...(activeContext.facets ? { maps: activeContext.facets.maps.map((item) => item.map), agents: activeContext.facets.agents, gameModes: activeContext.facets.gameModes } : {}),
   } : undefined, [activeContext]);
   const analytics = useMemo(() => buildAnalytics(state.dataset, state.source === 'REAL_SERVER' ? facts : undefined), [facts, state.dataset, state.source]);
   const historyLoader = useMemo(() => client.loadHistory?.bind(client), [client]);

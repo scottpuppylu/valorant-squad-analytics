@@ -5,9 +5,9 @@ import { scoreMetricIds } from '../i18n/zhTW';
 import { ScoreExplanation } from '../components/ScoreExplanation';
 import { lazy, Suspense, useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { calculateRecentForm, recentFormFromWindow, groupByAgent, groupByMap, mapExtremes, mostUsedAgent } from '../analytics/analysis';
+import { calculateRecentForm, recentFormFromWindow } from '../analytics/analysis';
+import { mapExtremesFromSummary, playerSummary } from '../analytics/summary';
 import { selectPerformances } from '../analytics/filters';
-import { aggregateSelection } from '../analytics/rankings';
 import { AnalysisFilterBar } from '../components/AnalysisFilterBar';
 import { EmojiAvatarPicker } from '../components/EmojiAvatarPicker';
 import { MetricInfo } from '../components/MetricInfo';
@@ -52,17 +52,19 @@ export function PlayerProfilePage() {
   const selection = analysis.selection;
   // Recent form selects its own adaptive current/baseline windows from the context without a horizon.
   const formEntries = useMemo(() => selectPerformances(performanceEntries, { ...filters, period: 'all', playerId: player?.id ?? '__missing__' }, { population }).byPlayer.get(player?.id ?? '') ?? [], [filters, performanceEntries, player, population]);
-  const analytics = useMemo(() => aggregateSelection(selection)[0], [selection]);
-  const entries = selection.byPlayer.get(player?.id ?? '') ?? [];
+  const analytics = analysis.summary.analytics[0];
+  const context = playerSummary(analysis.summary, player?.id ?? '');
+  // Per-account appearances of THIS page's population (server summary; never the transport snapshot).
+  const accountCounts = useMemo(() => (analysis.source === 'server' ? new Map((context?.accounts ?? []).map((item) => [item.accountId, item.appearances])) : undefined), [analysis.source, context]);
 
   if (!player) {
     return <EmptyState page title="這個玩家連結不存在" description="請回到戰力排名選擇目前資料集中的玩家。" actions={<Link className="button-primary" to="/leaderboard">返回戰力排名</Link>} />;
   }
 
-  const maps = groupByMap(entries);
-  const agents = groupByAgent(entries);
-  const extremes = mapExtremes(player, entries);
-  const primaryAgent = mostUsedAgent(entries);
+  const maps = context?.maps ?? [];
+  const agents = context?.agents ?? [];
+  const extremes = mapExtremesFromSummary(context);
+  const primaryAgent = agents[0]?.id;
   const serverForm = analysis.formWindows?.get(player.id);
   const form = serverForm ? recentFormFromWindow(player, serverForm) : calculateRecentForm(player, formEntries, population);
   const statCards: Array<[string, string, string]> = analytics ? [
@@ -84,7 +86,7 @@ export function PlayerProfilePage() {
     </section>
 
     <EmojiAvatarPicker key={player.id} player={player} />
-    <MemberAccounts player={player} matches={activeDataset.matches} />
+    <MemberAccounts player={player} matches={activeDataset.matches} {...(accountCounts ? { counts: accountCounts } : {})} />
     <RecentRefreshPanel accounts={player.accounts ?? []} />
     <AnalysisFilterBar filters={filters} onChange={update} onReset={reset} players={activeDataset.players} maps={availableMaps} agents={availableAgents} gameModes={availableGameModes} includePlayer={false} seasonKeys={population.seasonKeys} />
     <AnalysisStatusNotice analysis={analysis} />

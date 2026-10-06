@@ -10,10 +10,10 @@ import { enforceRateLimit } from '../../server/rateLimit.js';
 import { clientKey } from '../../server/http.js';
 
 /**
- * Absent `view`: unchanged schema 4 newest-300 snapshot.
+ * Absent `view`: the bounded newest-300 TRANSPORT snapshot (bootstrap only; not an analytics/history boundary).
  * `view=history`: DATA-03B.1 bounded keyset page (browse only).
  * `view=analytics`: DATA-03B.2A aggregate population/evidence facts for scope labels.
- * `view=analysis`: DATA-03B.2B server-resolved feature population over all durable history;
+ * `view=analysis`: server-analysis-v2 (TASK-DATA-03B.2C) aggregates of the full feature population over all durable history;
  *   `feature=weaponAnalytics` (TASK-WEAPON-01) is aggregate weapon evidence over all eligible history.
  * All served by this same function to stay within the 12-function Vercel Hobby limit.
  */

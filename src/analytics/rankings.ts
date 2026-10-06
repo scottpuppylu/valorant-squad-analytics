@@ -1,8 +1,8 @@
-import { compareScoreResults, calculatePlayerScores } from '../scoring/calculateScores';
-import type { MatchRecord, PlayerAnalytics } from '../types/valorant';
-import { aggregatePlayerStats, getRecentPerformances } from '../utils/aggregateStats';
-import { safeDivide } from '../utils/number';
-import type { AnalysisFilters, PerformanceEntry, RankedPlayer, RankingMetric, SelectionResult, SortDirection } from './types';
+import { compareScoreResults, calculatePlayerScores } from '../scoring/calculateScores.js';
+import type { MatchRecord, PlayerAnalytics } from '../types/valorant.js';
+import { aggregatePlayerStats, getRecentPerformances } from '../utils/aggregateStats.js';
+import { safeDivide } from '../utils/number.js';
+import type { AnalysisFilters, PerformanceEntry, RankedPlayer, RankingMetric, SelectionResult, SortDirection } from './types.js';
 
 export const rankingMetricLabels: Record<RankingMetric, string> = {
   roundImpact: '回合影響', economy: '經濟效率', roleValue: '角色價值', overall: '綜合表現', firepower: '火力', entry: '開戰影響', teamplay: '團隊貢獻', clutch: '殘局能力', consistency: '穩定度',
@@ -43,8 +43,18 @@ export function rankPlayers(
   metric: RankingMetric,
   direction: SortDirection = lowerIsBetterMetrics.has(metric) ? 'asc' : 'desc',
 ): RankedPlayer[] {
+  return rankAnalytics(aggregateSelection(selection), filters, metric, direction);
+}
+
+/** TASK-DATA-03B.2C: the same ranking over precomputed analytics (server or local summary). */
+export function rankAnalytics(
+  analytics: PlayerAnalytics[],
+  filters: AnalysisFilters,
+  metric: RankingMetric,
+  direction: SortDirection = lowerIsBetterMetrics.has(metric) ? 'asc' : 'desc',
+): RankedPlayer[] {
   const factor = direction === 'asc' ? 1 : -1;
-  return aggregateSelection(selection)
+  return analytics
     .filter(({ stats }) => stats.matches > 0 && stats.rounds > 0 && stats.matches >= filters.minMatches && stats.rounds >= filters.minRounds)
     .flatMap((analytics) => {
       const value = rankingValue(analytics, metric);
@@ -54,7 +64,11 @@ export function rankPlayers(
 }
 
 export function insufficientPlayers(selection: SelectionResult, filters: AnalysisFilters): string[] {
-  return aggregateSelection(selection)
+  return insufficientFromAnalytics(aggregateSelection(selection), filters);
+}
+
+export function insufficientFromAnalytics(analytics: PlayerAnalytics[], filters: AnalysisFilters): string[] {
+  return analytics
     .filter(({ stats }) => stats.matches < filters.minMatches || stats.rounds < filters.minRounds)
     .map(({ player }) => player.id);
 }

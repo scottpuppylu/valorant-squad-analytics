@@ -1,4 +1,4 @@
-import type { MatchRecord, PairTradeEvidence } from '../types/valorant';
+import type { MatchRecord, PairTradeEvidence } from '../types/valorant.js';
 
 /** Expand only in memory; IDs and common coverage are not duplicated on the wire. */
 export function pairTradeEvidence(match: MatchRecord): PairTradeEvidence[] {

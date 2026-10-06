@@ -126,5 +126,11 @@ export function isDatasetAnalyticsContextResponse(value: unknown): value is Data
     && evidence.season.currentActKnown === false && Array.isArray(evidence.season.acts)
     && evidence.season.acts.every((act) => isRecord(act) && normalizeSeasonKey(act.key) === act.key && count(act.matches))
     && isRecord(evidence.rank) && scopeStatuses.has(evidence.rank.status)
-    && isRecord(evidence.duration) && Array.isArray(evidence.queues);
+    && isRecord(evidence.duration) && Array.isArray(evidence.queues)
+    && (candidate.facets === undefined || (isRecord(candidate.facets)
+      && Array.isArray(candidate.facets.maps) && candidate.facets.maps.every((item) => isRecord(item) && typeof item.map === 'string' && count(item.matches))
+      && Array.isArray(candidate.facets.agents) && candidate.facets.agents.every((agent) => typeof agent === 'string')
+      && Array.isArray(candidate.facets.gameModes) && candidate.facets.gameModes.every((mode) => typeof mode === 'string')
+      && isRecord(candidate.facets.teamOutcome) && count(candidate.facets.teamOutcome.matches) && count(candidate.facets.teamOutcome.wins)
+      && candidate.facets.teamOutcome.wins <= candidate.facets.teamOutcome.matches));
 }

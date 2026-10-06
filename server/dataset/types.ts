@@ -5,6 +5,11 @@ export const datasetSchemaVersion = 6 as const;
 /** TASK-IDENTITY-01: public `Player` = MEMBER (person) with 1..N sanitized accounts. */
 export const datasetIdentityVersion = 'member-identity-v2' as const;
 export const datasetProjectionVersion = 'evidence-decoupled-projection-v1' as const;
+/**
+ * TRANSPORT bootstrap size of the default snapshot (identity bootstrap, recent display, rollback, Demo).
+ * TASK-DATA-03B.2C: NOT a product-data boundary — analytics are server-side over all tracked history
+ * (view=analysis/analytics) and browsing pages through all of it (view=history).
+ */
 export const datasetWindowSize = 300;
 
 /** One public ACCOUNT row with its member (TASK-IDENTITY-01). Internal ids never leave the server. */
@@ -212,6 +217,7 @@ export interface DatasetCoverage {
   to?: string;
   lastSyncedAt?: string;
   completeForProviderWindow: boolean;
+  /** Transport snapshot size only; never total tracked history, analysis completeness or maximum browsable history. */
   boundedMatchLimit: number;
   lifetimeComplete: false;
 }

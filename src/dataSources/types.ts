@@ -1,4 +1,4 @@
-import type { MatchRecord, Player } from '../types/valorant';
+import type { MatchRecord, Player } from '../types/valorant.js';
 
 export interface NormalizedAnalyticsDataset {
   players: Player[];

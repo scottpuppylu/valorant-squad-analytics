@@ -1,18 +1,18 @@
-import type { MatchRecord, MatchPerformance, Player, PlayerAnalytics, PlayerScores, PlayerRole, RawPlayerStats } from '../types/valorant';
-import type { MetricEvidenceStatus } from '../types/advancedMetrics';
-import { aggregateAdvancedMetrics } from '../analytics/advancedMetrics';
-import { aggregatePlayerStats, getRecentPerformances } from '../utils/aggregateStats';
-import { agentRoles } from '../utils/agentRoles';
-import { standardDeviation } from '../utils/number';
-import { benchmarkFor, type ComponentMetric } from './benchmarks';
-import { normalizeBenchmark } from './normalize';
-import { categoryMetricWeights, roleWeights, type MetricWeight } from './weights';
-import { defaultProfile, validateProfile } from './profiles';
-import { dimensionResult, calculateConfidence } from './components';
-import { dimensions, SCORING_RULE_VERSION, BENCHMARK_VERSION } from './versions';
-import type { Dimension } from './versions';
-import type { ComponentTrace, ScoreResult, ScoringProfile } from './types';
-export { calculateConfidence } from './components';
+import type { MatchRecord, MatchPerformance, Player, PlayerAnalytics, PlayerScores, PlayerRole, RawPlayerStats } from '../types/valorant.js';
+import type { MetricEvidenceStatus } from '../types/advancedMetrics.js';
+import { aggregateAdvancedMetrics } from '../analytics/advancedMetrics.js';
+import { aggregatePlayerStats, getRecentPerformances } from '../utils/aggregateStats.js';
+import { agentRoles } from '../utils/agentRoles.js';
+import { standardDeviation } from '../utils/number.js';
+import { benchmarkFor, type ComponentMetric } from './benchmarks.js';
+import { normalizeBenchmark } from './normalize.js';
+import { categoryMetricWeights, roleWeights, type MetricWeight } from './weights.js';
+import { defaultProfile, validateProfile } from './profiles.js';
+import { dimensionResult, calculateConfidence } from './components.js';
+import { dimensions, SCORING_RULE_VERSION, BENCHMARK_VERSION } from './versions.js';
+import type { Dimension } from './versions.js';
+import type { ComponentTrace, ScoreResult, ScoringProfile } from './types.js';
+export { calculateConfidence } from './components.js';
 
 interface Entry { performance: MatchPerformance; rounds: number; role?: PlayerRole }
 interface Observation { value?: number; denominator: number; coverage: number; status: string; reason?: string; events?: number }
