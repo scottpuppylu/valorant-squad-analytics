@@ -66,7 +66,8 @@
 | Full-tracked analysis latency (≈ 10 s at 671 matches, linear) | RISK — must be addressed before ~4,000 tracked matches (60 s limit); never by sampling or a cap |
 | TASK-SCORING-RANK-01 | NOT STARTED |
 | TASK-DATA-PERFORMANCE-SCORE-01 official Performance Score evidence | AUDIT COMPLETE / PHASE B BLOCKED (2026-10-06): provider field NOT VERIFIED (outcome D); `stats.score` = legacy combat-score total → ACS_SAFE; nothing ingested — see docs/PERFORMANCE_SCORE.md |
-| TASK-SCORING-SHARED-MATCH-01 shared-match relative rating | NOT STARTED |
+| TASK-SCORING-SHARED-MATCH-01 shared-match relative rating (Competitive + Unrated, within-match) | NOT STARTED |
+| TASK-DATA-MODE-POLICY-01 mode eligibility | COMPLETE / ACCEPTED (2026-10-06): mode-eligibility-policy-v1; strength analytics Competitive only; Unrated = future same-match only; other modes browse-only; feature-scope-policy-v3, weapon-analytics-v2; formulas unchanged — see docs/MODE_ELIGIBILITY.md |
 | TASK-DATA-RANK-01 rank ingestion | NOT STARTED (rank stays optional) |
 | DATA-04B Riot provider / RSO | DEFERRED |
 | Riot ticket #139243830 | OPEN — informational / non-blocking |
@@ -76,6 +77,16 @@ The dated bullets below are a chronological log. Status words inside them descri
 they were written; lines marked **[SUPERSEDED]** must not be read as current state.
 
 ### Dated stage log
+
+- TASK-DATA-MODE-POLICY-01 (2026-10-06, SDD STRICT): rules.
+  - Queue rules live ONLY in `src/analytics/modeEligibility.ts` (mode-eligibility-policy-v1).
+  - Every "how good is this person?" metric, score, ranking, map/agent/role/Act/weapon/progress/current/recent/trend value
+    and duo-synergy-v1 uses **Competitive only**.
+  - Unrated may only feed future within-the-same-match comparisons, never cross-match per-player aggregates.
+  - Premier, Custom, entertainment and unknown modes are browse-only; fail closed, with no fuzzy rule.
+  - An explicit ineligible mode never computes.
+  - Never filter storage, acquisition or history browsing by mode.
+  - New eligible modes need explicit product authorization. Read docs/MODE_ELIGIBILITY.md first.
 
 - TASK-DATA-PERFORMANCE-SCORE-01 (2026-10-06, SDD STRICT): rules.
   - Never treat Henrik `stats.score` as Performance Score, and never reuse `match_participants.score` for it.

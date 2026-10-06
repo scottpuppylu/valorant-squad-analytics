@@ -1,5 +1,7 @@
 # Server-side context-aware analytics
 
+> **TASK-DATA-MODE-POLICY-01:** server-analysis-v2 is structurally unchanged. It adds `modeEligibilityPolicyVersion` and `featurePolicyVersion: feature-scope-policy-v3`; strength populations are Competitive only, and an explicit ineligible mode returns no analytics. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
+
 > **TASK-DATA-03B.2C (2026-10-06) — CURRENT: `server-analysis-v2`.**
 > - The 2000-match phase-2 cap is REMOVED. Phase 2 walks the whole selected population in 250-match
 >   chunks.

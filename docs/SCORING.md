@@ -1,5 +1,7 @@
 # Evidence-aware community scoring
 
+> **TASK-DATA-MODE-POLICY-01:** community-score-v2 / community-benchmarks-v1 / overall-profile-v1 formulas are **unchanged**, but every population feeding them is **Competitive only**. Unrated and entertainment modes contribute zero evidence. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
+
 > **TASK-DATA-PERFORMANCE-SCORE-01:** the official VALORANT Performance Score is **NOT part of community-score-v2** and is not ingested. Firepower/Consistency keep using ACS = legacy combat-score total ÷ rounds, which was verified unchanged after Patch 13.06 (ACS_SAFE). No formula changed. See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
 
 Versions: `community-score-v2`, `community-benchmarks-v1`, `overall-profile-v1`.

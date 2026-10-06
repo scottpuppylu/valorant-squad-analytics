@@ -4,7 +4,19 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-BULK-01B Phase 2 (2026-10-06)
+## Current decision — TASK-DATA-MODE-POLICY-01 (2026-10-06)
+
+**COMPLETE / ACCEPTED.**
+- `mode-eligibility-policy-v1`: absolute strength analytics are **Competitive only**.
+- Unrated is eligible only for the future same-match relative engine (TASK-SCORING-SHARED-MATCH-01, NOT STARTED).
+- Entertainment, Premier, Custom and unknown modes are browse-only.
+- feature-scope-policy-v3 (queue eligibility only) and weapon-analytics-v2 (population only) are active; every score
+  formula is unchanged and duo-synergy-v1 is Competitive only.
+- Production: 309 Competitive of 671 tracked; every absolute population is 309 or a subset of it.
+- Bulk is still STOPPED / BLOCKED, the DATABASE_ERROR is NOT RESOLVED, and the analysis latency risk is OPEN.
+- See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
+
+## Earlier decision — TASK-DATA-BULK-01B Phase 2 (2026-10-06)
 
 **STOPPED / BLOCKED** on the first `DATABASE_ERROR` (one `sync/continue` 503 for 滑板車; root cause NOT VERIFIED).
 - Ran 53.6 min at 2 lanes / 6 RPM with **zero 429**: 311 charged / 310 measured provider requests.

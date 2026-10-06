@@ -1,5 +1,10 @@
 # Code map
 
+## TASK-DATA-MODE-POLICY-01
+
+- `src/analytics/modeEligibility.ts` (mode-eligibility-policy-v1) is the only queue rule. It is enforced in `src/analytics/scope/resolveScope.ts` (`resolveScopeSelection`, `matchesInPairContext`, `populationFromMatches`) via `policies.ts` (feature-scope-policy-v3), in `server/dataset/weaponAnalytics.ts` and in `src/analytics/weapons/local.ts`. `server/dataset/analyticsContext.ts` adds the eligibility counts. Tests: `tests/modeEligibility.test.ts`. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
+
+
 ## TASK-DATA-PERFORMANCE-SCORE-01
 
 - `server/evidence/shapeInspector.ts` (provider-shape-inspector-v1): value-free path discovery. `HenrikDataProvider.auditPerformanceScoreShape` plus `mode: "performance-score"` on `api/valorant/provider/audit.ts` (non-production only, ≤ 2 logical requests). Tests: `tests/providerShapeInspector.test.ts`. See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).

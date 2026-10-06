@@ -1,5 +1,7 @@
 # Full-tracked analytics — TASK-DATA-03B.2C (2026-10-06)
 
+> **TASK-DATA-MODE-POLICY-01:** 全部已追蹤 for strength features now means all tracked **Competitive** matches (全部已追蹤排位). Inventory counts stay all-mode. There is still no match-count cap. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
+
 Status: **COMPLETE / ACCEPTED**. The REAL website has **no 300-match functional ceiling** and **no generic
 2000-match ALL/ACT/PAIR ceiling**.
 

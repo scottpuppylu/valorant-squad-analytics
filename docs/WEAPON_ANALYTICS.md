@@ -1,5 +1,7 @@
 # Member weapon analytics (TASK-WEAPON-01)
 
+> **TASK-DATA-MODE-POLICY-01 → weapon-analytics-v2 (population contract only):** ALL / ACT / CURRENT weapon evidence is Competitive only. `mode=all` means every eligible mode; an ineligible mode is `queue_excluded_by_policy`. Formulas, thresholds and weapon-catalog-v2 are unchanged. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
+
 > **Current catalog: `weapon-catalog-v2`** (TASK-WEAPON-01.1, 2026-10-06). Warden is classified as a
 > **Rifle** (`isFirearm: true`, public key `warden`). Official basis: Riot VALORANT Patch Notes 13.06
 > (Weapon Class: Rifle). This is a classification-only correction: `weapon-analytics-v1` formulas,

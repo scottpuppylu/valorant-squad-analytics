@@ -1,5 +1,7 @@
 # Adaptive Improvement Index (進步指數)
 
+> **TASK-DATA-MODE-POLICY-01:** improvement-index-v1 is unchanged and stays Competitive only for current and baseline. The previous-Act fallback never crosses into Unrated. The adaptive anchor now comes from Competitive evidence only. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
+
 > **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** Progress is person-level: current/baseline windows are chosen over the member's merged chronological evidence from all linked accounts. improvement-index-v1 is unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
 
 TASK-PROGRESS-01 — SDD STRICT, authorized 2026-10-05. Starting HEAD

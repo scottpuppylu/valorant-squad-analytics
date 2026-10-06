@@ -1,5 +1,7 @@
 # V1 release preflight
 
+> **TASK-DATA-MODE-POLICY-01 (2026-10-06):** Competitive-only strength analytics are active and verified read-only in production. This is not a release action; V1 is NOT YET RELEASED. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
+
 > **TASK-DATA-PERFORMANCE-SCORE-01 (2026-10-06):** audit complete. The Performance Score provider field is NOT VERIFIED; ACS_SAFE. Not a release action; V1 NOT YET RELEASED. See [PERFORMANCE_SCORE.md](PERFORMANCE_SCORE.md).
 
 > **TASK-DATA-03B.2C (2026-10-06):** the REAL website 300-match functional ceiling and the generic

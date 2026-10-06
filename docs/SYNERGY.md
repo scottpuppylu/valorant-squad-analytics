@@ -1,5 +1,7 @@
 # Evidence-aware teammate synergy — duo-synergy-v1
 
+> **TASK-DATA-MODE-POLICY-01:** duo-synergy-v1 (formula unchanged) is **Competitive only**. It compares pair windows with each member's baselines from different matches using Overall, so it is an absolute-strength consumer. The future TASK-SCORING-SHARED-MATCH-01 is the first engine allowed to use Competitive + Unrated (within-match). See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
+
 > **TASK-IDENTITY-01 (member-identity-v1, 2026-10-06):** pairs are member↔member; shared games from any linked account count toward the same pair. duo-synergy-v1 is unchanged. See [MEMBER_IDENTITY.md](MEMBER_IDENTITY.md).
 
 Status: implementation complete; final release acceptance is recorded in TASK_SYNERGY_01_PLAN.md.

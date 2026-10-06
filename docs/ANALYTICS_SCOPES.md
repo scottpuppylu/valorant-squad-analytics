@@ -1,5 +1,7 @@
 # Context-aware analytics scopes
 
+> **TASK-DATA-MODE-POLICY-01 (feature-scope-policy-v3):** every strength feature uses **Competitive only** (mode-eligibility-policy-v1), enforced in `resolveScopeSelection` before every horizon. Match history is the only browse-all feature. 全部已追蹤 on strength pages means 全部已追蹤排位. Horizons and bounds are unchanged. See [MODE_ELIGIBILITY.md](MODE_ELIGIBILITY.md).
+
 > **TASK-DATA-03B.2C (2026-10-06):**
 > - Scopes are resolved and aggregated server-side over all tracked history (server-analysis-v2,
 >   selection-summary-v1).
