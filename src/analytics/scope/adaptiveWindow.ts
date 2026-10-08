@@ -3,6 +3,7 @@ import { daysBetween, newestFirst, sampleOf, toObservation, type ScopeObservatio
 import type { BaselineBounds, FeatureScopePolicy, WindowBounds } from './policies.js';
 import type { AdaptiveWindowResult, ScopePopulation, ScopeReason, ScopeStatus, WindowConfidence, WindowSample } from './types.js';
 import { ADAPTIVE_WINDOW_VERSION } from './versions.js';
+import { last } from '../../utils/last.js';
 
 /** Optional rank evidence. Absent today (rank_observations is not ingested); never fabricated. */
 export interface RankEvidence {
@@ -138,7 +139,7 @@ export function resolveAdaptiveWindow(entries: PerformanceEntry[], policy: Featu
 
 function resolveBaseline(queued: ScopeObservation[], current: ScopeObservation[], currentSample: WindowSample,
   bounds: BaselineBounds, reasons: Set<ScopeReason>, actKey: string | undefined) {
-  const oldestCurrent = current.at(-1);
+  const oldestCurrent = last(current);
   // Non-overlap by deterministic ORDER position, so exact-timestamp ties can never be shared.
   const startIndex = oldestCurrent ? queued.indexOf(oldestCurrent) + 1 : queued.length;
   const required = Math.max(bounds.minRounds, Math.ceil(bounds.minRoundsRatio * currentSample.rounds));

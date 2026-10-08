@@ -3,6 +3,7 @@ import type { PlayerAnalytics } from '../types/valorant.js';
 import { analyticsFromEntries, groupByAgent, groupByMap, groupByRole, groupEntries } from './analysis.js';
 import { aggregateSelection } from './rankings.js';
 import type { GroupSummary, PerformanceEntry, SelectionResult } from './types.js';
+import { last } from '../utils/last.js';
 
 /**
  * TASK-DATA-03B.2C `selection-summary-v1`: everything a page derives from a selected population,
@@ -102,5 +103,5 @@ export function mapExtremesFromSummary(context: PlayerContextSummary | undefined
     .filter((map) => map.appearances >= minimum && map.overall !== undefined)
     .map((map) => ({ map: map.id, score: map.overall! }))
     .sort((a, b) => b.score - a.score || a.map.localeCompare(b.map));
-  return { strongest: candidates[0]?.map, weakest: candidates.length > 1 ? candidates.at(-1)?.map : undefined };
+  return { strongest: candidates[0]?.map, weakest: candidates.length > 1 ? last(candidates)?.map : undefined };
 }

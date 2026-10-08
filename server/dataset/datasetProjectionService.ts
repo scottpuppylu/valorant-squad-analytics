@@ -18,6 +18,7 @@ import { datasetHistoryVersion, datasetIdentityVersion, datasetProjectionVersion
 import { assembleMatch, dateValue, hasMemberCollision, reconstructMatchFacts, type AssemblyContext, type ParticipantFact } from './matchAssembly.js';
 export { hasMemberCollision } from './matchAssembly.js';
 import { encodeHistoryCursor } from './historyCursor.js';
+import { last } from '../../src/utils/last.js';
 
 export type ProjectableRows = Pick<DatasetProjectionRows, 'players' | 'performances' | 'rounds' | 'roundParticipants' | 'events'>;
 
@@ -210,7 +211,7 @@ export class DatasetProjectionService {
     const { dataset, availability, eventCount, projectionStarted, metricReconstructionMs } = this.project(rows.rows);
     const pageKeys = rows.keys.slice(0, request.pageSize);
     const hasMore = rows.keys.length > request.pageSize;
-    const oldest = pageKeys.at(-1);
+    const oldest = last(pageKeys);
     const newest = pageKeys[0];
     const traversedMatchCount = pageKeys.length;
     // Present each page in exact keyset order (started_at DESC, public_id DESC). A match

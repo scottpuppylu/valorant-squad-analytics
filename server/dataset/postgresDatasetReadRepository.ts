@@ -14,6 +14,7 @@ import type {
   DatasetRoundRow,
 } from './types.js';
 import { PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
+import { last } from '../../src/utils/last.js';
 
 /**
  * Currently PUBLIC ACCOUNTS (TASK-IDENTITY-01: `players` rows are Riot accounts) with their
@@ -242,7 +243,7 @@ export class PostgresDatasetReadRepository implements DatasetReadRepository {
       ? [{ key: { startedAtMicros: row.key_started_us, publicMatchId: row.key_public_id }, startedAt: row.key_started_at }]
       : []));
     const startFound = start.kind !== 'before' || summary?.bound_count === 1;
-    const oldest = keys.slice(0, pageSize).at(-1)?.key;
+    const oldest = last(keys.slice(0, pageSize))?.key;
     const upper: DatasetHistoryKey | undefined = summary?.bound_started_us && summary.bound_public_id
       ? { startedAtMicros: summary.bound_started_us, publicMatchId: summary.bound_public_id }
       : undefined;

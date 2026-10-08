@@ -7,6 +7,7 @@ import {
 } from './eventMetricEngine.js';
 import { aliveBounds, analyzeRoundTopology, type ClassifiedEvent, type RoundTopology } from './roundTopology.js';
 import type { EventMetricMatchInput, MatchMetricReconstruction, MetricKillInput, MetricTraceEntry, PlayerMetricReconstruction } from './types.js';
+import { last } from '../../src/utils/last.js';
 
 /**
  * `event-metrics-v2` (TASK-ANALYTICS-EVENT-RECONSTRUCTION-ROBUSTNESS-01). Same outputs and evidence contract as v1,
@@ -116,7 +117,7 @@ export function reconstructV2(input: EventMetricMatchInput): MatchMetricReconstr
       const deaths = events.filter((item) => item.event.victimId === player.id);
       const endState = topology.lifeBefore[events.length]!.get(player.id) ?? 'alive';
       if (deaths.length === 0) survivedRounds += 1;
-      const finalDeath = deaths.at(-1);
+      const finalDeath = last(deaths);
       // Traded: the player's FINAL death of the round (the one that ended their round), when it was an opponent kill.
       const traded = endState === 'dead' && finalDeath !== undefined && finalDeath.opponentKill && trade.tradedDeathEvents.has(eventKey(finalDeath.event));
       const survived: Decision = endState === 'alive' ? true : endState === 'dead' ? false : 'unknown';

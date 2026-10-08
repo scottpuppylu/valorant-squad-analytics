@@ -4,7 +4,7 @@
 
 - `server/dataset/matchAssembly.ts`: THE per-match projection — `reconstructMatchFacts` (event-metrics-v1), `assembleMatch` (MatchRecord), `factsAreVisibilityIndependent`.
 - `server/dataset/analysisFacts.ts`: versions/engine key, freshness predicate, `factSourceSql`, `refreshAnalysisFacts` (write path + hydration), `factReadSql`, `factOf`.
-- `server/dataset/analysisFactHydration.ts` + `scripts/hydrate-analysis-facts-vercel.ts` (`db:hydrate-facts:vercel`, part of `vercel-build`).
+- `server/dataset/analysisFactHydration.ts` + `scripts/hydrate-analysis-facts-vercel.ts` (`db:hydrate-facts:vercel`, part of `build:vercel`, the single Vercel build command; formerly `vercel-build`, renamed by TASK-RELEASE-PRODUCTION-BUILD-HARDENING-01 so it runs once per deployment).
 - `server/dataset/analysisService.ts`: phase 1 uses fresh facts for the round gate; phase 2 = one fact read + raw fallback for non-fresh matches.
 - `server/repositories/postgres.ts` (`upsertMatch` refresh), `server/deletion/revocationDeletionService.ts` (fact delete on anonymization), `migrations/0011_analysis_participant_facts.sql`.
 - Tests: `tests/analysisFacts.test.ts`, `tests/fullTrackedLatency.test.ts`, `tests/support/analysisBenchFixture.ts`. Docs: [FULL_TRACKED_LATENCY.md](FULL_TRACKED_LATENCY.md).

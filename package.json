@@ -34,7 +34,7 @@
     "preview": "vite preview",
     "test": "vitest run && node scripts/assert-secret-boundary.mjs",
     "test:watch": "vitest",
-    "vercel-build": "npm run db:migrate:vercel && npm run db:hydrate-facts:vercel && npm run build"
+    "build:vercel": "npm run db:migrate:vercel && npm run db:hydrate-facts:vercel && npm run build"
   },
   "dependencies": {
     "pg": "^8.23.1",

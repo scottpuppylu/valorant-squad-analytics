@@ -11,6 +11,7 @@ import { policyFor } from './scope/policies.js';
 import { populationFromMatches } from './scope/resolveScope.js';
 import type { AdaptiveWindowResult, ScopePopulation } from './scope/types.js';
 import { summarizeSelection, type SelectionSummary } from './summary.js';
+import { last } from '../utils/last.js';
 
 function summarize(id: string, label: string, entries: PerformanceEntry[]): GroupSummary {
   const rounds = entries.reduce((sum, entry) => sum + entry.rounds, 0);
@@ -100,7 +101,7 @@ export function mapExtremes(player: Player, entries: PerformanceEntry[], minimum
     .map(([map, group]) => ({ map, score: analyticsFromEntries(player, group)!.scores.overall.value }))
     .filter((item): item is { map: MapName; score: number } => item.score !== undefined)
     .sort((a, b) => b.score - a.score || a.map.localeCompare(b.map));
-  return { strongest: candidates[0]?.map, weakest: candidates.length > 1 ? candidates.at(-1)?.map : undefined };
+  return { strongest: candidates[0]?.map, weakest: candidates.length > 1 ? last(candidates)?.map : undefined };
 }
 
 export function mostUsedAgent(entries: PerformanceEntry[]): AgentName | undefined {

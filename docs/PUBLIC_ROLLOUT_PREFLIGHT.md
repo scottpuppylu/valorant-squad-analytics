@@ -223,3 +223,66 @@ OLD_ROWS_COMPATIBLE = YES.
    3. Observe the Vercel Production build (0012 applied, hydration summary).
    4. Observe Pages and CI.
    5. Keep the rollback plan (§8) ready.
+
+## Addendum — PRODUCTION_BUILD_HARDENING (TASK-RELEASE-PRODUCTION-BUILD-HARDENING-01, 2026-10-08)
+
+The evidence above is unchanged. This addendum resolves the two concerns raised by Preview
+`dpl_2RMCZ28f5UQx2KcfxtwChcZwhgqh`.
+
+**Build invocation (root cause verified).** The 13 build passes were **13 real, serial executions**, not replayed logs.
+- Each pass has its own timestamps (about 28 s apart) and its own `vite build` duration (6.2–8.7 s).
+- Pass 1 is the project build command. Passes 2–13 each precede one of the 12 API function compiles
+  (`Using TypeScript 5.9.3`).
+- Cause: `@vercel/node` 22.0.0 (`build()` with `considerBuildCommand = false`) calls
+  `runPackageJsonScript(entrypointDir, ["vercel-build", "now-build"])` for **every function entrypoint**. It walks up to
+  the root `package.json`, which defined `vercel-build`.
+- The project-build-command path (`considerBuildCommand = true`) is used only by framework node builders, not by
+  `api/**/*.ts`.
+- `docs/FULL_TRACKED_LATENCY.md` had already recorded the 12× re-run on Production deploy `d629c28`.
+
+**Before the fix, per Production deployment:**
+- migration 13× (1 applies, 12 are no-ops);
+- hydration 13× (1 full pass, 12 pending scans with `scannedMatches: 0`, about 1 s each);
+- build 13×.
+
+**Fix (repo-only; no Vercel setting change).**
+- The npm script is renamed `vercel-build` → `build:vercel`, and `vercel.json` `buildCommand` → `npm run build:vercel`.
+- Vercel's own `getScriptName(pkg, ["vercel-build", "now-build"])` (cached CLI 62.7.0) selected `"vercel-build"` for the
+  old `package.json` and selects `null` for the new one. Function entrypoints therefore run no script, and the project
+  build runs the chain once.
+- The chain and its order are unchanged (migrate → hydrate → build), both database steps stay gated on Vercel
+  Production, and nothing was removed.
+
+**Expected after the fix, per Production deployment:**
+- MIGRATION_INVOCATIONS_PER_DEPLOYMENT = 1;
+- HYDRATION_INVOCATIONS_PER_DEPLOYMENT = 1;
+- BUILD_INVOCATIONS_PER_DEPLOYMENT = 1.
+
+These counts are derived from the builder source plus local selection; the Production count is first observable on the
+next authorized Production deploy.
+
+**Repeat safety (local, no database contact).**
+- MIGRATION_REPEAT_SAFE = YES: 13 sequential runner invocations on the deployed baseline apply `0012` once, then nothing;
+  the ledger has 12 rows.
+- HYDRATION_REPEAT_CORRECTNESS = IDEMPOTENT: a second `hydrateAnalysisFacts` scans 0 matches (`tests/analysisFacts.test.ts`).
+- HYDRATION_REPEAT_COST_RISK = LOW per repeat after a successful first pass (one pending-scan query, ids only). It is
+  removed anyway: 12 fewer Production Neon sessions per deploy.
+- Trade-off: a failed or partial first hydration is no longer retried 12 times within the deploy. Correctness is
+  unaffected, because the read path reconstructs any non-fresh fact from raw evidence.
+- No guard, lock row or external state was added: the build now naturally runs once.
+
+**TS2550.**
+- Vercel's function type-check uses the nearest `tsconfig.json`: the root solution file, with `"files": []` and no
+  `compilerOptions`. It therefore defaults to ES2021, where `Array.prototype.at` (ES2022) is reported.
+- This was diagnostic-only and non-fatal; the Node 24 runtime supports `.at`. Four of the six sites were already in
+  `7a9934e`.
+- The six flagged `.at(-1)` sites now use `src/utils/last.ts` (identical semantics; tested for empty, single, multiple
+  and 0..50-length arrays against `.at(-1)`).
+- A local reproduction of the bundler check (12 entrypoints, ES2021 lib) went from 6 × TS2550 to **0**.
+- The TypeScript target and lib were not raised.
+- One pre-existing, non-fatal `TS2339` (`server/dataset/weaponAnalytics.ts:161`, `.map` on `unknown`) remains, unchanged
+  and out of scope.
+
+**Release branch.** RELEASE_BRANCH_UPDATE_REQUIRED = YES: one hardening commit on `release/pre-public-clean-01`. Pushing
+it needs SDD approval and would create one more database-free Preview. `main` and Production stay unchanged and blocked
+on the Neon gate.

@@ -180,7 +180,7 @@ synergy are Competitive-only exactly as before. This is recorded, not changed.
 
 ### Backfill: deploy-time deterministic hydration
 
-- `vercel-build` runs `db:migrate:vercel` -> `db:hydrate-facts:vercel` -> `build`.
+- `vercel-build` runs `db:migrate:vercel` -> `db:hydrate-facts:vercel` -> `build`. [Renamed `build:vercel` (TASK-RELEASE-PRODUCTION-BUILD-HARDENING-01): it now runs once per deployment instead of once per function.]
 - `scripts/hydrate-analysis-facts-vercel.ts` runs only in Vercel Production, with the existing build
   environment (no secret retrieval). It calls `hydrateAnalysisFacts`:
   - one keyset pass over matches with a linked participant lacking a fresh fact;
@@ -261,7 +261,7 @@ seconds.
 - HEAD `d629c28` on production deployment `dpl_FWzQeCWx…`. CI, GitHub Pages and Vercel all succeeded.
 - The normal Vercel migration runner applied `0011`.
 - Deploy-time hydration: `{"scannedMatches":672,"refreshedMatches":672,"facts":1405,"withheldMatches":0,"batches":7,"durationMs":33948}`.
-- Pre-existing build behaviour, unchanged by this task: Vercel re-runs `vercel-build` once per function
+- Pre-existing build behaviour, unchanged by this task [RESOLVED by TASK-RELEASE-PRODUCTION-BUILD-HARDENING-01: script renamed `build:vercel`]: Vercel re-runs `vercel-build` once per function
   (12×). Every later run reported "already up to date" and hydration `scannedMatches: 0` (~1 s each). The
   same 6 bundler type warnings also appear in the previous (`a265f9e`) build.
 
