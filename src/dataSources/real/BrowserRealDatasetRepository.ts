@@ -20,7 +20,7 @@ function isPlayer(value: unknown): value is Player {
     && typeof value.id === 'string'
     && typeof value.handle === 'string'
     && typeof value.displayName === 'string'
-    && ['Duelist', 'Initiator', 'Controller', 'Sentinel'].includes(String(value.role))
+    && (value.role === undefined || ['Duelist', 'Initiator', 'Controller', 'Sentinel'].includes(String(value.role)))
     && Array.isArray(value.agents)
     && value.agents.every((agent) => typeof agent === 'string' && agent.length > 0)
     && isPlayerEmoji(value.defaultEmoji);

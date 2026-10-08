@@ -165,7 +165,7 @@ export function normalizeHenrikMatches(payload: unknown, input: MatchImportInput
     id: playerId,
     handle: `${input.gameName}#${input.tag}`,
     displayName: input.gameName,
-    role: primaryRoleForAgents(agents),
+    ...(primaryRoleForAgents(agents) ? { role: primaryRoleForAgents(agents) } : {}),
     agents,
     accent: '#6ee7b7',
     tagline: '已連接真實戰績',

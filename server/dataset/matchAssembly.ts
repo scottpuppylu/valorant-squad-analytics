@@ -319,7 +319,8 @@ export function assembleMatch(context: AssemblyContext, performanceRows: Dataset
     for (const [victimId, count] of facts.get(row.internal_participant_id)?.tradeEdges ?? []) edgeCounts.set(JSON.stringify([row.internal_participant_id, victimId]), count);
   }
   const complete = performances.every((p) => p.advancedMetrics?.evidence.trade === 'reconstructed');
-  const synergyEvidence: MatchPairTradeEvidence = { ruleVersion: 'event-metrics-v1', status: complete ? 'reconstructed' : 'unavailable',
+  const synergyEvidence: MatchPairTradeEvidence = { ruleVersion: performances[0]?.advancedMetrics?.ruleVersion === 'event-metrics-v2' ? 'event-metrics-v2' : 'event-metrics-v1',
+    status: complete ? 'reconstructed' : 'unavailable',
     reconstructedRounds: complete ? observedRoundsForMatch : 0, pairs: [] };
   for (let i = 0; i < performances.length; i += 1) for (let j = i + 1; j < performances.length; j += 1) {
     const a = performances[i]!; const b = performances[j]!;

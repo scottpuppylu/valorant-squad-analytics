@@ -1,3 +1,4 @@
+import type { POSITION_EVIDENCE_VERSION } from './positionEvidence.js';
 export type EvidenceStatus = 'observed' | 'missing' | 'unavailable';
 
 export const DURABLE_NORMALIZATION_VERSION = 'durable-evidence-v2' as const;
@@ -46,8 +47,10 @@ export interface EvidenceKill {
   assistantHmacs: string[];
   weaponId?: string;
   weaponName?: string;
+  /** KILL_EVENT_LOCATION: provider `kills[].location` (raw coordinate system). */
   location?: { x: number; y: number };
-  playerLocations: Array<{ participantHmac: string; x: number; y: number }>;
+  /** PLAYER_SNAPSHOT_LOCATION at this kill (position-evidence-v1): one row per participant, first occurrence wins. */
+  playerLocations: Array<{ participantHmac: string; x: number; y: number; viewRadians?: number }>;
 }
 
 export interface EvidenceRoundParticipant {
@@ -76,6 +79,14 @@ export interface EvidenceRound {
   defuseStatus: EvidenceStatus | 'present' | 'absent';
   defuseParticipantHmac?: string;
   defuseTimeMs?: number;
+  /** position-evidence-v1: provider plant site label (never inferred from coordinates). */
+  plantSite?: string;
+  plantLocation?: { x: number; y: number };
+  defuseLocation?: { x: number; y: number };
+  /** position-evidence-v1: explicit round side (see server/evidence/positionEvidence.ts). */
+  winningTeamRole?: 'Attacker' | 'Defender';
+  attackingTeamKey?: string;
+  sideSource?: 'winning_team_role' | 'plant' | 'defuse';
   participantsStatus: EvidenceStatus;
   participants: EvidenceRoundParticipant[];
   kills: EvidenceKill[];
@@ -99,6 +110,8 @@ export interface DurableMatchEvidence {
   seasonShort?: string;
   roundsStatus: EvidenceStatus;
   killsStatus: EvidenceStatus;
+  /** Version of the spatial / side columns written with this match (TASK-DATA-POSITION-NORMALIZATION-01). */
+  positionEvidenceVersion: typeof POSITION_EVIDENCE_VERSION;
   participants: EvidenceParticipant[];
   teams: Array<{ teamKey: string; won?: boolean; roundsWon?: number; roundsLost?: number }>;
   rounds: EvidenceRound[];

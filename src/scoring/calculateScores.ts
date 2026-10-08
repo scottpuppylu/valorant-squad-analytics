@@ -1,5 +1,5 @@
 import type { MatchRecord, MatchPerformance, Player, PlayerAnalytics, PlayerScores, PlayerRole, RawPlayerStats } from '../types/valorant.js';
-import type { MetricEvidenceStatus } from '../types/advancedMetrics.js';
+import { isEventMetricRuleVersion, type MetricEvidenceStatus } from '../types/advancedMetrics.js';
 import { aggregateAdvancedMetrics } from '../analytics/advancedMetrics.js';
 import { aggregatePlayerStats, getRecentPerformances } from '../utils/aggregateStats.js';
 import { agentRoles } from '../utils/agentRoles.js';
@@ -35,7 +35,7 @@ function observe(metric: ComponentMetric, entries: Entry[]): Observation {
       && (!performance.eventEvidence || !['kast','firstKillsPerRound','fdpr'].includes(metric)
         || performance.eventEvidence[metric === 'kast' ? 'kast' : 'opening'] === 'reconstructed')
       && (!['kast','firstKillsPerRound','fdpr'].includes(metric) || !performance.advancedMetrics
-        || performance.advancedMetrics.ruleVersion === 'event-metrics-v1' && performance.advancedMetrics.coverage.eligibleRounds === rounds && performance.advancedMetrics.coverage.reconstructedRounds === rounds && performance.advancedMetrics.coverage.omittedRounds === 0));
+        || isEventMetricRuleVersion(performance.advancedMetrics.ruleVersion) && performance.advancedMetrics.coverage.eligibleRounds === rounds && performance.advancedMetrics.coverage.reconstructedRounds === rounds && performance.advancedMetrics.coverage.omittedRounds === 0));
     denominator = sum(eligible.map((entry) => entry.rounds));
     const counts = sum(eligible.map(({performance}) => performance[field as keyof MatchPerformance] as number));
     if (denominator > 0) {
@@ -50,7 +50,7 @@ function observe(metric: ComponentMetric, entries: Entry[]): Observation {
       : metric === 'objectives' ? 'objectives' : 'economy';
     eligible = entries.filter(({performance,rounds}) => {
       const advanced = performance.advancedMetrics;
-      return advanced?.ruleVersion === 'event-metrics-v1' && complete(advanced.evidence[domain])
+      return advanced !== undefined && isEventMetricRuleVersion(advanced.ruleVersion) && complete(advanced.evidence[domain])
         && advanced.coverage.eligibleRounds === rounds
         && (domain === 'economy' || domain === 'objectives'
           || advanced.coverage.reconstructedRounds === rounds && advanced.coverage.omittedRounds === 0);
@@ -95,9 +95,12 @@ function observe(metric: ComponentMetric, entries: Entry[]): Observation {
   return { ...(usable ? {value} : {}), denominator,coverage,status:coverage===1 ? 'complete' : coverage>0 ? 'partial' : 'unavailable',
     ...(!usable ? {reason:coverage < .7 ? 'Observed selected-round evidence below 70%' : 'Missing evidence or invalid denominator'} : {}),events };
 }
-function component(metric: ComponentMetric, weight: number, entries: Entry[], role: PlayerRole, roleKnown=true): ComponentTrace {
+/** Trace benchmark when no role is known at all: role-free placeholder (never a guessed role; no value is computed). */
+const unknownRoleBenchmark = (metric: ComponentMetric): ComponentTrace['benchmark'] => ({ metric, context:'unknown_role', poor:0, strong:0, direction:'higher', version:'unknown-role' });
+function component(metric: ComponentMetric, weight: number, entries: Entry[], role: PlayerRole | undefined, roleKnown=true): ComponentTrace {
   const observation=observe(metric,entries);
-  const benchmark=benchmarkFor(metric,role);
+  if(role===undefined) roleKnown=false;
+  const benchmark=role===undefined ? unknownRoleBenchmark(metric) : benchmarkFor(metric,role);
   const rawValue=roleKnown ? observation.value : undefined;
   return {metric,selectedRole:roleKnown ? role : undefined,configuredWeight:weight,usedWeight:0,evidenceStatus:observation.status,benchmark,denominator:observation.denominator,
     observedCoverage:observation.coverage,...(rawValue!==undefined ? {rawValue,normalizedValue:normalizeBenchmark(rawValue,benchmark)} : {omissionReason:roleKnown ? observation.reason : 'Unknown selected agent role'})};
@@ -135,8 +138,11 @@ export function compareScoreResults(a: ScoreResult,b: ScoreResult): number {
   const priority={available:0,partial:1,unavailable:2};
   return priority[a.status]-priority[b.status] || (b.value ?? -Infinity)-(a.value ?? -Infinity) || 0;
 }
-export function calculatePlayerScores(player: Player, _stats: RawPlayerStats, matches: MatchRecord[], profile: ScoringProfile=defaultProfile): PlayerScores {
-  const entries: Entry[]=matches.flatMap((match) => match.performances.filter((performance) => performance.playerId===player.id).map((performance) => ({performance,rounds:match.scoreFor+match.scoreAgainst,role:agentRoles[performance.agent]})));
+/** `roles` defaults to the canonical agent catalog; frozen evidence versions (shared-match-evidence-v1) pass their own. */
+export function calculatePlayerScores(player: Player, _stats: RawPlayerStats, matches: MatchRecord[], profile: ScoringProfile=defaultProfile,
+  options: { roles?: Readonly<Record<string, PlayerRole>> } = {}): PlayerScores {
+  const roles=options.roles ?? agentRoles;
+  const entries: Entry[]=matches.flatMap((match) => match.performances.filter((performance) => performance.playerId===player.id).map((performance) => ({performance,rounds:match.scoreFor+match.scoreAgainst,role:roles[performance.agent]})));
   const sample={matches:entries.length,rounds:sum(entries.map((entry) => entry.rounds))};
   const groups=new Map<PlayerRole|undefined,Entry[]>();
   for(const entry of entries) groups.set(entry.role,[...(groups.get(entry.role) ?? []),entry]);
@@ -147,13 +153,14 @@ export function calculatePlayerScores(player: Player, _stats: RawPlayerStats, ma
     if(dimension==='consistency') {scores[dimension]=consistency(entries,sample);continue;}
     const traces:ComponentTrace[]=[];
     for(const [role,values] of groups) {
-      const weights:readonly MetricWeight[]=dimension==='roleValue' ? roleWeights[role ?? dominant] : categoryMetricWeights[dimension];
+      const selected=role ?? dominant;
+      const weights:readonly MetricWeight[]=dimension==='roleValue' ? (selected ? roleWeights[selected] : []) : categoryMetricWeights[dimension];
       const fraction=sample.rounds>0 ? sum(values.map((entry) => entry.rounds))/sample.rounds : 0;
       traces.push(...weights.map(([metric,weight]) => component(metric,weight*fraction,values,role ?? dominant,role!==undefined)));
     }
     // Preserve configured denominator even for an empty selection.
     if(!groups.size) {
-      const weights=dimension==='roleValue' ? roleWeights[dominant] : categoryMetricWeights[dimension];
+      const weights=dimension==='roleValue' ? (dominant ? roleWeights[dominant] : []) : categoryMetricWeights[dimension];
       traces.push(...weights.map(([metric,weight]) => component(metric,weight,[],dominant)));
     }
     const relevant=dimension==='clutch' ? observe('shrunkClutch',entries).events : dimension==='economy' ? observe('damageEfficiency',entries).events : undefined;
@@ -163,7 +170,7 @@ export function calculatePlayerScores(player: Player, _stats: RawPlayerStats, ma
     if(dimension==='clutch') {
       const completeEntries=entries.filter(({performance,rounds}) => {
         const advanced=performance.advancedMetrics;
-        return advanced?.ruleVersion==='event-metrics-v1' && complete(advanced.evidence.clutch) && advanced.coverage.eligibleRounds===rounds && advanced.coverage.reconstructedRounds===rounds && advanced.coverage.omittedRounds===0;
+        return advanced !== undefined && isEventMetricRuleVersion(advanced.ruleVersion) && complete(advanced.evidence.clutch) && advanced.coverage.eligibleRounds===rounds && advanced.coverage.reconstructedRounds===rounds && advanced.coverage.omittedRounds===0;
       });
       const clutch=aggregateAdvancedMetrics(completeEntries.map(({performance}) => performance)).clutch.value;
       if(clutch?.clutchAttempts && clutch.clutchWins!==undefined) scores[dimension].trace.prior={mean:.20,strength:5,wins:clutch.clutchWins,attempts:clutch.clutchAttempts,rawConversion:clutch.clutchWins/clutch.clutchAttempts,shrunkConversion:(clutch.clutchWins+1)/(clutch.clutchAttempts+5)};

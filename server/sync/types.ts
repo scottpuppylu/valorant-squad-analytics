@@ -41,6 +41,8 @@ export interface SyncSubject {
 
 export interface SyncCursorRecord {
   deep?: DeepCursorState;
+  /** sync_cursors.history_rule_version (deep_backfill only). */
+  historyRuleVersion?: string;
   id: string;
   playerId: string;
   kind: SyncKind;
@@ -81,10 +83,12 @@ export interface SyncChunkMetrics {
   returnedMatches: number;
   persistedMatches: number;
   overlapMatches: number;
+  /** stored-index-efficiency-v1: pre-v2 stored_index cursors restarted at page 1 in this chunk. */
+  storedCursorRestarts?: number;
 }
 
 export interface PublicSyncStatus {
-  history?: DeepCursorState & { ruleVersion: 'deep-history-v1'; sourceExhausted: boolean; lifetimeComplete: false };
+  history?: DeepCursorState & { ruleVersion: 'deep-history-v1' | 'deep-history-v2'; sourceExhausted: boolean; lifetimeComplete: false };
   runId: string;
   kind: SyncKind;
   status: SyncStatus;

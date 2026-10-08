@@ -6,7 +6,8 @@ import { DURABLE_NORMALIZATION_VERSION } from '../server/evidence/types';
 import { EventMetricEngine } from '../server/metrics/eventMetricEngine';
 import type { EventMetricMatchInput, MetricKillInput, MetricParticipantInput, MetricRoundInput, ReconstructedAdvancedMetrics } from '../server/metrics/types';
 
-const engine = new EventMetricEngine();
+// event-metrics-v1 semantics of the preserved historical (rollback) engine, pinned explicitly.
+const engine = new EventMetricEngine({ ruleVersion: 'event-metrics-v1' });
 
 describe('direct pair edges retain the single event-metrics-v1 classification', () => {
   it('counts a direct retaliation once in the correct direction at 5000ms', () => {

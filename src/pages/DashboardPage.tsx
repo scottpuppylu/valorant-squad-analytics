@@ -79,7 +79,7 @@ export function DashboardPage() {
               <p className="metric-label">{leader.scores.overall.value === undefined ? '綜合資料不足' : '目前綜合領先'}</p>
               <h2 className="mt-3 text-3xl font-semibold text-white">{leader.player.handle}</h2>
               <MemberNickname player={leader.player} className="block text-sm text-slate-400" />
-              <p className="mt-1 text-sm text-slate-400">{zhTW.roles[leader.player.role]} · {leader.player.tagline}</p>
+              <p className="mt-1 text-sm text-slate-400">{leader.player.role ? zhTW.roles[leader.player.role] : zhTW.unknownRole} · {leader.player.tagline}</p>
               </div>
             </div>
             <ScoreBadge value={leader.scores.overall} label={zhTW.scores.overall} />

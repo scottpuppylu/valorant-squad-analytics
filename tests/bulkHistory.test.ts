@@ -233,6 +233,18 @@ describe('bulk-history-v1 scheduler', () => {
     await clock.drive(controller.run());
     expect(maxInWindow(server.providerAt)).toBeLessThanOrEqual(4);
   });
+  it('TASK-DATA-STORED-INDEX-01: two stored_index lanes (index + detail per chunk) stay ≤ 6 per rolling minute at 6 RPM, never same-account concurrent', async () => {
+    const clock = new FakeClock();
+    const server = new SimServer(clock);
+    const a = account(1); const b = account(2);
+    server.add(a.accountId, 40, 'stored_index'); server.add(b.accountId, 40, 'stored_index');
+    const controller = new BulkController([a, b], server, clock, { lanes: 2, providerRpm: 6, maxProviderRequests: 60 });
+    const summary = await clock.drive(controller.run());
+    expect(maxInWindow(server.providerAt)).toBeLessThanOrEqual(6);
+    expect(summary.providerRequests).toBe(server.providerAt.length);
+    expect(summary.unmeasuredProviderRequests).toBe(0);
+    expect(server.maxPerAccount).toBe(1);
+  });
   it('reserves 2 for unknown/stored phases, returns unused reservation and never exceeds the session budget', async () => {
     const clock = new FakeClock();
     const server = new SimServer(clock);

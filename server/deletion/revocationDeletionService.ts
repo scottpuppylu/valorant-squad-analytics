@@ -231,6 +231,16 @@ export class RevocationDeletionService {
                armor_evidence_status='unavailable', armor_id=NULL, armor_name=NULL WHERE match_participant_id=$1`,
             [participant.id],
           );
+          // position-evidence-v1 (0012): the planter's / defuser's precise event coordinates are that participant's own
+          // position; the site label, side and the anonymous planter / defuser topology stay as shared round facts.
+          await transaction.query(
+            'UPDATE rounds SET plant_location_x=NULL, plant_location_y=NULL WHERE source_match_id=$1 AND plant_participant_id=$2',
+            [match.id, participant.id],
+          );
+          await transaction.query(
+            'UPDATE rounds SET defuse_location_x=NULL, defuse_location_y=NULL WHERE source_match_id=$1 AND defuse_participant_id=$2',
+            [match.id, participant.id],
+          );
           await transaction.query('DELETE FROM event_player_locations WHERE match_participant_id=$1', [participant.id]);
           // TASK-DATA-03B.2D: derived analysis facts of the anonymized participant go with its evidence.
           await transaction.query('DELETE FROM analysis_participant_facts WHERE match_participant_id=$1', [participant.id]);

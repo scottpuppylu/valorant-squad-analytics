@@ -1,5 +1,5 @@
-import type { NormalizedAnalyticsDataset } from '../types';
-import type { PUBLIC_DATASET_PRIVACY_VERSION } from '../../../shared/privacyPolicy';
+import type { NormalizedAnalyticsDataset } from '../types.js';
+import type { PUBLIC_DATASET_PRIVACY_VERSION } from '../../../shared/privacyPolicy.js';
 
 export type ProviderPublicErrorCode =
   | 'BAD_REQUEST'
@@ -97,7 +97,7 @@ export type SyncStatus = 'pending' | 'running' | 'paused' | 'complete' | 'failed
 
 export interface PublicSyncProgress {
   history?: {
-    ruleVersion: 'deep-history-v1';
+    ruleVersion: 'deep-history-v1' | 'deep-history-v2';
     historyPhase: 'live_v4' | 'stored_index' | 'complete';
     storedPage: number;
     storedItemIndex: number;

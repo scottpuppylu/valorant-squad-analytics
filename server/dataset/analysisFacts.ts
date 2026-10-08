@@ -1,6 +1,6 @@
 import type { SqlExecutor } from '../db/types.js';
 import { DURABLE_NORMALIZATION_VERSION } from '../evidence/types.js';
-import { EVENT_METRIC_RULE_VERSION, EventMetricEngine } from '../metrics/eventMetricEngine.js';
+import { CANONICAL_EVENT_METRIC_RULE_VERSION, EventMetricEngine, type EventMetricRuleVersion } from '../metrics/eventMetricEngine.js';
 import { factsAreVisibilityIndependent, reconstructMatchFacts, type ParticipantFact } from './matchAssembly.js';
 import { eventSelect, performanceSelect, roundParticipantSelect, roundSelect } from './postgresDatasetReadRepository.js';
 import type { DatasetEventRow, DatasetPerformanceRow, DatasetRoundParticipantRow, DatasetRoundRow } from './types.js';
@@ -9,7 +9,7 @@ import type { DatasetEventRow, DatasetPerformanceRow, DatasetRoundParticipantRow
  * TASK-DATA-03B.2D `analysis-match-facts-v1`: materialized per-participant analysis facts.
  *
  * Grain: one LINKED match participant (Riot ACCOUNT x source match). A fact is the exact output of the
- * shared reconstruction (`reconstructMatchFacts`) for that participant: event-metrics-v1 metrics, round
+ * shared reconstruction (`reconstructMatchFacts`) for that participant: event metrics of the writing engine, round
  * coverage and direct trade edges. No score, provider identifier, HMAC or name is stored.
  *
  * Freshness: a fact is used only while `engine_key` equals the running engine and `source_observed_at`
@@ -19,8 +19,14 @@ import type { DatasetEventRow, DatasetPerformanceRow, DatasetRoundParticipantRow
 export const ANALYSIS_FACTS_VERSION = 'analysis-match-facts-v1' as const;
 /** Internal engine label of the full-tracked analysis read path (not part of the public contract). */
 export const FULL_TRACKED_AGGREGATE_VERSION = 'full-tracked-aggregate-v1' as const;
-/** Any change to the fact contract, event-metrics rules or durable normalization invalidates every fact. */
-export const ANALYSIS_FACTS_ENGINE_KEY = `${ANALYSIS_FACTS_VERSION}:${EVENT_METRIC_RULE_VERSION}:${DURABLE_NORMALIZATION_VERSION}`;
+/**
+ * Any change to the fact contract, event-metrics rules or durable normalization invalidates every fact. The key names
+ * the engine that WROTE the fact (a v1 fact is never read as a v2 fact, and vice versa). The fact SHAPE is the same
+ * for every rule version, so ANALYSIS_FACTS_VERSION does not change: the rule version inside the key is the version.
+ */
+export const analysisFactsEngineKey = (ruleVersion: EventMetricRuleVersion) => `${ANALYSIS_FACTS_VERSION}:${ruleVersion}:${DURABLE_NORMALIZATION_VERSION}`;
+/** The key a fact must carry to be fresh for the running (canonical) engine. */
+export const ANALYSIS_FACTS_ENGINE_KEY = analysisFactsEngineKey(CANONICAL_EVENT_METRIC_RULE_VERSION);
 
 /** SQL predicate: fact row `f` is fresh for source match `sm`. Server-owned constant only. */
 export const freshFactPredicate = (f: string, sm: string) =>
@@ -87,7 +93,7 @@ export async function refreshAnalysisFacts(executor: SqlExecutor, matchIds: stri
     if (!factsAreVisibilityIndependent(topology)) { withheldMatches += 1; continue; }
     const { facts } = reconstructMatchFacts(engine, topology);
     for (const [participantId, fact] of facts) {
-      rows.push([participantId, matchId, ANALYSIS_FACTS_ENGINE_KEY, observedAt, fact.observedRounds, fact.presentEveryRound,
+      rows.push([participantId, matchId, analysisFactsEngineKey(engine.ruleVersion), observedAt, fact.observedRounds, fact.presentEveryRound,
         JSON.stringify(fact.metrics), JSON.stringify(fact.tradeEdges)]);
     }
   }

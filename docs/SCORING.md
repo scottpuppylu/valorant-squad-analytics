@@ -98,7 +98,20 @@ Role Value weights:
 | Controller | KAST30, APR25, trade assists/round20, objectives/round15, damage efficiency10 |
 | Sentinel | KAST30, shrunk clutch20, objectives/round20, APR15, trade assists/round15 |
 
-Mixed-role selections group performances by actual agent role, compute raw/normalized terms per group, then multiply configured weights by that group's selected-round fraction. This is equivalent to rounds-weighting complete role-group dimension results, but the missing-weight gate is applied to the full mixed selection without fabricating unobserved groups. Traces show each component's role and role-round totals. Unknown agents do not fall back to the global profile for scoring. A dominant selected role is shown for context only. Clutch component priors are per role group; the summary prior is a descriptive aggregate of complete clutch samples.
+Mixed-role selections group performances by actual agent role, compute raw/normalized terms per group, then multiply configured weights by that group's selected-round fraction. This is equivalent to rounds-weighting complete role-group dimension results, but the missing-weight gate is applied to the full mixed selection without fabricating unobserved groups. Traces show each component's role and role-round totals. Unknown agents do not fall back to the global profile for scoring. A dominant selected role is shown for context only.
+
+**Agent roles (agent-catalog-v1, TASK-DATA-AGENT-CATALOG-01).** Roles come only from `src/utils/agentRoles.ts`, keyed by the
+stable agent content id with display-name aliases ([AGENT_CATALOG.md](AGENT_CATALOG.md)). An unknown agent has no
+role:
+- its rounds are omitted from role-dependent components ("Unknown selected agent role");
+- role-free statistics still count them.
+
+When no played agent has a known role:
+- no dominant role exists, and the member's profile role is absent (shown as 未知角色; formerly a Controller fallback);
+- Role Value has no components;
+- traces use a role-free `unknown_role` benchmark placeholder, and no value is computed.
+
+No formula, weight or gate changed. shared-match-evidence-v1 scores with the frozen catalog v0 map. Clutch component priors are per role group; the summary prior is a descriptive aggregate of complete clutch samples.
 
 ## Overall profiles and confidence
 

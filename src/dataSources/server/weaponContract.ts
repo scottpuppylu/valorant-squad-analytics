@@ -1,4 +1,4 @@
-import type { WeaponAnalyticsResult } from '../../analytics/weapons/engine';
+import type { WeaponAnalyticsResult } from '../../analytics/weapons/engine.js';
 
 /** TASK-WEAPON-01 `view=analysis&feature=weaponAnalytics` response (schema 6, weapon-analytics-v2, weapon-catalog-v2). */
 export type WeaponAnalyticsResponse = WeaponAnalyticsResult & { ok: true; schemaVersion: 6; view: 'analysis'; feature: 'weaponAnalytics' };

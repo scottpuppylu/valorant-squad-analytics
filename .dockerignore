@@ -1,0 +1,15 @@
+node_modules
+dist
+dist-server
+coverage
+.git
+.local
+.vercel
+.env
+.env.*
+!.env.example
+infra/env
+*.log
+*.pem
+*.key
+backups

@@ -25,8 +25,11 @@ interface ProviderOptions {
   durableWriter?: DurableEvidenceWriter;
 }
 
+/** The only account fields a history / detail GET uses (no consent marker is involved in a read request). */
+export type ProviderAccountRef = Pick<ConnectionInput, 'gameName' | 'tag' | 'affinity'>;
+
 export interface HistoricalMatchProvider {
-  fetchHistoryPage(input: ConnectionInput, start: number, size: number): Promise<unknown>;
+  fetchHistoryPage(input: ProviderAccountRef, start: number, size: number): Promise<unknown>;
 }
 
 function delay(milliseconds: number): Promise<void> {
@@ -196,19 +199,34 @@ export class HenrikDataProvider implements ValorantDataProvider {
     return { dataset, importedMatches: dataset.matches.length, importedAt: this.now().toISOString() };
   }
 
-  async fetchHistoryPage(input: ConnectionInput, start: number, size: number): Promise<unknown> {
+  async fetchHistoryPage(input: ProviderAccountRef, start: number, size: number): Promise<unknown> {
     return this.request(
       `/valorant/v4/matches/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`,
       { size: String(size), start: String(start) },
     );
   }
 
-  async fetchStoredIndexPage(input: ConnectionInput, page: number, size: number): Promise<unknown> {
+  async fetchStoredIndexPage(input: ProviderAccountRef, page: number, size: number): Promise<unknown> {
     return this.request(`/valorant/v1/stored-matches/${encodeURIComponent(input.affinity)}/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`, { size: String(size), page: String(page) });
   }
 
-  async fetchMatchDetail(input: ConnectionInput, matchId: string): Promise<unknown> {
+  async fetchMatchDetail(input: Pick<ConnectionInput, 'affinity'>, matchId: string): Promise<unknown> {
     return this.request(`/valorant/v4/match/${encodeURIComponent(input.affinity)}/${encodeURIComponent(matchId)}`);
+  }
+
+  /** v3 MMR (current / peak / seasonal) raw payload; persists nothing (TASK-DATA-RANK-01). */
+  async fetchMmrV3(input: ProviderAccountRef): Promise<unknown> {
+    return this.request(`/valorant/v3/mmr/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`);
+  }
+
+  /** v2 stored MMR history raw payload (Henrik's stored per-match rank rows); persists nothing (TASK-DATA-RANK-01). */
+  async fetchStoredMmrHistory(input: ProviderAccountRef, size: number): Promise<unknown> {
+    return this.request(`/valorant/v2/stored-mmr-history/${encodeURIComponent(input.affinity)}/pc/${encodeURIComponent(input.gameName)}/${encodeURIComponent(input.tag)}`, { size: String(size) });
+  }
+
+  /** Raw v2 account payload (name, tag, puuid, region); persists nothing (TASK-DATA-LOCAL-REBUILD-COLLECT-01). */
+  async fetchAccount(gameName: string, tag: string): Promise<unknown> {
+    return this.request(`/valorant/v2/account/${encodeURIComponent(gameName)}/${encodeURIComponent(tag)}`);
   }
 
   /**

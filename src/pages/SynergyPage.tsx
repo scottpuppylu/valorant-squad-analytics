@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { staticNotPrecomputedMessage } from '../components/AnalysisStatusNotice';
 import { EmptyState } from '../components/EmptyState';
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -72,6 +73,7 @@ export function SynergyPage() {
       {ineligibleMode ? <p className="sample-warning" role="alert">搭檔分析僅使用排位模式；網址指定的「{requestedMode}」不納入（一般模式僅保留給未來的同場相對比較）。</p> : null}
       <p className="text-sm text-slate-400">資料範圍（全部已追蹤排位或指定 Act）、日期、地圖與模式同時套用共同場次及雙方基準（analysis-scope-v1 搭檔情境）；不使用全域特務／角色或最近 N 場篩選，避免拆散配對。</p>
       {pairPopulation.status === 'loading' ? <p className="sample-warning" role="status">正在以伺服器完整已追蹤歷史計算共同場次與雙方基準…</p>
+        : pairPopulation.status === 'error' && pairPopulation.notPrecomputed ? <p className="sample-warning" role="alert">{staticNotPrecomputedMessage}</p>
         : pairPopulation.status === 'error' ? <p className="sample-warning" role="alert">伺服器搭檔分析暫時無法取得；為避免改用其他資料範圍，此處不顯示替代結果。</p>
         : <p className="text-sm text-slate-400">{pairPopulation.source === 'server' ? `共同場次與雙方基準由伺服器依全部已追蹤排位戰績計算（已追蹤總數 ${pairPopulation.trackedMatchCount ?? '—'} 場）計算；此情境共 ${pairPopulation.populationMatches ?? '—'} 場。歷史資料持續補齊中。` : '示範資料：在瀏覽器內以固定虛構資料計算。'}</p>}
       {pairPopulation.status === 'loading' || pairPopulation.status === 'error' ? null : selected ? <SynergyDetail result={selected} /> : <div id="pair-detail"><EmptyState title="沒有共同同隊樣本" description="請選擇其他搭檔，或放寬日期、地圖與模式條件。" actions={<button type="button" className="button-secondary" onClick={() => setParams({})}>重設條件</button>} /></div>}

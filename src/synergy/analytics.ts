@@ -8,6 +8,7 @@ import { SYNERGY_BENCHMARK_VERSION, SYNERGY_RULE_VERSION, synergyCoverageGate, s
 import type { DuoSynergyResult, PairMember, PairWindow, SynergyFilters } from './types.js';
 import { pairTradeEvidence } from './tradeEvidence.js';
 import { matchesInPairContext } from '../analytics/scope/resolveScope.js';
+import { isEventMetricRuleVersion } from '../types/advancedMetrics.js';
 
 export const defaultSynergyFilters: SynergyFilters = { from: '', to: '', map: 'all', gameMode: 'all', minimumShared: 0 };
 export const canonicalPair = (a: string, b: string) => {
@@ -37,7 +38,7 @@ function windowFor(player: Player, entries: Appearance[]): PairWindow {
   const kastEntries = entries.filter(({ match, performance: p }) => {
     const coverage = p.advancedMetrics?.coverage;
     return p.kast !== undefined && Number.isFinite(p.kast) && (!p.eventEvidence || p.eventEvidence.kast === 'reconstructed')
-      && roundsFor(p, match) > 0 && (!p.advancedMetrics || p.advancedMetrics.ruleVersion === 'event-metrics-v1'
+      && roundsFor(p, match) > 0 && (!p.advancedMetrics || isEventMetricRuleVersion(p.advancedMetrics.ruleVersion)
       && coverage?.eligibleRounds === roundsFor(p, match) && coverage.reconstructedRounds === roundsFor(p, match) && coverage.omittedRounds === 0);
   });
   const kastRounds = kastEntries.reduce((total, { match, performance: p }) => total + roundsFor(p, match), 0);
@@ -92,7 +93,7 @@ function pairResult(a: Player, b: Player, matches: MatchRecord[], appearances: M
   for (const match of shared) {
     const edge = pairTradeEvidence(match).find((e) => canonicalPair(e.playerAId, e.playerBId).key === pair.key);
     const pa = ae.paired.find((e) => e.match.id === match.id)!.performance;
-    if (!edge || edge.ruleVersion !== 'event-metrics-v1' || edge.status !== 'reconstructed' || edge.reconstructedRounds !== roundsFor(pa, match)
+    if (!edge || !isEventMetricRuleVersion(edge.ruleVersion) || edge.status !== 'reconstructed' || edge.reconstructedRounds !== roundsFor(pa, match)
       || edge.reconstructedRounds <= 0 || edge.aTradedBDeaths === undefined || edge.bTradedADeaths === undefined) continue;
     observed += 1; reconstructedRounds += edge.reconstructedRounds;
     const reverse = edge.playerAId !== a.id;

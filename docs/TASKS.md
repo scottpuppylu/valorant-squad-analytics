@@ -4,7 +4,357 @@
 > are dated decisions; status words inside "Earlier decision" sections are **historical** and
 > are marked [SUPERSEDED] where they conflict with current state.
 
-## Current decision — TASK-DATA-BULK-01E (2026-10-06)
+## Current decision — TASK-RELEASE-BLOCKER-FIX-01 (2026-10-08)
+
+**STATUS: COMPLETE / RELEASE_CHECKPOINT_READY = YES (checkpoint attempt 2).** The tag
+`checkpoint-local-release-pre-public-01` is local only. Nothing was pushed.
+- Revocation now clears the revoked planter's / defuser's plant and defuse coordinates in shared matches. Four
+  permanent tests failed before the fix and pass after it.
+- The third-party Neon skill is removed from the release tree. Its history is kept; the clean release branch keeps it
+  off the remote.
+- Next: PUBLIC-ROLLOUT-PREFLIGHT-01 (the Vercel / Neon / Pages push side effects).
+- Details: [LOCAL_RELEASE_CHECKPOINT.md](LOCAL_RELEASE_CHECKPOINT.md) §13.
+
+## Earlier decision — LOCAL-RELEASE-CHECKPOINT-01 (2026-10-08)
+
+**STATUS: COMPLETE / RELEASE_CHECKPOINT_READY = NO.** No tag was created and nothing was pushed. [SUPERSEDED: attempt 2 READY, see TASK-RELEASE-BLOCKER-FIX-01.]
+- Every verification gate passed except one blocking finding.
+- **Blocker:** after a shared-match revocation, the revoked planter's / defuser's round plant and defuse coordinates
+  (migration 0012 columns) are not cleared.
+- Next: a separately authorized deletion fix, then a re-run of this checkpoint.
+- Details: [LOCAL_RELEASE_CHECKPOINT.md](LOCAL_RELEASE_CHECKPOINT.md).
+
+## Earlier decision — TASK-ANALYTICS-TEAM-COMPOSITION-02 (2026-10-08)
+
+**STATUS: COMPLETE / OUTCOME_B / AWAITING SDD REVIEW (local only, not pushed).**
+- team-composition-v2 adds holdout-gated attack / defense responsibilities to the unchanged V1 assignment.
+- site-reference-v1 classifies held-out plants with P95 accuracy 0.948 (0 wrong site, 0 ambiguous).
+- Member-level site tendencies did not reproduce (1 of 6), so every site claim is withheld.
+- V1 output is byte-identical, and Shared-Match, rank, facts and basic stats are unchanged.
+- This is the final analytics feature task.
+- Next (not started automatically): LOCAL_RELEASE_CHECKPOINT → PUBLIC_ROLLOUT_PREFLIGHT → SOURCE PUSH. [SUPERSEDED: checkpoint ran; READY = NO.]
+- Details: [TEAM_COMPOSITION_V2.md](TEAM_COMPOSITION_V2.md).
+
+## Earlier decision — TASK-DATA-MAP-ZONE-METADATA-01 (2026-10-08)
+
+**STATUS: STOPPED FOR SDD REVIEW. OUTCOME_D.**
+- No transform or callout source has acceptable provenance; the third-party source is unofficial and all rights
+  reserved.
+- Provider plant-site labels are a validated, license-free site reference in raw coordinates.
+- SDD decides among: provider-site references for V2, a licensed transform source, or proceeding to the release
+  checkpoint. [SUPERSEDED: SDD chose provider-site references; see TASK-ANALYTICS-TEAM-COMPOSITION-02.]
+- Details: [MAP_SPATIAL_METADATA.md](MAP_SPATIAL_METADATA.md).
+
+## Earlier decision — TASK-DATA-POSITION-NORMALIZATION-01 (2026-10-08)
+
+**STATUS: COMPLETE / AWAITING SDD REVIEW.**
+- position-evidence-v1 fixes the nested `player_locations` parser and normalizes view direction, plant site and
+  coordinates, defuse coordinates and explicit round side (migration 0012).
+- The rebuild is identical across two runs; all analytics are unchanged.
+- MAP_ZONE_METADATA_READY = NO, so TEAM_COMPOSITION_V2_READY = NO.
+- Next: the smallest map-zone metadata task.
+- Details: [POSITION_EVIDENCE.md](POSITION_EVIDENCE.md).
+
+## Earlier decision — TASK-ANALYTICS-TEAM-COMPOSITION-01 (2026-10-08)
+
+**STATUS: COMPLETE / OUTCOME_B / AWAITING SDD REVIEW.**
+- Agent / role recommendations are supported: member × agent evidence validates out of sample.
+- Map, synergy and role distribution do not validate and are shown as context.
+- No win-probability or optimal claim; no position or site claims.
+- Next: TASK-DATA-POSITION-NORMALIZATION-01.
+- Details: [TEAM_COMPOSITION.md](TEAM_COMPOSITION.md).
+
+## Earlier decision — TASK-DATA-AGENT-CATALOG-01 (2026-10-08)
+
+**STATUS: COMPLETE / AWAITING SDD REVIEW.**
+- agent-catalog-v1 is keyed by stable id. Miks = Controller (Riot official). `773f0c78-…` stays UNKNOWN (non-Competitive
+  rows only).
+- The Controller fallback is removed, and the completeness guard is in place.
+- Coverage: Community Score 6/9, Current Strength 7/9, Recent Form 4/9, Progress 9/9.
+- Shared-Match v1 is exact (pinned to catalog v0).
+- TEAM_COMPOSITION_V1_READY = YES (agent / role / responsibility only).
+- TASK-DATA-POSITION-NORMALIZATION-01 is required before position or site claims.
+- Details: [AGENT_CATALOG.md](AGENT_CATALOG.md).
+
+## Earlier decision — TASK-ANALYTICS-EVENT-METRICS-V2-ROLLOUT-01 (2026-10-08)
+
+**STATUS: LOCAL_V2_CANONICAL_READY = YES; local default switched; AWAITING SDD REVIEW. Public rollout BLOCKED.**
+- All nine rollout gates pass.
+- High-level analytics are restored only partly: Community Score 5/9, Current Strength 6/9, Recent Form 2/9,
+  Progress 8/9 (saturating).
+- INTERNAL_STRENGTH_RESEARCH_REOPEN_RECOMMENDED = NO for now.
+- Details: [EVENT_METRICS_V2_ROLLOUT.md](EVENT_METRICS_V2_ROLLOUT.md).
+
+## Earlier decision — TASK-SCORING-INTERNAL-STRENGTH-01 (2026-10-08, accepted OUTCOME_B)
+
+**STATUS: PHASE A COMPLETE / OUTCOME_B / AWAITING SDD REVIEW.**
+- On canonical evidence, every transparent candidate predicts later same-match outcomes about equally (0.74–0.78).
+- The absolute composites are unavailable for all members (event-metrics-v1).
+- Rank, Shared-Match and recency ablations are not material.
+- `community-internal-strength-v1` is not implemented.
+- Interim: shared-match-rating-v1 alone is the most defensible group-internal representation.
+- Details: [INTERNAL_STRENGTH.md](INTERNAL_STRENGTH.md).
+
+## Earlier decision — TASK-SCORING-SHARED-MATCH-02 (2026-10-08, accepted OUTCOME_B)
+
+**STATUS: PHASE A COMPLETE / OUTCOME_B / AWAITING SDD REVIEW.**
+- Richer event-metrics-v2 signals improve saturation, within-member role neutrality and stability.
+- No candidate clearly dominates Firepower: noise is not better, availability is lower, and same-role sensitivity did
+  not improve.
+- `shared-match-rating-v2` is not implemented; shared-match-rating-v1 stays current.
+- Details: [SHARED_MATCH_RATING_V2.md](SHARED_MATCH_RATING_V2.md).
+
+## Earlier decision — TASK-ANALYTICS-EVENT-RECONSTRUCTION-ROBUSTNESS-01 (2026-10-08)
+
+**STATUS: COMPLETE / AWAITING SDD REVIEW. OUTCOME_A.**
+- **v2:** `event-metrics-v2` handles revives, self / environmental kills and posthumous kills without invalidating
+  whole matches. True ambiguity still fails closed (0 cases in real data).
+- **Real data:** KAST / Opening / Trade go from 45 to 547 of 548 matches.
+- **Next:** SHARED_MATCH_V2_RECOMMENDED = YES (design only). Canonical v2 adoption is a separate rollout.
+- **Details:** [EVENT_RECONSTRUCTION_ROBUSTNESS.md](EVENT_RECONSTRUCTION_ROBUSTNESS.md).
+
+## Earlier decision — TASK-SCORING-SHARED-MATCH-01 (2026-10-08)
+
+**STATUS: COMPLETE / AWAITING SDD REVIEW.**
+- **Evidence:** a same-match pair evidence model and `shared-match-rating-v1`, computed locally from private staging.
+  All 36 member pairs have direct evidence; all of it is same-team.
+- **Signal:** role-aware one-match Firepower. The event-reconstructed dimensions are too sparse because the engine
+  fails closed on revive / posthumous rounds.
+- **Rank:** context only.
+- **Limitations:** documented (residual role bias, saturation, teammates only).
+- **Next:** TASK-SCORING-INTERNAL-STRENGTH-01.
+- **Details:** [SHARED_MATCH_RATING.md](SHARED_MATCH_RATING.md).
+
+## Earlier decision — TASK-DATA-RANK-01 (2026-10-07)
+
+**STATUS: COMPLETE / AWAITING SDD REVIEW.**
+- **What it built:** private rank evidence (`rank-staging-v1`) plus a provider-independent point-in-time resolver
+  (`rank-context-v1`) with no future leakage.
+- **Evidence:** every staged match carries the account's pre-match tier, with 0 provider requests. Current, peak and
+  seasonal are available for 9/9. Stored MMR history is short (≈ 20 rows per account).
+- **`elo`:** Henrik's `elo` is a tier + RR encoding, not MMR.
+- **Not done:** no scoring, weights or multipliers.
+- **Next:** TASK-SCORING-SHARED-MATCH-01.
+- **Details:** [RANK_EVIDENCE.md](RANK_EVIDENCE.md).
+
+## Product direction (SDD, 2026-10-07)
+
+- **Direction:** a public platform plus user-created private / invite-only comparison groups. Opt-in is per member;
+  analytics are group-scoped.
+- **Excluded:** no global player search, global MMR / Elo ranking or opponent scouting.
+- **Order:** TASK-DATA-RANK-01 → TASK-SCORING-SHARED-MATCH-01 → TASK-SCORING-INTERNAL-STRENGTH-01 → group UI →
+  TASK-RIOT-PRODUCTION-READINESS-01 (DEFERRED).
+
+## Earlier decision — TASK-DATA-HISTORY-COVERAGE-GAP-01 (2026-10-07)
+
+**STATUS: COMPLETE (SDD-corrected). PRIMARY OUTCOME_D; supporting candidate OUTCOME_B.**
+- No documented authorized source currently demonstrates recoverable lifetime history.
+- **Riot Production + RSO** remains the only official path worth pursuing; its depth is UNKNOWN.
+- **滑鏟:** the reference-count gap is confirmed; the match-level gap is not verified.
+- **Neon:** whether it holds extra history is UNKNOWN.
+- **Henrik:** the stored history is a documented accumulating subset of Riot history, so it cannot backfill the
+  滑鏟 gap (102 provider-visible vs ≈ 433 observed).
+- **Riot official:** a Production key + RSO matchlist is the only authorized candidate. Its depth is not documented,
+  and Riot's policy excludes private personal-use apps.
+- **Next:** decisions on the source of the ≈ 433 reference, the product scope for Riot eligibility, and the truthful
+  "provider-visible history" model.
+- **Details:** [HISTORY_COVERAGE_GAP.md](HISTORY_COVERAGE_GAP.md).
+
+## Earlier decision — TASK-DATA-LOCAL-REBUILD-COLLECT-01 closed (2026-10-07)
+
+**STATUS: PASS_WITH_GOVERNANCE_EXCEPTION** (SDD).
+- **Rate waiver:** for this task only. `HISTORICAL_MAX_OBSERVED_RPM = 7`; the corrective controls are in place.
+- **Result:** 838 / 838 hydrated.
+- **Coverage gap confirmed:** 滑鏟 shows 102 Henrik-visible Competitive matches in 2026, against about 433 observed.
+  Classified as an upstream history-coverage limitation; the crawler is not the cause.
+- **Backup:** the private staging store is preserved and backed up locally.
+- **Next, planned, research only:** TASK-DATA-HISTORY-COVERAGE-GAP-01.
+- **Then, after Neon access returns:** TASK-DATA-NEON-RECONCILIATION-01.
+- **Canonical evidence:** [REBUILD_STAGING.md](REBUILD_STAGING.md).
+
+### Collection record (2026-10-07)
+
+**STATUS at collection time: COLLECTION COMPLETE / AWAITING SDD REVIEW** [SUPERSEDED: PASS_WITH_GOVERNANCE_EXCEPTION].
+- **Collected:** private provider-visible history for the 9 public accounts, into the isolated PostgreSQL 18 staging
+  store.
+- **Result:** 838 unique matches, all hydrated, every source exhausted, integrity clean. 838 is the same as the
+  earlier Production reference.
+- **滑鏟:** 102 Competitive matches in 2026, because the provider's history for that account starts 2026-02-15.
+- **Unchanged:** consent and public code.
+- **Not publication-eligible;** `lifetimeComplete = false`.
+- **Evidence and defects fixed:** [REBUILD_STAGING.md](REBUILD_STAGING.md).
+- **Next:** TASK-DATA-NEON-RECONCILIATION-01, after the Neon quota resets.
+
+## Earlier decision — TASK-DATA-LOCAL-REBUILD-01 (2026-10-07) [SUPERSEDED by TASK-DATA-LOCAL-REBUILD-COLLECT-01]
+
+**STATUS: PREPARED / BLOCKED_ON_MAINTAINER_INPUT.**
+- **Done:** the empty PostgreSQL 18 rebuild target is ready.
+- **Not run:** no provider request.
+- **Needed:** the provider key placed locally by the maintainer, the 9 Riot IDs with affinity, an SDD decision on
+  consent records, and an SDD decision on the HMAC key. See [LOCAL_REBUILD.md](LOCAL_REBUILD.md).
+- **TASK-INFRA-PRODUCTION-PG18-TARGET-PREP-01:** complete, awaiting SDD review.
+- **TASK-INFRA-PRODUCTION-DATA-MIGRATION-01:** DEFERRED_BY_NEON_TRANSFER_QUOTA.
+- **TASK-DATA-NEON-RECONCILIATION-01:** future.
+
+## Earlier decision — TASK-INFRA-PRODUCTION-DATA-MIGRATION-01 (2026-10-07)
+
+**STATUS: BLOCKED_BY_NEON_TRANSFER_QUOTA** [SUPERSEDED: DEFERRED_BY_NEON_TRANSFER_QUOTA]. Neon Free monthly transfer allowance is exhausted (≈ 5.13 GB of ≈ 5 GB).
+- **Resets:** 2026-11-01. Resume then, or after the maintainer explicitly confirms an upgrade.
+- **Not run:** no Production probe, read or dump.
+- **Local target:** ready and empty.
+- **Neon tooling:** the Neon CLI and the project-level Neon skill are installed; Neon MCP is deferred.
+- **Readiness:** LOCAL_PRODUCTION_DATABASE_READY = NO.
+- **Resume:** follow the checklist in [PRODUCTION_DATA_MIGRATION.md](PRODUCTION_DATA_MIGRATION.md).
+
+## Earlier decision — TASK-INFRA-STATIC-PUBLICATION-CHANNEL-01 (2026-10-07) — ACCEPTED by SDD
+
+**Publication channel validated end to end on the real Internet with SYNTHETIC data only.**
+- Public data repository `scottpuppylu/valorant-squad-analytics-data`, served by GitHub Pages.
+- The git-based `GitHubDataRepositoryPublisher` writes the version first, verifies it, and writes the manifest last.
+- Verified: remote frontend PASS, A → B switch, incomplete C safe, rollback.
+- See [STATIC_DATA_PUBLISH.md §11](STATIC_DATA_PUBLISH.md).
+
+**SDD decisions recorded:**
+- STATIC-QUERY-PARITY-01 ACCEPTED, and `weaponId` approved as a static content id.
+- TASK-SYNERGY-SCALING-01 is DEFERRED / NON-BLOCKING.
+
+**Still NOT_STARTED:** real data publication, production data migration and cutover.
+
+## Earlier decision — TASK-INFRA-STATIC-QUERY-PARITY-01 (2026-10-07)
+
+**Static query parity implemented locally (synthetic data only, nothing published).**
+See [STATIC_DATA_PUBLISH.md §10](STATIC_DATA_PUBLISH.md).
+
+- **SDD verdict on STATIC-DATA-PUBLISH-01:** the foundation is ACCEPTED, but static data architecture readiness
+  was NOT ACCEPTED, because multi-filter and custom-date queries were "not precomputed".
+- **Fix:** a hybrid model. Public facts (`public-facts-v1`) run the extracted SHARED server core in a browser Web
+  Worker; a small `common` first-paint tier is precomputed. Every normal visible control is preserved.
+- **Evidence:**
+  - 1 401 byte-identical parity cases, 0 fail;
+  - every 10k export finished under the default statement timeout, and the weapon SQL blocker was removed by the
+    architecture.
+- **Follow-ups (separate tasks, not started):**
+  - **TASK-SYNERGY-SCALING-01:** all-history Synergy at 10k takes ≈ 7 s in the shared scoring aggregation, on the
+    server as well.
+  - **TASK-WEAPON-ANALYTICS-SCALING-01:** only needed if the live API path stays in use.
+  - Optional: serve history from facts, to remove duplication.
+
+## Earlier decision — TASK-INFRA-STATIC-DATA-PUBLISH-01 (2026-10-07)
+
+**STATIC_DATA_ARCHITECTURE_READY (local, synthetic data only).** Nothing published: PUBLIC_DATA_PUBLISHED = NO.
+See [STATIC_DATA_PUBLISH.md](STATIC_DATA_PUBLISH.md).
+
+- **Model:** PostgreSQL stays the source of truth. Public reads come from a derived, immutable, versioned snapshot
+  (`static-snapshot-v1`). The manifest is published LAST, and the browser fetches only files of the snapshot it
+  pinned.
+- **Exporter:** `npm run data:export`.
+  - Uses the same server services as `/api/valorant/dataset` over one READ ONLY snapshot of a local database.
+  - Privacy gate `public-export-gate-v1`: allowlist, forbidden names, content scan, database cross-check.
+  - Deterministic, content-addressed snapshot ids.
+- **Publisher:** `npm run data:publish:local` (`LocalFilesystemPublisher`). GitHub is only a future publisher.
+- **Frontend:** `StaticSnapshotClient` behind the existing `DatasetApiClient`, enabled with
+  `VITE_DATA_MODE=static`. Pages are unchanged; requests outside the catalog show an explicit notice.
+- **Recommended channel:** B, a separate public data repository served by GitHub Pages (same origin, scoped token,
+  isolated and squashable history).
+- **Finding:** at 10 000 matches the existing weapon-analytics aggregate statement exceeds the default 55 s
+  statement timeout. The export fails closed. A future `TASK-WEAPON-01` scaling task, or a raised exporter
+  timeout, is an SDD decision.
+
+**Earlier decision TASK-INFRA-LOCAL-RUNTIME-BOOTSTRAP-01:** ACCEPTED by SDD (2026-10-07).
+
+## Earlier decision — TASK-INFRA-LOCAL-RUNTIME-BOOTSTRAP-01 (2026-10-07)
+
+**LOCAL_RUNTIME_READY = YES** (this desktop, local only). Synthetic data and credentials only; 0 Production calls,
+0 provider requests, no push, no inbound exposure.
+
+| Area | Evidence |
+|---|---|
+| WSL storage | Recovery export `D:\WSL-Recovery\Ubuntu-pre-move-20261007.tar` (6.87 GB, SHA-256 recorded, GNU tar validated) **kept until SDD acceptance**. Native `wsl --manage Ubuntu --move D:\WSL\Ubuntu`; WSL itself retired the old C: vhdx. Boot, default user, systemd and home verified after the move |
+| Docker | Docker Engine 29.8.2 + Compose v5.6.0 from the official apt repo inside WSL (no Docker Desktop). Socket `660 root:docker`, no TCP listener, root `/var/lib/docker` on ext4 (D:-hosted vhdx) |
+| PostgreSQL storage | Named volume `postgres-data` under `/var/lib/docker/volumes/` on ext4 `/dev/sdd`; never `/mnt/c`, `/mnt/d` or NTFS |
+| Source | git bundle of Windows HEAD `5620921` cloned into `~/projects` (Linux-native), identical commit |
+| Real PostgreSQL 16.15 | Contract suite 5/5 PASS; full suite 730 passed / 0 skipped with `TEST_DATABASE_URL` |
+| Migration rehearsal | `infra/rehearsal/rehearse-migration.sh` PASS: 600 synthetic matches, pg_dump → pg_restore, parity identical, migrate idempotent |
+| Backup / restore | PASS for both the live stack DB and a 300-match synthetic dump: backup, checksum, restore and parity. The non-empty target is refused. Corrupt / missing-checksum / unsafe-target / missing-dump are refused (exit 1/1/2/2). The valid backup is intact |
+| Local stack | `up` gives: postgres healthy, migrate exit 0, app healthy, scheduler running (no job before 18:05 UTC, 0 sync runs), Caddy valid. `/`, the SPA fallback, `/healthz` and `/api` return 200 over local TLS. No secret in logs; `down -v` clean |
+
+**Defects found by the real runtime and fixed (local commits):**
+1. The parity gate compared OID-derived NOT NULL names and deparsed CHECK text, so every faithful restore failed
+   (now `database-parity-v2`).
+2. The scheduler inherited the API's HTTP healthcheck and was always unhealthy.
+
+**Operational finding:** WSL shuts its VM down when idle, and the stack restarts on the next WSL start. 24/7
+self-hosting needs WSL kept running (power and idle policy). BACKUP_FAILURE_DOMAIN stays SHARED (C: and D: are
+one SSD).
+
+**Still NOT_STARTED:** PRODUCTION_DATA_MIGRATION, PRODUCTION_CUTOVER, STATIC_JSON_PUBLISH. Next candidate:
+TASK-INFRA-STATIC-DATA-PUBLISH-01 (not implemented). [SUPERSEDED: implemented locally, see the current decision above.]
+
+## Earlier decision — TASK-INFRA-SELFHOST-READINESS-01 (2026-10-07)
+
+**SDD correction:** SELF_HOSTED_FIRST. Production runs on user-owned hardware. The cloud VPS path
+(TASK-INFRA-VPS-BOOTSTRAP-01) is cancelled as the primary target.
+
+**Outcome: B — HOST_READY_NETWORK_BLOCKED.** Read-only discovery only; nothing installed or exposed, router and
+DNS untouched.
+
+| Area | Evidence | Verdict |
+|---|---|---|
+| Host | i5-14400F 10C/16T, 31.8 GB RAM, 1 TB NVMe (C: 79 GB free, D: 158 GB free), desktop with no battery, Hyper-V active | OK |
+| WSL2 | 2.6.3, kernel 6.6.87.2, Ubuntu 24.04, `systemd=true`, NAT networking, vhdx on C: [SUPERSEDED: moved to D:] | Docker Engine feasible [SUPERSEDED: installed] |
+| Power | AC sleep never, hibernate off, Fast Startup off | 24/7 needs a usage change: 70 clean shutdowns and 74 boots in 30 days, 14 unexpected shutdowns in 90 days |
+| Network | Wired Realtek 2.5GbE at 1 Gbps, DHCP LAN, no IPv6 on the LAN | — |
+| Public IP | IPv4 globally routable (masked 122.100.x.x); IPv6 none | — |
+| CGNAT | **POSSIBLE**: router upstream hop RFC1918 (10.x); no UPnP / NAT-PMP to read the router WAN | Unconfirmed |
+| Ports | 80, 443, 5432, 3000 free; RDP 3389 and SMB 445 listen on all interfaces (LAN) | — |
+| Firewall | Windows Firewall on for all profiles (default inbound block); Ethernet profile Public; Hyper-V firewall for WSL default inbound Block | OK |
+| Storage | One physical SSD (C:/D:) plus a removable SD card; no NAS | **BACKUP_FAILURE_DOMAIN=SHARED** |
+
+**SDD decision needed:** whether direct inbound IPv4 is possible.
+- Compare the router status page's WAN IPv4 with the public IPv4. If they differ, it is CGNAT.
+- If CGNAT is confirmed, ask the ISP for a public IPv4 (or IPv6), or decide on a fallback. Not decided here.
+
+## Earlier decision — TASK-INFRA-REAL-POSTGRES-REHEARSAL-01 (2026-10-07)
+
+**BLOCKED_BY_RUNTIME_ENVIRONMENT** [SUPERSEDED: rehearsal PASS, TASK-INFRA-LOCAL-RUNTIME-BOOTSTRAP-01]. No Docker, PostgreSQL client tools or Caddy on this machine; nothing was
+installed.
+- **Ran without Docker:** shell syntax, structural compose parse, the restore script's negative paths (all refuse),
+  the background-limit re-check and all local gates.
+- **Fixed:** two static compose defects — the app-image `build` linkage, and app secrets leaking into the postgres
+  container env.
+- **Next required environment:** this machine with Docker Desktop, or the VPS.
+- **Production unchanged:** PRODUCTION_VPS_READY / DATA_MIGRATION / CUTOVER / VERCEL_RETIREMENT / NEON_RETIREMENT = NO.
+
+See [DATABASE_OPERATIONS.md](DATABASE_OPERATIONS.md).
+
+## Earlier decision — TASK-INFRA-DATABASE-PORTABILITY-01 (2026-10-07)
+
+**LOCAL IMPLEMENTATION COMPLETE; nothing in Production changed.** The main line is fixed:
+infra → migration → historical completeness → coverage → Rank → Shared-Match.
+
+| Milestone | Status |
+|---|---|
+| CODE_PROVIDER_DECOUPLING | COMPLETE: standard `pg`, `createDatabase` / `getSharedDatabase`, Neon SDK removed, architecture guards |
+| NODE_STANDALONE_RUNTIME | COMPLETE: the same 12 handlers on `node:http`, scheduler replaces Vercel Cron |
+| VPS_DEPLOYMENT_ASSETS | COMPLETE: Dockerfile, compose, Caddy, env.example, backup / restore / rehearsal |
+| LOCAL_POSTGRES_VALIDATION | PGlite + mocked-pg PASS; real PostgreSQL **NOT RUN** (no Docker/PostgreSQL on the authoring machine) |
+| MIGRATION_REHEARSAL | Parity gate PASS (PGlite); real `pg_dump` / `pg_restore` rehearsal **NOT RUN** |
+| PRODUCTION_VPS_READY / PRODUCTION_DATA_MIGRATION / PRODUCTION_CUTOVER | NOT STARTED |
+| VERCEL_RETIREMENT / NEON_RETIREMENT | NOT STARTED (Neon = rollback source until retired) |
+
+stored_index Production acceptance is deferred to the VPS (runbook step 20). Phase 4 is NOT READY.
+See [PRODUCTION_MIGRATION_RUNBOOK.md](PRODUCTION_MIGRATION_RUNBOOK.md).
+
+## Earlier decision — TASK-DATA-STORED-INDEX-01 (2026-10-07)
+
+**IMPLEMENTATION IN PROGRESS / PRODUCTION ACCEPTANCE BLOCKED BY NEON TRANSFER QUOTA.**
+- Option C: stored-index page size 20, separate from live_v4's 3; exact HMAC check; ≤ 1 detail per chunk;
+  deep-history-v2 restarts v1 stored cursors at page 1.
+- Locally: −85 % stored index requests at Phase-3 density, with exact discovery parity.
+- The local commit is not pushed. 0 Production canaries run, and the canary authorization is unused.
+- Phase 4 is NOT READY. See [STORED_INDEX_EFFICIENCY.md](STORED_INDEX_EFFICIENCY.md).
+
+## Earlier decision — TASK-DATA-BULK-01E (2026-10-06)
 
 **COMPLETE / ACCEPTED — 6 RPM sustained for the full 120-minute window.**
 - 599 charged = 599 measured provider requests, 598 HTTP requests, 0 errors of any kind, max chunk 14.8 s, max

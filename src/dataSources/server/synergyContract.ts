@@ -1,4 +1,5 @@
-import type { MatchRecord } from '../../types/valorant';
+import type { MatchRecord } from '../../types/valorant.js';
+import { isEventMetricRuleVersion } from '../../types/advancedMetrics.js';
 
 const integer = (value: unknown) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 const optionalInteger = (value: unknown) => value === undefined || integer(value);
@@ -23,7 +24,7 @@ export function validSynergyContract(match: MatchRecord, publicPlayerIds: Set<st
   if (match.synergyEvidence === undefined) return true;
   const evidence = match.synergyEvidence;
   if (typeof evidence !== 'object' || evidence === null || Object.keys(evidence).some((key) => !pairKeys.has(key)) || !Array.isArray(evidence.pairs)) return false;
-  if (evidence.ruleVersion !== 'event-metrics-v1' || !['reconstructed','partial','unavailable'].includes(evidence.status) || !integer(evidence.reconstructedRounds)) return false;
+  if (!isEventMetricRuleVersion(evidence.ruleVersion) || !['reconstructed','partial','unavailable'].includes(evidence.status) || !integer(evidence.reconstructedRounds)) return false;
   if (evidence.status === 'reconstructed' && evidence.reconstructedRounds <= 0 || evidence.status === 'unavailable' && evidence.reconstructedRounds !== 0) return false;
   const seen = new Set<string>();
   for (const pair of evidence.pairs) {

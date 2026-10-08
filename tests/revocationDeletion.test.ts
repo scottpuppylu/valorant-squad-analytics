@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { hydrateAnalysisFacts } from '../server/dataset/analysisFactHydration';
 import { applyMigrations, loadMigrations } from '../server/db/migrations';
 import type { SqlDatabase, SqlExecutor, SqlResult } from '../server/db/types';
 import { RevocationDeletionService } from '../server/deletion/revocationDeletionService';
@@ -118,6 +119,56 @@ async function seedMatch(database: SqlDatabase, targetPlayerId: string, otherPla
   return sourceId;
 }
 
+/**
+ * position-evidence-v1 (migration 0012) shared match: the revoking participant T plants round 1 and defuses round 2;
+ * the retained participant O defuses round 1 and plants round 2; an untracked participant U is killed by O. Every
+ * coordinate is a distinctive synthetic value so residue is detectable.
+ */
+async function seedSpatialSharedMatch(database: SqlDatabase, targetPlayerId: string, otherPlayerId: string) {
+  const ids = { source: randomUUID(), target: randomUUID(), other: randomUUID(), untracked: randomUUID(), round1: randomUUID(), round2: randomUUID(),
+    killByTarget: randomUUID(), killByOther: randomUUID() };
+  const hex = (c: string) => randomUUID().replaceAll('-', '').padEnd(64, c).slice(0, 64);
+  await database.transaction(async (transaction) => {
+    await transaction.query(
+      `INSERT INTO source_matches (id,squad_id,provider,provider_match_lookup_hmac,provider_schema_version,normalization_version,
+         affinity,first_observed_at,last_observed_at,position_evidence_version)
+       VALUES ($1,'00000000-0000-4000-8000-000000000001','HenrikDev',$2,'v4','test','ap',now(),now(),'position-evidence-v1')`, [ids.source, hex('a')]);
+    for (const [id, player, team] of [[ids.target, targetPlayerId, 'Blue'], [ids.other, otherPlayerId, 'Red'], [ids.untracked, null, 'Blue']] as const) {
+      await transaction.query(
+        `INSERT INTO match_participants (id,source_match_id,player_id,participant_lookup_hmac,team_key,agent_name,stats_evidence_status,kills,deaths)
+         VALUES ($1,$2,$3,$4,$5,'Jett','observed',7,3)`, [id, ids.source, player, hex('b'), team]);
+    }
+    await transaction.query(
+      `INSERT INTO rounds (id,source_match_id,round_number,plant_status,plant_participant_id,plant_time_ms,plant_site,plant_location_x,plant_location_y,
+         defuse_status,defuse_participant_id,defuse_time_ms,defuse_location_x,defuse_location_y,winning_team_role,attacking_team_key,side_source)
+       VALUES ($1,$2,1,'present',$3,30000,'A',7101,7102,'present',$4,60000,4201,4202,'Defender','Blue','plant'),
+              ($5,$2,2,'present',$4,31000,'B',4301,4302,'present',$3,61000,7201,7202,'Defender','Red','plant')`,
+      [ids.round1, ids.source, ids.target, ids.other, ids.round2]);
+    await transaction.query(
+      `INSERT INTO kill_events (id,source_match_id,round_id,event_lookup_hmac,event_sequence,time_in_round_ms,killer_participant_id,victim_participant_id,
+         weapon_id,weapon_name,location_x,location_y)
+       VALUES ($1,$2,$3,$4,1,10000,$5,$6,'weapon','Vandal',7301,7302), ($7,$2,$8,$9,2,12000,$6,$10,'weapon','Phantom',4401,4402)`,
+      [ids.killByTarget, ids.source, ids.round1, hex('d'), ids.target, ids.other, ids.killByOther, ids.round2, hex('e'), ids.untracked]);
+    await transaction.query(
+      `INSERT INTO event_player_locations (kill_event_id,match_participant_id,location_x,location_y,view_radians)
+       VALUES ($1,$2,7401,7402,1.25), ($1,$3,4501,4502,2.5)`, [ids.killByOther, ids.target, ids.other]);
+  });
+  return ids;
+}
+
+/** Every precise coordinate still attributable to `participant` (snapshots, kill events it took part in, its plants and defuses). */
+async function spatialResidue(database: SqlDatabase, participant: string) {
+  const one = async (sql: string) => Number((await database.query<{ n: string }>(sql, [participant])).rows[0]!.n);
+  return {
+    snapshots: await one('SELECT count(*)::text AS n FROM event_player_locations WHERE match_participant_id=$1'),
+    killPositions: await one(`SELECT count(*)::text AS n FROM kill_events WHERE (killer_participant_id=$1 OR victim_participant_id=$1)
+      AND (location_x IS NOT NULL OR location_y IS NOT NULL)`),
+    plantPositions: await one('SELECT count(*)::text AS n FROM rounds WHERE plant_participant_id=$1 AND (plant_location_x IS NOT NULL OR plant_location_y IS NOT NULL)'),
+    defusePositions: await one('SELECT count(*)::text AS n FROM rounds WHERE defuse_participant_id=$1 AND (defuse_location_x IS NOT NULL OR defuse_location_y IS NOT NULL)'),
+  };
+}
+const NO_RESIDUE = { snapshots: 0, killPositions: 0, plantPositions: 0, defusePositions: 0 };
+
 describe('consent revocation and durable deletion', () => {
   let database: PGliteDatabase;
   let durable: DurableEvidenceService;
@@ -214,6 +265,75 @@ describe('consent revocation and durable deletion', () => {
       'SELECT event_lookup_hmac FROM kill_events WHERE source_match_id=$1', [sourceId],
     );
     expect(eventAfterRetry.rows[0]?.event_lookup_hmac).toBe(event.rows[0]?.event_lookup_hmac);
+  });
+
+  describe('position-evidence-v1 spatial telemetry in a retained shared match', () => {
+    async function revokeTarget() {
+      const other = await durable.persistConnection({ ...connection, gameName: 'OtherGoblin' }, 'other-player-puuid');
+      const otherId = await internalPlayerId(database, other.publicPlayerId!);
+      const ids = await seedSpatialSharedMatch(database, playerId, otherId);
+      const pending = await service.revoke(publicPlayerId, managementCredential);
+      const complete = await service.continue(pending.jobId, managementCredential);
+      return { ids, otherId, pending, complete };
+    }
+
+    it('erases every coordinate attributable to the revoked planter / defuser (snapshots with view, kills, plants, defuses)', async () => {
+      const { ids, complete } = await revokeTarget();
+      expect(complete).toMatchObject({ status: 'complete', progress: { sharedMatchesAnonymized: 1, participantsAnonymized: 1 } });
+      expect(await spatialResidue(database, ids.target)).toEqual(NO_RESIDUE);
+      expect(await count(database, 'event_player_locations', 'view_radians=1.25')).toBe(0);
+    });
+
+    it('keeps the shared match, its round topology and site / side labels, and the retained participant evidence', async () => {
+      const { ids, otherId } = await revokeTarget();
+      expect(await count(database, 'source_matches', `id='${ids.source}'`)).toBe(1);
+      const rounds = await database.query<Record<string, unknown>>(
+        `SELECT round_number, plant_status, plant_site, plant_time_ms, defuse_status, defuse_time_ms, winning_team_role, attacking_team_key, side_source,
+           plant_participant_id IS NOT NULL AS has_planter, defuse_participant_id IS NOT NULL AS has_defuser,
+           plant_location_x::text AS plant_x, plant_location_y::text AS plant_y, defuse_location_x::text AS defuse_x, defuse_location_y::text AS defuse_y
+         FROM rounds WHERE source_match_id=$1 ORDER BY round_number`, [ids.source]);
+      expect(rounds.rows).toEqual([
+        { round_number: 1, plant_status: 'present', plant_site: 'A', plant_time_ms: 30000, defuse_status: 'present', defuse_time_ms: 60000,
+          winning_team_role: 'Defender', attacking_team_key: 'Blue', side_source: 'plant', has_planter: true, has_defuser: true,
+          plant_x: null, plant_y: null, defuse_x: '4201', defuse_y: '4202' },
+        { round_number: 2, plant_status: 'present', plant_site: 'B', plant_time_ms: 31000, defuse_status: 'present', defuse_time_ms: 61000,
+          winning_team_role: 'Defender', attacking_team_key: 'Red', side_source: 'plant', has_planter: true, has_defuser: true,
+          plant_x: '4301', plant_y: '4302', defuse_x: null, defuse_y: null },
+      ]);
+      // The planter / defuser references now point only at the anonymized participant row (random lookup HMAC, no player).
+      const anonymized = await database.query<{ player_id: string | null }>('SELECT player_id FROM match_participants WHERE id=$1', [ids.target]);
+      expect(anonymized.rows[0]).toEqual({ player_id: null });
+      // Retained participant: identity, stats, own snapshot (with view) and the kill it took against an untracked player.
+      const retained = await database.query<Record<string, unknown>>('SELECT player_id, kills, deaths, agent_name FROM match_participants WHERE id=$1', [ids.other]);
+      expect(retained.rows[0]).toEqual({ player_id: otherId, kills: 7, deaths: 3, agent_name: 'Jett' });
+      const otherSnapshot = await database.query<Record<string, unknown>>(
+        'SELECT location_x::text AS x, location_y::text AS y, view_radians::text AS view FROM event_player_locations WHERE match_participant_id=$1', [ids.other]);
+      expect(otherSnapshot.rows).toEqual([{ x: '4501', y: '4502', view: '2.5' }]);
+      const otherKill = await database.query<Record<string, unknown>>('SELECT location_x::text AS x, weapon_name FROM kill_events WHERE id=$1', [ids.killByOther]);
+      expect(otherKill.rows[0]).toEqual({ x: '4401', weapon_name: 'Phantom' });
+      expect(await count(database, 'kill_events', `source_match_id='${ids.source}'`)).toBe(2);
+    });
+
+    it('is idempotent: a repeated continue and a repeated revoke attempt resurrect nothing and change nothing', async () => {
+      const { ids, pending, complete } = await revokeTarget();
+      const snapshot = async () => JSON.stringify((await database.query(
+        `SELECT r.round_number, r.plant_location_x::text, r.defuse_location_x::text, r.plant_participant_id, r.defuse_participant_id
+         FROM rounds r WHERE r.source_match_id=$1 ORDER BY r.round_number`, [ids.source])).rows);
+      const before = await snapshot();
+      await expect(service.continue(pending.jobId, managementCredential)).resolves.toEqual(complete);
+      const again = await service.revoke(publicPlayerId, managementCredential); // returns the existing job
+      expect(again.jobId).toBe(pending.jobId);
+      await expect(service.continue(again.jobId, managementCredential)).resolves.toMatchObject({ status: 'complete' });
+      expect(await snapshot()).toBe(before);
+      expect(await spatialResidue(database, ids.target)).toEqual(NO_RESIDUE);
+    });
+
+    it('a later analysis-fact rebuild from the application database cannot recreate revoked telemetry', async () => {
+      const { ids } = await revokeTarget();
+      await hydrateAnalysisFacts(database);
+      expect(await count(database, 'analysis_participant_facts', `match_participant_id='${ids.target}'`)).toBe(0);
+      expect(await spatialResidue(database, ids.target)).toEqual(NO_RESIDUE);
+    });
   });
 
   it('is resumable after a bounded pause, recovers a stale lease, and is idempotent after completion', async () => {

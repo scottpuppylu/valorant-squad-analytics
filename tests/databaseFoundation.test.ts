@@ -78,7 +78,7 @@ function rawPayload() {
           { player: { puuid: 'private-opponent-puuid' }, stats: { kills: 0, score: 0 }, economy: { loadout_value: 0, remaining: 800 } },
         ],
       }],
-      kills: [{ round: 1, time_in_round_in_ms: 10_000, time_in_match_in_ms: 10_000, killer: { puuid: 'consenting-puuid', team: 'Blue' }, victim: { puuid: 'private-opponent-puuid', team: 'Red' }, assistants: [{ puuid: 'private-teammate-puuid', team: 'Blue' }], weapon: { id: 'vandal-id', name: 'Vandal' }, location: { x: 0, y: 42 }, player_locations: [{ puuid: 'consenting-puuid', x: 0, y: 42 }, { puuid: 'private-opponent-puuid', x: 50, y: 70 }] }],
+      kills: [{ round: 1, time_in_round_in_ms: 10_000, time_in_match_in_ms: 10_000, killer: { puuid: 'consenting-puuid', team: 'Blue' }, victim: { puuid: 'private-opponent-puuid', team: 'Red' }, assistants: [{ puuid: 'private-teammate-puuid', team: 'Blue' }], weapon: { id: 'vandal-id', name: 'Vandal' }, location: { x: 0, y: 42 }, player_locations: [{ player: { puuid: 'consenting-puuid', team: 'Blue' }, location: { x: 0, y: 42 }, view_radians: 1.5 }, { player: { puuid: 'private-teammate-puuid', team: 'Blue' }, location: { x: 50, y: 70 }, view_radians: 0.25 }] }],
     }],
   };
 }
@@ -123,6 +123,7 @@ describe('durable database and consent foundation', () => {
       { version: '0009', applied: '1' },
       { version: '0010', applied: '1' },
       { version: '0011', applied: '1' },
+      { version: '0012', applied: '1' },
     ]);
     const cursorColumns = await database.query<{ column_name: string }>(
       `SELECT column_name FROM information_schema.columns WHERE table_name='sync_cursors'`,
@@ -170,7 +171,7 @@ describe('durable database and consent foundation', () => {
         VALUES ('00000000-0000-4000-8000-000000000101','00000000-0000-4000-8000-000000000102','Upgrade','TW')`);
       await existing.query(`INSERT INTO consents (id,player_id,status,consent_method,privacy_version,consented_at)
         VALUES ('00000000-0000-4000-8000-000000000103','00000000-0000-4000-8000-000000000101','active','self_asserted','old-v1',now())`);
-      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006', '0007', '0008', '0009', '0010', '0011']);
+      expect(await applyMigrations(existing, migrations)).toEqual(['0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012']);
       expect(await applyMigrations(existing, migrations)).toEqual([]);
     } finally {
       await existing.close();
@@ -181,9 +182,9 @@ describe('durable database and consent foundation', () => {
     const existing = new PGliteDatabase(new PGlite());
     try {
       const migrations = await loadMigrations(resolve('migrations'));
-      // The CURRENT writer also maintains analysis-match-facts-v1 (0011, independent of 0007–0010), so the
-      // populated pre-0007 state is written with that additive table present.
-      await applyMigrations(existing, [...migrations.slice(0, 6), migrations.find((migration) => migration.version === '0011')!]);
+      // The CURRENT writer also maintains analysis-match-facts-v1 (0011) and position-evidence-v1 (0012), both
+      // independent of 0007–0010, so the populated pre-0007 state is written with those additive objects present.
+      await applyMigrations(existing, [...migrations.slice(0, 6), ...migrations.filter((migration) => migration.version === '0011' || migration.version === '0012')]);
       const writer = new DurableEvidenceService(existing, hmacKey);
       const connected = await writer.persistConnection(input, 'consenting-puuid');
       await writer.persistMatches({ ...input, playerId: connected.publicPlayerId! }, rawPayload());

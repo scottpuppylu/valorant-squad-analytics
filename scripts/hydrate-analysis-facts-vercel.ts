@@ -1,5 +1,5 @@
 import { hydrateAnalysisFacts } from '../server/dataset/analysisFactHydration.js';
-import { createNeonDatabase } from '../server/db/neon.js';
+import { createDatabase } from '../server/db/runtime.js';
 
 /**
  * TASK-DATA-03B.2D: deterministic analysis-match-facts-v1 hydration in the normal Vercel Production build,
@@ -11,7 +11,7 @@ import { createNeonDatabase } from '../server/db/neon.js';
 if (process.env.VERCEL_ENV !== 'production') {
   process.stdout.write('Skipping analysis fact hydration outside Vercel Production.\n');
 } else {
-  const database = createNeonDatabase();
+  const database = createDatabase();
   if (!database) throw new Error('DATABASE_URL is required for Vercel Production fact hydration.');
   const started = Date.now();
   try {

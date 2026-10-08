@@ -27,7 +27,7 @@ export function PlayerCard({ analytics, rank }: PlayerCardProps) {
           <div className="min-w-0">
             <h3 className="truncate text-base font-semibold text-white">{player.handle}</h3>
             <MemberNickname player={player} className="block truncate text-xs text-slate-400" />
-            <p className="truncate text-xs text-slate-400">{zhTW.roles[player.role]} · {player.tagline}</p>
+            <p className="truncate text-xs text-slate-400">{player.role ? zhTW.roles[player.role] : zhTW.unknownRole} · {player.tagline}</p>
           </div>
         </div>
         <ScoreBadge value={scores.overall} compact />

@@ -2,7 +2,7 @@ import type { PlayerRole } from '../types/valorant.js';
 import type { Dimension } from './versions.js';
 
 export interface Benchmark {
-  metric: string; context: PlayerRole | 'global'; poor: number; strong: number;
+  metric: string; context: PlayerRole | 'global' | 'unknown_role'; poor: number; strong: number;
   direction: 'higher' | 'lower'; version: string;
 }
 export interface ComponentTrace {

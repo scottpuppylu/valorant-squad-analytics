@@ -72,6 +72,13 @@ const mapping: CommunityNameMapping[] = [
   { gameName: 'Fictional ü Plus', communityName: '測試丙' },
 ];
 
+/** Rows projected onto the columns that existed before (later additive migrations such as 0012 add nullable columns). */
+const beforeColumns = (after: Record<string, unknown>[] | undefined, before: Record<string, unknown>[] | undefined) =>
+  (after ?? []).map((row, i) => Object.fromEntries(Object.keys((before ?? [])[i] ?? row).map((key) => [key, row[key]])));
+/** position-evidence-v1 (0012) columns must stay NULL on pre-existing rows: the migration is purely additive. */
+const POSITION_COLUMNS = ['position_evidence_version', 'plant_site', 'plant_location_x', 'plant_location_y', 'defuse_location_x', 'defuse_location_y', 'winning_team_role', 'attacking_team_key', 'side_source'];
+const positionColumnsNull = (rows: Record<string, unknown>[] | undefined) => (rows ?? []).every((row) => POSITION_COLUMNS.every((key) => !(key in row) || row[key] === null));
+
 describe('migration 0009 member nickname', () => {
   it('adds a NULL nickname without changing members, accounts or account-scoped evidence; reapply is a no-op', async () => {
     const db = await database(8);
@@ -80,10 +87,13 @@ describe('migration 0009 member nickname', () => {
     const tables = ['members', 'players', 'consents', 'sync_cursors', 'sync_runs', 'match_participants', 'source_matches'];
     const dump = async () => Object.fromEntries(await Promise.all(tables.map(async (t) => [t, (await db.query(`SELECT * FROM ${t} ORDER BY id`)).rows] as const)));
     const before = await dump();
-    expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual(['0009', '0010', '0011']);
+    expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual(['0009', '0010', '0011', '0012']);
     expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual([]);
     const after = await dump();
-    for (const table of tables.filter((t) => t !== 'members')) expect(after[table], table).toEqual(before[table]);
+    for (const table of tables.filter((t) => t !== 'members')) {
+      expect(beforeColumns(after[table], before[table]), table).toEqual(before[table]);
+      expect(positionColumnsNull(after[table]), table).toBe(true);
+    }
     expect(after.members!.map(({ nickname, ...rest }) => { expect(nickname).toBeNull(); return rest; })).toEqual(before.members);
     await expect(db.query("UPDATE members SET nickname='' WHERE id=$1", [uuid(1, 1)])).rejects.toThrow();
     await expect(db.query("UPDATE members SET nickname=' x' WHERE id=$1", [uuid(1, 1)])).rejects.toThrow();

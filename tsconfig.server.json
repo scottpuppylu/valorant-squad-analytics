@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist-server",
+    "rootDir": ".",
+    "strict": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "noEmitOnError": true
+  },
+  "include": ["server/node/main.ts", "server/node/scheduler.ts", "scripts/migrate.ts", "scripts/hydrate-analysis-facts.ts", "scripts/member-admin.ts", "scripts/purge-expired-deletion-audits.ts", "scripts/provision-consent-management.ts", "scripts/bulk-history.ts", "scripts/database-parity.ts", "scripts/export-static-snapshot.ts", "scripts/publish-static-snapshot.ts", "scripts/publish-static-github.ts"]
+}

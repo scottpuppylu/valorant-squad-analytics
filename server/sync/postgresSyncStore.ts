@@ -14,6 +14,7 @@ import type {
   DeepCursorState,
 } from './types.js';
 import { PUBLIC_DATASET_CONSENT_METHOD, PUBLIC_DATASET_PRIVACY_VERSION } from '../../shared/privacyPolicy.js';
+import { DEEP_HISTORY_RULE_VERSION, LEGACY_DEEP_HISTORY_RULE_VERSION } from './historicalDiscoveryProvider.js';
 import type { ScheduledJob, ScheduledCandidate } from './scheduledSyncService.js';
 import type { RecentRefreshState } from './recentRefresh.js';
 
@@ -47,6 +48,7 @@ type CursorRow = {
   next_attempt_at: string | Date | null;
   coverage_complete_for_provider_window: boolean;
   coverage_incomplete_reason: string | null;
+  history_rule_version?: string | null;
 };
 
 type RunRow = SubjectRow & {
@@ -59,6 +61,7 @@ type RunRow = SubjectRow & {
 };
 
 type StatusRow = {
+  history_rule_version: string | null;
   history_phase: DeepCursorState['historyPhase'];
   stored_page: number;
   stored_item_index: number;
@@ -124,7 +127,7 @@ function cursorFromRow(row: CursorRow): SyncCursorRecord {
     nextAttemptAt: iso(row.next_attempt_at),
     completeForProviderWindow: row.coverage_complete_for_provider_window,
     incompleteReason: row.coverage_incomplete_reason ?? undefined,
-    ...(row.sync_kind === 'deep_backfill' ? { deep: deepFromRow(row) } : {}),
+    ...(row.sync_kind === 'deep_backfill' ? { deep: deepFromRow(row), ...(row.history_rule_version ? { historyRuleVersion: row.history_rule_version } : {}) } : {}),
   };
 }
 
@@ -259,7 +262,7 @@ export class PostgresSyncStore {
     const id = randomUUID();
     const insert = await transaction.query(
       `INSERT INTO sync_cursors (id, player_id, provider, affinity, queue_scope, sync_kind, history_rule_version)
-       VALUES ($1,$2,'HenrikDev',$3,'*',$4,CASE WHEN $4='deep_backfill' THEN 'deep-history-v1' ELSE NULL END)
+       VALUES ($1,$2,'HenrikDev',$3,'*',$4,CASE WHEN $4='deep_backfill' THEN '${DEEP_HISTORY_RULE_VERSION}' ELSE NULL END)
        ON CONFLICT (player_id, provider, affinity, queue_scope, sync_kind) DO NOTHING`,
       [id, subject.playerId, subject.affinity, kind],
     );
@@ -502,7 +505,7 @@ export class PostgresSyncStore {
            discovery_page=COALESCE(($12::jsonb->>'discoveryPage')::integer,discovery_page),
            live_history_exhausted=COALESCE(($12::jsonb->>'liveHistoryExhausted')::boolean,live_history_exhausted),
            stored_history_exhausted=COALESCE(($12::jsonb->>'storedHistoryExhausted')::boolean,stored_history_exhausted),
-           history_rule_version=CASE WHEN $12::jsonb IS NULL THEN history_rule_version ELSE 'deep-history-v1' END,
+           history_rule_version=CASE WHEN $12::jsonb IS NULL THEN history_rule_version ELSE '${DEEP_HISTORY_RULE_VERSION}' END,
            lease_token=NULL, lease_expires_at=NULL, updated_at=$9
          WHERE id=$1 AND lease_token=$2`,
         [input.cursorId, input.leaseToken, input.nextStart, input.coverageFrom ?? null, input.coverageTo ?? null,
@@ -588,7 +591,7 @@ export class PostgresSyncStore {
     const result = await this.database.query<StatusRow>(
       `SELECT sr.public_id, sr.sync_kind, sr.status, sr.page_count, sr.matches_seen,
               sc.history_phase,sc.stored_page,sc.stored_item_index,sc.stored_total,sc.discovery_page,
-              sc.live_history_exhausted,sc.stored_history_exhausted,
+              sc.live_history_exhausted,sc.stored_history_exhausted,sc.history_rule_version,
               sr.stored_matches_seen,sr.detail_requests,sr.detail_unavailable_count,
               sr.matches_persisted, sr.overlap_count, sr.retry_count,
               COALESCE(sc.coverage_from,sr.coverage_from) AS coverage_from,
@@ -613,7 +616,7 @@ export class PostgresSyncStore {
       kind: row.sync_kind,
       status: row.status,
       ...(row.sync_kind === 'deep_backfill' ? { history: {
-        ...deepFromRow(row), ruleVersion: 'deep-history-v1' as const,
+        ...deepFromRow(row), ruleVersion: row.history_rule_version === LEGACY_DEEP_HISTORY_RULE_VERSION ? LEGACY_DEEP_HISTORY_RULE_VERSION : DEEP_HISTORY_RULE_VERSION,
         sourceExhausted: row.history_phase === 'complete' && row.live_history_exhausted && row.stored_history_exhausted,
         lifetimeComplete: false as const,
       } } : {}),

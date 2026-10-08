@@ -2,7 +2,7 @@ import type { MatchImportInput } from '../contracts.js';
 import { PublicApiError } from '../errors.js';
 import { lookupHmac, sourceMatchHmac } from '../identityProtection.js';
 import type { DurableEvidenceService } from '../persistence/durableEvidenceService.js';
-import type { HistoricalDiscoveryProvider } from './historicalDiscoveryProvider.js';
+import { DEEP_HISTORY_RULE_VERSION, STORED_INDEX_PAGE_SIZE, type HistoricalDiscoveryProvider } from './historicalDiscoveryProvider.js';
 import type { PostgresSyncStore } from './postgresSyncStore.js';
 import { normalizeSeasonEvidence } from '../evidence/seasonEvidence.js';
 import { logDatabaseFailure } from './databaseFailureStage.js';
@@ -37,6 +37,8 @@ export async function executeDeepHistoryChunk(options: {
   input: MatchImportInput;
   hmacKey: string;
   pageSize: number;
+  /** stored-index-efficiency-v1 page size (live_v4 keeps `pageSize`). Overridable only for parity tests. */
+  storedPageSize?: number;
   now: () => Date;
   monotonicNow: () => number;
   invocationStarted: number;
@@ -44,12 +46,25 @@ export async function executeDeepHistoryChunk(options: {
   metrics: SyncChunkMetrics;
 }): Promise<DeepChunkResult> {
   const { store, durable, provider, run, cursor, input, hmacKey, pageSize, now, monotonicNow } = options;
+  const storedPageSize = options.storedPageSize ?? STORED_INDEX_PAGE_SIZE;
   const deep: DeepCursorState = { ...(cursor.deep ?? {
     historyPhase: 'live_v4', storedPage: 1, storedItemIndex: 0,
     liveHistoryExhausted: false, storedHistoryExhausted: false,
   }) };
   const metrics = options.metrics;
   const result: DeepChunkResult = { deep, metrics, nextStart: cursor.nextStart, runStatus: 'paused' };
+  // TASK-DATA-STORED-INDEX-01: a pre-v2 cursor inside stored_index holds coordinates in the old page size.
+  // The stored index is mutable (newest first, grows at the front), so an offset rebase could skip entries;
+  // restart stored discovery at page 1 instead. Known entries are cheap to re-read (exact HMAC check).
+  // live_v4 and complete cursors are never reset by this transition.
+  let previousFingerprint = cursor.lastPageFingerprintHmac;
+  if (deep.historyPhase === 'stored_index' && cursor.historyRuleVersion !== DEEP_HISTORY_RULE_VERSION) {
+    deep.storedPage = 1;
+    deep.storedItemIndex = 0;
+    delete deep.discoveryPage;
+    previousFingerprint = undefined;
+    metrics.storedCursorRestarts = (metrics.storedCursorRestarts ?? 0) + 1;
+  }
   async function request(work: () => Promise<unknown>, detail = false): Promise<unknown> {
     if (monotonicNow() - options.invocationStarted >= options.budgetMs) {
       throw new PublicApiError(504, 'PROVIDER_TIMEOUT', '已達同步時間預算，保留原進度。');
@@ -67,7 +82,7 @@ export async function executeDeepHistoryChunk(options: {
     try { return await work(); } finally { metrics.providerFetchMs += Math.round(monotonicNow() - started); }
   }
   function ids(payload: unknown, stored: boolean): string[] {
-    if (!record(payload) || !Array.isArray(payload.data) || payload.data.length > pageSize) throw malformed();
+    if (!record(payload) || !Array.isArray(payload.data) || payload.data.length > (stored ? storedPageSize : pageSize)) throw malformed();
     return payload.data.map((entry) => {
       const meta = record(entry) ? entry[stored ? 'meta' : 'metadata'] : undefined;
       const id = record(meta) ? meta[stored ? 'id' : 'match_id'] : undefined;
@@ -143,7 +158,7 @@ export async function executeDeepHistoryChunk(options: {
     return result;
   }
   if (deep.historyPhase !== 'stored_index') throw malformed();
-  const payload = await request(() => provider.fetchStoredIndexPage(input, deep.storedPage, pageSize));
+  const payload = await request(() => provider.fetchStoredIndexPage(input, deep.storedPage, storedPageSize));
   const rawIds = ids(payload, true);
   const hmacs = hmacsFor(rawIds);
   result.fingerprintHmac = fingerprint(hmacs);
@@ -160,9 +175,9 @@ export async function executeDeepHistoryChunk(options: {
     if (!rawIds.length && after > 0) return stall();
   }
   if (result.fingerprintHmac && deep.discoveryPage !== undefined && deep.discoveryPage !== deep.storedPage
-    && result.fingerprintHmac === cursor.lastPageFingerprintHmac) return stall();
+    && result.fingerprintHmac === previousFingerprint) return stall();
   // The materialized index is mutable: restart a changed in-progress page safely.
-  if (deep.storedItemIndex > 0 && result.fingerprintHmac !== cursor.lastPageFingerprintHmac) deep.storedItemIndex = 0;
+  if (deep.storedItemIndex > 0 && result.fingerprintHmac !== previousFingerprint) deep.storedItemIndex = 0;
   if (deep.storedItemIndex > rawIds.length) deep.storedItemIndex = 0;
   deep.discoveryPage = deep.storedPage;
   const existing = await store.existingMatchHmacs(hmacs);
@@ -201,7 +216,7 @@ export async function executeDeepHistoryChunk(options: {
     metrics.storedMatchesSeen! += 1;
   }
   if (deep.storedItemIndex === rawIds.length) {
-    if (after === 0 || (after === undefined && rawIds.length < pageSize)) {
+    if (after === 0 || (after === undefined && rawIds.length < storedPageSize)) {
       deep.storedHistoryExhausted = true;
       if (deep.liveHistoryExhausted) {
         deep.historyPhase = 'complete';

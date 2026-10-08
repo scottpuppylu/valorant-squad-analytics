@@ -30,6 +30,8 @@ export const zhTW = {
     consistency: '穩定度',
     confidence: '樣本信心',
   } satisfies Record<ScoreCategory | 'confidence', string>,
+  /** agent-catalog-v1: label when no played agent has a known role (never a guessed role). */
+  unknownRole: '未知角色',
   roles: {
     Duelist: '決鬥者',
     Initiator: '先鋒',

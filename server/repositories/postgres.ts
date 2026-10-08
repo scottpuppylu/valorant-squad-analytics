@@ -130,8 +130,8 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
       `INSERT INTO source_matches (
         id, squad_id, provider, provider_match_lookup_hmac, provider_schema_version, normalization_version,
         affinity, map_id, map_name, queue_id, queue_name, started_at, game_length_ms, first_observed_at, last_observed_at
-        , rounds_evidence_status, kills_evidence_status, season_id, season_short
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14,$15,$16,$17,$18)
+        , rounds_evidence_status, kills_evidence_status, season_id, season_short, position_evidence_version
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$14,$15,$16,$17,$18,$19)
       ON CONFLICT (provider, provider_match_lookup_hmac) DO UPDATE SET
         map_id=EXCLUDED.map_id, map_name=EXCLUDED.map_name, queue_id=EXCLUDED.queue_id, queue_name=EXCLUDED.queue_name,
         started_at=EXCLUDED.started_at, game_length_ms=EXCLUDED.game_length_ms, normalization_version=EXCLUDED.normalization_version,
@@ -139,11 +139,12 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
         season_id=COALESCE(EXCLUDED.season_id, source_matches.season_id),
         season_short=COALESCE(EXCLUDED.season_short, source_matches.season_short),
         rounds_evidence_status=EXCLUDED.rounds_evidence_status, kills_evidence_status=EXCLUDED.kills_evidence_status,
+        position_evidence_version=EXCLUDED.position_evidence_version,
         last_observed_at=EXCLUDED.last_observed_at RETURNING id`,
       [randomUUID(), squadId, evidence.provider, evidence.matchLookupHmac, evidence.providerSchemaVersion, evidence.normalizationVersion,
         evidence.affinity, evidence.mapId ?? null, evidence.mapName ?? null, evidence.queueId ?? null, evidence.queueName ?? null,
         evidence.startedAt ?? null, evidence.gameLengthMs ?? null, observedAt, evidence.roundsStatus, evidence.killsStatus,
-        evidence.seasonId ?? null, evidence.seasonShort ?? null],
+        evidence.seasonId ?? null, evidence.seasonShort ?? null, evidence.positionEvidenceVersion ?? null],
     );
 
     // TASK-DATA-HISTORICAL-IDENTITY-01: never re-link a participant row owned by a different account, and
@@ -215,11 +216,14 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
       round.plantParticipantHmac ? participantIds.get(round.plantParticipantHmac) ?? null : null, round.plantTimeMs ?? null,
       round.defuseStatus, round.defuseParticipantHmac ? participantIds.get(round.defuseParticipantHmac) ?? null : null,
       round.defuseTimeMs ?? null,
+      round.plantSite ?? null, round.plantLocation?.x ?? null, round.plantLocation?.y ?? null, round.defuseLocation?.x ?? null, round.defuseLocation?.y ?? null,
+      round.winningTeamRole ?? null, round.attackingTeamKey ?? null, round.sideSource ?? null,
     ]);
     if (roundRows.length > 0) {
       await transaction.query(
-        `INSERT INTO rounds (id, source_match_id, round_number, winning_team, result, participants_evidence_status, plant_status, plant_participant_id, plant_time_ms, defuse_status, defuse_participant_id, defuse_time_ms)
-         VALUES ${valuePlaceholders(roundRows.length, 12)}`,
+        `INSERT INTO rounds (id, source_match_id, round_number, winning_team, result, participants_evidence_status, plant_status, plant_participant_id, plant_time_ms, defuse_status, defuse_participant_id, defuse_time_ms,
+           plant_site, plant_location_x, plant_location_y, defuse_location_x, defuse_location_y, winning_team_role, attacking_team_key, side_source)
+         VALUES ${valuePlaceholders(roundRows.length, 20)}`,
         flattenRows(roundRows),
       );
     }
@@ -273,16 +277,18 @@ export class PostgresMatchEvidenceRepository implements MatchEvidenceRepository 
     for (const { id: killId, kill } of preparedKills) {
       for (const location of kill.playerLocations) {
         const locationPlayerId = participantIds.get(location.participantHmac);
-        if (locationPlayerId) locationsByParticipant.set(`${killId}:${locationPlayerId}`, [killId, locationPlayerId, location.x, location.y]);
+        const key = `${killId}:${locationPlayerId}`;
+        // First snapshot per (event, participant) wins; a reference to an unknown participant is dropped.
+        if (locationPlayerId && !locationsByParticipant.has(key)) locationsByParticipant.set(key, [killId, locationPlayerId, location.x, location.y, location.viewRadians ?? null]);
       }
     }
     const locationRows = [...locationsByParticipant.values()];
     if (locationRows.length > 0) {
       await transaction.query(
-        `INSERT INTO event_player_locations (kill_event_id, match_participant_id, location_x, location_y)
-         VALUES ${valuePlaceholders(locationRows.length, 4)}
+        `INSERT INTO event_player_locations (kill_event_id, match_participant_id, location_x, location_y, view_radians)
+         VALUES ${valuePlaceholders(locationRows.length, 5)}
          ON CONFLICT (kill_event_id, match_participant_id) DO UPDATE SET
-           location_x=EXCLUDED.location_x, location_y=EXCLUDED.location_y`,
+           location_x=EXCLUDED.location_x, location_y=EXCLUDED.location_y, view_radians=EXCLUDED.view_radians`,
         flattenRows(locationRows),
       );
     }

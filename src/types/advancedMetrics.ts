@@ -1,5 +1,14 @@
 export type MetricEvidenceStatus = 'reconstructed' | 'derived' | 'partial' | 'unavailable';
 
+/**
+ * Event-metric rule versions the scoring engine accepts. event-metrics-v2 (round-topology-aware) keeps the exact v1
+ * evidence contract; see docs/EVENT_RECONSTRUCTION_ROBUSTNESS.md.
+ */
+export const EVENT_METRIC_RULE_VERSIONS = ['event-metrics-v1', 'event-metrics-v2'] as const;
+export function isEventMetricRuleVersion(value: unknown): boolean {
+  return typeof value === 'string' && (EVENT_METRIC_RULE_VERSIONS as readonly string[]).includes(value);
+}
+
 export interface MetricCoverage {
   eligibleRounds?: number;
   reconstructedRounds?: number;

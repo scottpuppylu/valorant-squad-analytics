@@ -1,7 +1,8 @@
-import type { DatasetAnalyticsContextResponse, DatasetHistoryResponse, DatasetReadyResponse } from './contracts';
-import { normalizeSeasonKey } from '../../analytics/scope/season';
-import type { NormalizedAnalyticsDataset } from '../types';
-import { validSynergyContract } from './synergyContract';
+import type { DatasetAnalyticsContextResponse, DatasetHistoryResponse, DatasetReadyResponse } from './contracts.js';
+import { normalizeSeasonKey } from '../../analytics/scope/season.js';
+import type { NormalizedAnalyticsDataset } from '../types.js';
+import { validSynergyContract } from './synergyContract.js';
+import { isEventMetricRuleVersion } from '../../types/advancedMetrics.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -12,7 +13,7 @@ function isFiniteOptionalNumber(value: unknown): boolean {
 }
 
 function isAdvancedMetrics(value: unknown): boolean {
-  if (!isRecord(value) || value.ruleVersion !== 'event-metrics-v1' || !isRecord(value.coverage) || !isRecord(value.evidence)) return false;
+  if (!isRecord(value) || !isEventMetricRuleVersion(value.ruleVersion) || !isRecord(value.coverage) || !isRecord(value.evidence)) return false;
   if (!isFiniteOptionalNumber(value.coverage.eligibleRounds)
     || !isFiniteOptionalNumber(value.coverage.reconstructedRounds)
     || !isFiniteOptionalNumber(value.coverage.omittedRounds)) return false;

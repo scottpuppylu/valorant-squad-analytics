@@ -5,7 +5,7 @@ import {
   consentManagementCredentialHmac,
   createConsentManagementCredential,
 } from '../server/consentManagementCredential.js';
-import { createNeonDatabase } from '../server/db/neon.js';
+import { createDatabase } from '../server/db/runtime.js';
 
 const publicPlayerId = process.env.CONSENT_PROVISION_PLAYER_ID;
 const outputPath = process.env.CONSENT_PROVISION_OUTPUT_PATH;
@@ -24,7 +24,7 @@ if (relativeOutput === '' || (!relativeOutput.startsWith('..') && !isAbsolute(re
   throw new Error('Credential output must be outside the repository.');
 }
 
-const database = createNeonDatabase();
+const database = createDatabase();
 if (!database) throw new Error('Database is unavailable.');
 const credential = createConsentManagementCredential();
 const issuedAt = new Date().toISOString();

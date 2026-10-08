@@ -1,0 +1,97 @@
+# TASK-INFRA-DATABASE-PORTABILITY-01 — single-VPS Production stack.
+#
+#   Internet --HTTPS--> web (Caddy, :80/:443) --app-internal--> app (Node API :3000) --app-internal--> postgres (:5432)
+#
+# Only Caddy publishes ports. PostgreSQL is attached ONLY to the private `app-internal` network (internal: true,
+# no route to the Internet); application <-> database traffic never crosses the public Internet. The API also
+# joins `edge` for outbound provider HTTPS; nothing publishes the API or database port.
+# Secrets come from infra/env/production.env (app/jobs) and infra/env/postgres.env (database only), both NOT committed
+# (copy infra/env.example and infra/postgres.env.example). Run with `--env-file infra/env/production.env` so SITE_ADDRESS
+# and POSTGRES_DB/POSTGRES_USER interpolate. Never `down -v` in Production.
+name: valorant-squad-analytics
+
+services:
+  postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    # Least privilege: the database container receives ONLY database settings, never application secrets.
+    env_file: ./env/postgres.env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-valorant}
+      POSTGRES_USER: ${POSTGRES_USER:-valorant}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [app-internal]
+    # No `ports:` — PostgreSQL is never published (not even on 127.0.0.1 by default).
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    shm_size: 256mb
+
+  migrate:
+    build: { context: .., dockerfile: Dockerfile, target: app }
+    image: valorant-squad-analytics-app:local
+    env_file: ./env/production.env
+    networks: [app-internal]
+    depends_on:
+      postgres: { condition: service_healthy }
+    # One-shot: schema migrations, then deterministic analysis-fact hydration (idempotent).
+    command: ["sh", "-c", "node dist-server/scripts/migrate.js && node dist-server/scripts/hydrate-analysis-facts.js"]
+    restart: "no"
+
+  app:
+    build: { context: .., dockerfile: Dockerfile, target: app }
+    image: valorant-squad-analytics-app:local
+    restart: unless-stopped
+    env_file: ./env/production.env
+    environment:
+      PORT: "3000"
+      HOST: "0.0.0.0"
+    # app-internal: Caddy + PostgreSQL. edge: outbound HTTPS to the provider API (no inbound ports).
+    networks: [app-internal, edge]
+    # No `ports:` — only Caddy reaches the API.
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+
+  scheduler:
+    build: { context: .., dockerfile: Dockerfile, target: app }
+    image: valorant-squad-analytics-app:local
+    restart: unless-stopped
+    env_file: ./env/production.env
+    environment:
+      SCHEDULER_TARGET_URL: "http://app:3000"
+    networks: [app-internal]
+    command: ["node", "dist-server/server/node/scheduler.js"]
+    # The image HEALTHCHECK probes the API's :3000/healthz; the scheduler serves no HTTP, so it would always
+    # report unhealthy. Liveness is the process itself (restart: unless-stopped).
+    healthcheck: { disable: true }
+    depends_on:
+      app: { condition: service_healthy }
+
+  web:
+    build: { context: .., dockerfile: Dockerfile, target: web }
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [app-internal, edge]
+    depends_on:
+      app: { condition: service_healthy }
+
+networks:
+  app-internal:
+    internal: true
+  edge: {}
+
+volumes:
+  postgres-data:
+  caddy-data:
+  caddy-config:

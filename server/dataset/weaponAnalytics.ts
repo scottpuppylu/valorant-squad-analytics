@@ -2,14 +2,15 @@ import type { SqlDatabase } from '../db/types.js';
 import { PublicApiError } from '../errors.js';
 import { activePlayers } from './postgresDatasetReadRepository.js';
 import type { ServerAnalysisService } from './analysisService.js';
-import { datasetSchemaVersion } from './types.js';
 import { normalizeSeasonKey } from '../../src/analytics/scope/season.js';
-import { isAbsoluteStrengthMode, requestedModeAllowed } from '../../src/analytics/modeEligibility.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
 import {
-  buildWeaponAnalytics, type EvidenceState, type KillAggRow, type RoundAggRow, type WeaponAggregates, type WeaponDimension,
+  type EvidenceState, type KillAggRow, type RoundAggRow, type WeaponAggregates, type WeaponDimension,
   type WeaponRoundAggRow, type WeaponScopeMode,
 } from '../../src/analytics/weapons/engine.js';
+import { finishWeaponAnalytics, weaponModeIncluded, weaponRequestReasons, type PublicWeaponFact, type WeaponRequest } from '../../src/analytics/weapons/weaponQuery.js';
+
+export type { WeaponRequest } from '../../src/analytics/weapons/weaponQuery.js';
 
 /**
  * TASK-WEAPON-01 server feature `view=analysis&feature=weaponAnalytics` (same Vercel function).
@@ -18,7 +19,6 @@ import {
  * own currentStrength adaptive selection (feature-scope-policy-v2, unchanged), then the same SQL
  * restricted to those member/match pairs. Visibility = the shared `activePlayers` projection.
  */
-export interface WeaponRequest { player: string; scope: WeaponScopeMode; act?: string; map: string; agent: string; mode: string }
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 const bad = (message: string) => new PublicApiError(400, 'BAD_REQUEST', message);
@@ -143,7 +143,6 @@ export class WeaponAnalyticsService {
     const started = performance.now();
     let sqlQueryCount = 0;
     const query = <Row extends Record<string, unknown>>(sql: string, params: unknown[] = []) => { sqlQueryCount += 1; return this.database.query<Row>(sql, params); };
-    const reasons: string[] = [];
     const [values, visible, current] = await Promise.all([
       query<{ queue_id: string | null; queue_name: string | null; season_short: string | null }>('SELECT DISTINCT queue_id, queue_name, season_short FROM source_matches'),
       query<{ member_id: string }>(`SELECT DISTINCT member_public_id::text AS member_id FROM (${activePlayers}) a ORDER BY 1`),
@@ -151,25 +150,19 @@ export class WeaponAnalyticsService {
         ? this.analysis.analyze({ feature: 'currentStrength', map: request.map, agent: request.agent, mode: request.mode, role: 'all', player: 'all', form: false })
         : Promise.resolve(undefined),
     ]);
-    // weapon-analytics-v2 / mode-eligibility-policy-v1: weapon STRENGTH evidence is Competitive only for
-    // ALL / ACT / CURRENT. 'all' = every eligible mode; an explicit ineligible mode computes nothing.
-    const modeExcluded = !requestedModeAllowed('ABSOLUTE_STRENGTH', request.mode);
-    if (modeExcluded) reasons.push('queue_excluded_by_policy');
-    const queueKeys = modeExcluded ? [] : [...new Set(values.rows.filter((row) => {
-      const mode = normalizeGameMode(row.queue_id, row.queue_name);
-      return isAbsoluteStrengthMode(mode) && (request.mode === 'all' || mode === request.mode);
-    }).map((row) => `${row.queue_id ?? ''}|${row.queue_name ?? ''}`))];
+    // weapon-analytics-v2 / mode-eligibility-policy-v1 (shared weaponQuery): weapon STRENGTH evidence is
+    // Competitive only for ALL / ACT / CURRENT; an explicit ineligible mode computes nothing.
+    const queueKeys = [...new Set(values.rows.filter((row) => weaponModeIncluded(request, normalizeGameMode(row.queue_id, row.queue_name)))
+      .map((row) => `${row.queue_id ?? ''}|${row.queue_name ?? ''}`))];
     const seasons = request.scope === 'act' ? [...new Set(values.rows.map((row) => row.season_short).filter((raw): raw is string => normalizeSeasonKey(raw) === request.act))] : null;
-    if (seasons && seasons.length === 0) reasons.push('act_not_observed');
     let pairs: string[] | null = null;
     let scopeStatus: EvidenceState | undefined;
     if (current) {
-      const selection = current.selection;
-      pairs = Object.entries(selection).flatMap(([memberId, matchIds]) => matchIds.map((matchId) => `${memberId}|${matchId}`));
-      const scope = current.payload.scope;
-      if (scope) { scopeStatus = scope.status; reasons.push(...scope.reasons); }
-      reasons.push('current_strength_adaptive_window');
+      pairs = Object.entries(current.selection).flatMap(([memberId, matchIds]) => matchIds.map((matchId) => `${memberId}|${matchId}`));
+      scopeStatus = current.payload.scope?.status;
     }
+    const reasons = weaponRequestReasons(request, (seasons?.length ?? 0) > 0,
+      current ? { ...(scopeStatus ? { scopeStatus } : {}), scopeReasons: current.payload.scope?.reasons ?? [] } : undefined);
     const params = [queueKeys, request.map === 'all' ? null : request.map, request.agent === 'all' ? null : request.agent, seasons, pairs];
     const [roundResult, kills] = await Promise.all([
       query<Dim & { kind: 'coverage' | 'usage'; wkey: string | null; weapon_name: string | null; played_rounds: number; weapon_observed_rounds: number; loadout_observed_rounds: number;
@@ -189,15 +182,69 @@ export class WeaponAnalyticsService {
         kills: num(row.kills), matches: num(row.matches) })),
     };
     const memberIds = visible.rows.map((row) => row.member_id);
-    const memberVisible = request.player === 'all' || memberIds.includes(request.player);
-    if (!memberVisible) reasons.push('member_not_visible');
-    const anyRounds = aggregates.rounds.some((row) => row.dim === 'total' && row.playedRounds > 0);
-    const status: EvidenceState = !memberVisible || !anyRounds ? 'unavailable' : scopeStatus === 'partial' ? 'partial' : 'available';
-    const result = buildWeaponAnalytics(aggregates, {
-      memberIds, ...(request.player !== 'all' && memberVisible ? { memberId: request.player } : {}),
-      scope: { mode: request.scope, status, reasons: [...new Set(reasons)].sort(), ...(request.act ? { act: request.act } : {}), context: { map: request.map, agent: request.agent, mode: request.mode } },
-    });
-    const payload = { ok: true as const, schemaVersion: datasetSchemaVersion, view: 'analysis' as const, feature: 'weaponAnalytics' as const, modeEligibilityPolicyVersion: 'mode-eligibility-policy-v1' as const, ...result };
+    const payload = finishWeaponAnalytics(aggregates, request, { memberIds, reasons, ...(scopeStatus ? { scopeStatus } : {}) });
     return { payload, metrics: { sqlQueryCount, totalMs: Math.round(performance.now() - started), currentAnalysis: Boolean(current) } };
   }
+}
+
+/**
+ * TASK-INFRA-STATIC-QUERY-PARITY-01 public weapon facts: one row per member-match participation exactly as
+ * `participations` (same visibility, collision and start rules, NO request filters) with its eligible round
+ * rows (rr) and own kill events (kk). The browser filters them with the shared `filterWeaponFacts` (the SQL
+ * WHERE) and aggregates with the engine's SQL mirror `aggregateWeaponFacts`. One bounded statement per member.
+ */
+export const weaponFactsSql = `${participations},
+  pf AS (
+    SELECT p.participant_id, p.source_match_id, p.team_key, p.member_id, p.account_id, p.map_name, p.agent, p.started_at,
+           sm.public_id::text AS match_id, sm.queue_id, sm.queue_name, sm.season_short AS season_raw,
+           (sm.map_name IS NULL) AS map_null, (mp.agent_name IS NULL) AS agent_null
+    FROM p JOIN source_matches sm ON sm.id = p.source_match_id JOIN match_participants mp ON mp.id = p.participant_id
+    WHERE p.member_id = $6::text
+  ),
+  rr AS (
+    SELECT pf.participant_id, json_agg(json_build_array(
+             CASE WHEN r.winning_team IS NULL THEN NULL ELSE r.winning_team = pf.team_key END,
+             rp.weapon_evidence_status, rp.weapon_id, rp.weapon_name, rp.loadout_evidence_status, rp.loadout_value, rp.stats_evidence_status, rp.score)
+           ORDER BY r.round_number) AS rounds
+    FROM pf JOIN rounds r ON r.source_match_id = pf.source_match_id
+    JOIN round_participants rp ON rp.round_id = r.id AND rp.match_participant_id = pf.participant_id AND rp.present IS TRUE
+    GROUP BY pf.participant_id
+  ),
+  kk AS (
+    SELECT pf.participant_id, json_agg(json_build_array(ke.weapon_id, ke.weapon_name)
+           ORDER BY ke.weapon_id COLLATE "C" NULLS FIRST, ke.weapon_name COLLATE "C" NULLS FIRST) AS kills
+    FROM pf JOIN kill_events ke ON ke.source_match_id = pf.source_match_id AND ke.killer_participant_id = pf.participant_id
+    GROUP BY pf.participant_id
+  )
+  SELECT pf.member_id, pf.account_id, pf.match_id, pf.map_name, pf.agent, pf.started_at, pf.queue_id, pf.queue_name, pf.season_raw,
+         pf.map_null, pf.agent_null, coalesce(rr.rounds, '[]'::json) AS rounds, coalesce(kk.kills, '[]'::json) AS kills
+  FROM pf LEFT JOIN rr ON rr.participant_id = pf.participant_id LEFT JOIN kk ON kk.participant_id = pf.participant_id
+  ORDER BY pf.started_at, pf.match_id COLLATE "C", pf.account_id COLLATE "C"`;
+
+type RoundTuple = [boolean | null, string, string | null, string | null, string, number | null, string, number | null];
+
+/** Visible members (same order as the live service) and the public Act keys observed in ANY tracked source match. */
+export async function readWeaponFactContext(database: Pick<SqlDatabase, 'query'>) {
+  const [visible, seasons] = await Promise.all([
+    database.query<{ member_id: string }>(`SELECT DISTINCT member_public_id::text AS member_id FROM (${activePlayers}) a ORDER BY 1`),
+    database.query<{ season_short: string | null }>('SELECT DISTINCT season_short FROM source_matches'),
+  ]);
+  const acts = [...new Set(seasons.rows.map((row) => normalizeSeasonKey(row.season_short)).filter((key): key is string => Boolean(key)))].sort();
+  return { memberIds: visible.rows.map((row) => row.member_id), observedActs: acts };
+}
+
+export async function readPublicWeaponFacts(database: Pick<SqlDatabase, 'query'>, memberId: string): Promise<PublicWeaponFact[]> {
+  const rows = (await database.query<{ member_id: string; account_id: string; match_id: string; map_name: string; agent: string; started_at: unknown;
+    queue_id: string | null; queue_name: string | null; season_raw: string | null; map_null: boolean; agent_null: boolean; rounds: RoundTuple[]; kills: [string | null, string | null][] }>(
+    weaponFactsSql, [null, null, null, null, null, memberId])).rows;
+  return rows.map((row): PublicWeaponFact => ({
+    memberId: row.member_id, accountId: row.account_id, matchId: row.match_id, map: row.map_name, agent: row.agent,
+    ...(row.season_raw !== null ? { act: row.season_raw } : {}), startedAt: new Date(row.started_at as string).toISOString(),
+    rounds: row.rounds.map(([won, weaponStatus, weaponId, weaponName, loadoutStatus, loadoutValue, statsStatus, score]) => ({
+      won, weaponStatus: weaponStatus as 'observed', weaponId, weaponName, loadoutStatus: loadoutStatus as 'observed',
+      loadoutValue: loadoutValue === null ? null : Number(loadoutValue), statsStatus: statsStatus as 'observed', score: score === null ? null : Number(score) })),
+    kills: row.kills.map(([weaponId, weaponName]) => ({ weaponId, weaponName })),
+    gameMode: normalizeGameMode(row.queue_id, row.queue_name),
+    ...(row.map_null ? { mapNull: true as const } : {}), ...(row.agent_null ? { agentNull: true as const } : {}),
+  }));
 }

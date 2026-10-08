@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { buildAnalytics, type AnalyticsPopulationFacts } from '../data/analytics';
 import { demoDataSource } from '../dataSources/demo/DemoDataSource';
 import { removeBrowserRealDataset } from '../dataSources/real/BrowserRealDatasetRepository';
-import { serverDatasetApiClient, type DatasetApiClient } from '../dataSources/server/DatasetApiClient';
+import type { DatasetApiClient } from '../dataSources/server/DatasetApiClient';
+import { createDatasetClient, dataDeliveryConfig } from '../dataSources/runtimeClient';
 import type { DatasetReadyResponse } from '../dataSources/server/contracts';
 import type { NormalizedAnalyticsDataset } from '../dataSources/types';
 import type { DatasetContextValue, DatasetRuntimeSource, DatasetRuntimeStatus } from './DatasetContext';
@@ -35,12 +36,15 @@ function emptyRealDataset(): NormalizedAnalyticsDataset {
   return { players: [], matches: [], sourceId: 'durable-neon-v4', isDemo: false, mode: 'REAL' };
 }
 
+/** GitHub Pages is Demo-only unless the build reads a published static snapshot (VITE_DATA_MODE=static). */
 function githubPagesRuntime(): boolean {
-  return typeof window !== 'undefined' && window.location.hostname.endsWith('.github.io');
+  return typeof window !== 'undefined' && window.location.hostname.endsWith('.github.io') && dataDeliveryConfig().mode !== 'static';
 }
 
+const defaultClient = createDatasetClient();
 
-export function DatasetProvider({ children, client = serverDatasetApiClient, forceDemo }: DatasetProviderProps) {
+
+export function DatasetProvider({ children, client = defaultClient, forceDemo }: DatasetProviderProps) {
   const demo = useMemo(() => demoDataSource.snapshot(), []);
   const [state, setState] = useState<RuntimeState>({ status: 'loading', source: 'DEMO', dataset: demo });
   const stateRef = useRef(state);

@@ -20,6 +20,7 @@ import type {
 import type { AnalysisQuery, DatasetAnalysisResponse } from './analysisResult';
 import type { WeaponQuery } from '../../analytics/weapons/local';
 import type { WeaponAnalyticsResponse } from './weaponContract';
+import { analysisSearchParams, weaponSearchParams } from '../static/contract';
 
 export class BackendApiError extends Error {
   constructor(readonly code: ProviderPublicErrorCode, message: string) {
@@ -65,24 +66,12 @@ export class ValorantBackendClient {
 
   /** DATA-03B.2B server-resolved feature population over all durable history (feature + context only). */
   datasetAnalysis(query: AnalysisQuery, signal?: AbortSignal): Promise<DatasetAnalysisResponse | DatasetDisabledResponse> {
-    const params = new URLSearchParams({ view: 'analysis', feature: query.feature });
-    for (const key of ['act', 'from', 'to', 'map', 'agent', 'role', 'mode', 'player'] as const) {
-      const value = query[key];
-      if (value && value !== 'all') params.set(key, value);
-    }
-    if (query.recent) params.set('recent', String(query.recent));
-    if (query.form) params.set('form', '1');
-    return requestJson(`/api/valorant/dataset?${params.toString()}`, { signal });
+    return requestJson(`/api/valorant/dataset?${analysisSearchParams(query).toString()}`, { signal });
   }
 
   /** TASK-WEAPON-01 member weapon analytics (semantic scope/context only; same dataset function). */
   weaponAnalytics(query: WeaponQuery, signal?: AbortSignal): Promise<WeaponAnalyticsResponse | DatasetDisabledResponse> {
-    const params = new URLSearchParams({ view: 'analysis', feature: 'weaponAnalytics', scope: query.scope, mode: query.mode });
-    if (query.player !== 'all') params.set('player', query.player);
-    if (query.act) params.set('act', query.act);
-    if (query.map !== 'all') params.set('map', query.map);
-    if (query.agent !== 'all') params.set('agent', query.agent);
-    return requestJson(`/api/valorant/dataset?${params.toString()}`, { signal });
+    return requestJson(`/api/valorant/dataset?${weaponSearchParams(query).toString()}`, { signal });
   }
 
   /** DATA-03B.2A aggregate analytics facts (population coverage, Act/rank/duration availability). */

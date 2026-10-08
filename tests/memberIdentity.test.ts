@@ -125,6 +125,13 @@ const stripAccounts = (dataset: NormalizedAnalyticsDataset) => JSON.parse(JSON.s
 const analysisFeatures: AnalysisRequest[] = [request({ form: true }), request({ feature: 'lifetimeTotals' }), request({ feature: 'mapStats', map: 'Bind' }),
   request({ feature: 'actOverview', act: 'e11a5' }), request({ feature: 'fixedRecent', recent: 10 }), request({ feature: 'improvementIndex' })];
 
+/** Rows projected onto the columns that existed before (later additive migrations such as 0012 add nullable columns). */
+const beforeColumns = (after: Record<string, unknown>[] | undefined, before: Record<string, unknown>[] | undefined) =>
+  (after ?? []).map((row, i) => Object.fromEntries(Object.keys((before ?? [])[i] ?? row).map((key) => [key, row[key]])));
+/** position-evidence-v1 (0012) columns must stay NULL on pre-existing rows: the migration is purely additive. */
+const POSITION_COLUMNS = ['position_evidence_version', 'plant_site', 'plant_location_x', 'plant_location_y', 'defuse_location_x', 'defuse_location_y', 'winning_team_role', 'attacking_team_key', 'side_source'];
+const positionColumnsNull = (rows: Record<string, unknown>[] | undefined) => (rows ?? []).every((row) => POSITION_COLUMNS.every((key) => !(key in row) || row[key] === null));
+
 describe('migration 0008 member-identity-v1', () => {
   it('backfills exactly one member per existing account, reusing ids, without touching account-scoped evidence', async () => {
     const db = await database(7);
@@ -139,10 +146,13 @@ describe('migration 0008 member-identity-v1', () => {
     const dump = async () => Object.fromEntries(await Promise.all(tables.map(async (table) => [table, (await db.query(`SELECT * FROM ${table} ORDER BY id`)).rows] as const)));
     const before = await dump();
 
-    expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual(['0008', '0009', '0010', '0011']);
+    expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual(['0008', '0009', '0010', '0011', '0012']);
     expect(await applyMigrations(db, await loadMigrations(resolve('migrations')))).toEqual([]);
     const after = await dump();
-    for (const table of tables.filter((name) => name !== 'players')) expect(after[table], table).toEqual(before[table]);
+    for (const table of tables.filter((name) => name !== 'players')) {
+      expect(beforeColumns(after[table], before[table]), table).toEqual(before[table]);
+      expect(positionColumnsNull(after[table]), table).toBe(true);
+    }
     // Existing player columns are unchanged; only the new columns were added.
     const legacyColumns = (row: Record<string, unknown>) => Object.fromEntries(Object.entries(row).filter(([key]) => !['member_id', 'is_primary_account', 'account_label'].includes(key)));
     expect(after.players!.map(legacyColumns)).toEqual(before.players);
@@ -155,7 +165,7 @@ describe('migration 0008 member-identity-v1', () => {
       { id: uuid(1, 3), public_id: uuid(2, 3), display_name: 'Account3', display_name_source: 'legacy_account', archived: false },
       { id: uuid(1, 9), public_id: uuid(2, 9), display_name: '已刪除成員', display_name_source: 'legacy_account', archived: true },
     ]);
-    expect((await db.query('SELECT version FROM schema_migrations ORDER BY version')).rows.slice(-4)).toEqual([{ version: '0008' }, { version: '0009' }, { version: '0010' }, { version: '0011' }]);
+    expect((await db.query('SELECT version FROM schema_migrations ORDER BY version')).rows.slice(-5)).toEqual([{ version: '0008' }, { version: '0009' }, { version: '0010' }, { version: '0011' }, { version: '0012' }]);
     expect(await new MemberAdminService(db).invariants()).toMatchObject({
       members: 4, archivedMembers: 1, accounts: 4, liveAccounts: 3, accountsWithoutMember: 0, membersWithMultiplePrimaries: 0,
       activeMembersWithoutLiveAccount: 0, liveAccountsOnArchivedMember: 0, sameMatchMemberCollisions: 0, accountsPerMember: { 1: 3 },

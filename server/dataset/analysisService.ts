@@ -1,27 +1,26 @@
 import type { SqlDatabase, SqlExecutor } from '../db/types.js';
 import { PublicApiError } from '../errors.js';
-import { createPerformanceEntries, defaultAnalysisFilters, selectPerformances } from '../../src/analytics/filters.js';
-import type { AnalysisFilters } from '../../src/analytics/types.js';
-import { resolveAdaptiveWindow } from '../../src/analytics/scope/adaptiveWindow.js';
-import { policyFor } from '../../src/analytics/scope/policies.js';
-import { matchesInPairContext, populationFromMatches } from '../../src/analytics/scope/resolveScope.js';
-import { resolveProgressWindows } from '../../src/analytics/progress/windows.js';
 import { normalizeSeasonKey } from '../../src/analytics/scope/season.js';
-import type { AdaptiveWindowResult, ScopePopulation, ScopeSummary } from '../../src/analytics/scope/types.js';
-import { ADAPTIVE_WINDOW_VERSION, ANALYSIS_SCOPE_VERSION, FEATURE_SCOPE_POLICY_VERSION } from '../../src/analytics/scope/versions.js';
 import type { MatchRecord, Player } from '../../src/types/valorant.js';
-import type { PerformanceEntry, SelectionResult } from '../../src/analytics/types.js';
-import { summarizeSelection } from '../../src/analytics/summary.js';
-import { buildSynergy, defaultSynergyFilters } from '../../src/synergy/analytics.js';
+import type { ScopePopulation } from '../../src/analytics/scope/types.js';
 import { normalizeGameMode } from '../../src/utils/gameMode.js';
-import { MODE_ELIGIBILITY_POLICY_VERSION } from '../../src/analytics/modeEligibility.js';
+import {
+  analysisFeatures, analysisPopulation, availabilityOf, finalizeAnalysis, resolveAnalysisMatchIds,
+  type AnalysisFeature, type AnalysisRequest,
+} from '../../src/analytics/analysisCore.js';
 import { buildAnalyticsContext, PostgresAnalyticsContextRepository } from './analyticsContext.js';
 import { hasMemberCollision, membersFromRows, type DatasetProjectionService } from './datasetProjectionService.js';
 import { activePlayers, detailQueries, playersQuery, selectedMatches } from './postgresDatasetReadRepository.js';
 import { factOf, factReadSql, freshFactPredicate, FULL_TRACKED_AGGREGATE_VERSION, type FactReadRow } from './analysisFacts.js';
 import { assembleMatch, type ParticipantFact } from './matchAssembly.js';
 import type { DatasetEvidenceAvailability, DatasetPlayerRow } from './types.js';
-import { datasetIdentityVersion, datasetSchemaVersion } from './types.js';
+import { datasetIdentityVersion } from './types.js';
+
+// The DB-free core is shared with the static read model's browser engine (TASK-INFRA-STATIC-QUERY-PARITY-01).
+export {
+  SERVER_ANALYSIS_VERSION, analysisFeatures, filtersFor, serializeScope, serializeWindow,
+  type AnalysisFeature, type AnalysisRequest, type SerializedWindow,
+} from '../../src/analytics/analysisCore.js';
 
 /**
  * TASK-DATA-03B.2B — server-side context-aware analytics consumption.
@@ -41,45 +40,6 @@ import { datasetIdentityVersion, datasetSchemaVersion } from './types.js';
  * and only entries whose evidence phase 2 actually loaded are ever scored.
  * The browser then runs the unchanged community-score-v2 / duo-synergy-v1 code on the result.
  */
-export const SERVER_ANALYSIS_VERSION = 'server-analysis-v2' as const;
-/** Phase-2 work unit (matches per detail read) and parallel chunks. NOT a population limit. */
-export const PHASE2_CHUNK_MATCHES = 250;
-export const PHASE2_PARALLEL_CHUNKS = 2;
-
-function mergeAvailability(a: DatasetEvidenceAvailability, b: DatasetEvidenceAvailability): DatasetEvidenceAvailability {
-  // Each flag is an every(...) over matches, so AND across chunks equals the whole-population value.
-  return {
-    acs: 'derived', adr: 'derived',
-    headshotPercentage: a.headshotPercentage === 'derived' && b.headshotPercentage === 'derived' ? 'derived' : 'partial',
-    kast: a.kast === 'reconstructed' && b.kast === 'reconstructed' ? 'reconstructed' : 'partial',
-    firstKills: a.firstKills === 'reconstructed' && b.firstKills === 'reconstructed' ? 'reconstructed' : 'partial',
-    firstDeaths: a.firstDeaths === 'reconstructed' && b.firstDeaths === 'reconstructed' ? 'reconstructed' : 'partial',
-  };
-}
-
-/** Same SelectionResult the browser rebuilt from a v1 payload (byPlayer order, entries playedAt desc). */
-function selectionOf(byPlayer: Map<string, PerformanceEntry[]>): SelectionResult {
-  const entries = [...byPlayer.values()].flat()
-    .sort((a, b) => b.match.playedAt.localeCompare(a.match.playedAt) || a.playerId.localeCompare(b.playerId));
-  return { entries, byPlayer };
-}
-
-export const analysisFeatures = ['currentStrength', 'lifetimeTotals', 'mapStats', 'agentStats', 'actOverview', 'fixedRecent', 'synergy', 'improvementIndex'] as const;
-export type AnalysisFeature = (typeof analysisFeatures)[number];
-
-export interface AnalysisRequest {
-  feature: AnalysisFeature;
-  recent?: 10 | 30;
-  act?: string;
-  from?: string;
-  to?: string;
-  map: string;
-  agent: string;
-  role: string;
-  mode: string;
-  player: string;
-  form: boolean;
-}
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
 const datePattern = /^\d{4}-\d{2}-\d{2}$/u;
@@ -131,18 +91,6 @@ export function parseAnalysisRequest(query: Record<string, string | string[] | u
   };
 }
 
-/** The same AnalysisFilters a browser page builds for this feature/context. */
-export function filtersFor(request: AnalysisRequest): AnalysisFilters {
-  const period: AnalysisFilters['period'] = request.feature === 'currentStrength' ? 'current'
-    : request.feature === 'actOverview' ? 'act'
-      : request.feature === 'fixedRecent' ? (request.recent === 10 ? 'recent10' : 'recent30')
-        : request.from || request.to ? 'custom' : 'all';
-  return {
-    ...defaultAnalysisFilters, period,
-    ...(request.act ? { act: request.act } : {}), ...(request.from ? { dateFrom: request.from } : {}), ...(request.to ? { dateTo: request.to } : {}),
-    playerId: request.player, map: request.map, agent: request.agent, role: request.role as AnalysisFilters['role'], gameMode: request.mode,
-  };
-}
 
 interface ObservationRow extends Record<string, unknown> {
   internal_match_id: string;
@@ -234,253 +182,159 @@ function skeletonMatches(rows: ObservationRow[]): { matches: MatchRecord[]; inte
   return { matches, internalByPublic };
 }
 
-export interface SerializedWindow extends Omit<AdaptiveWindowResult, 'currentEntries' | 'baselineEntries'> {
-  currentMatchIds: string[];
-  baselineMatchIds: string[];
+
+/** Phase-2 work unit (matches per detail read) and parallel chunks. NOT a population limit. */
+export const PHASE2_CHUNK_MATCHES = 250;
+export const PHASE2_PARALLEL_CHUNKS = 2;
+
+/** Phase-1 inputs: skeletons of ALL eligible durable history plus players and aggregate evidence. */
+export interface AnalysisPhase1 {
+  skeletons: MatchRecord[];
+  internalByPublic: Map<string, string>;
+  agentsByInternal: Map<string, Set<string>>;
+  playerRows: DatasetPlayerRow[];
+  /** Members without agent history (phase-1 resolution input). */
+  skeletonPlayers: Player[];
+  population: ScopePopulation;
+  trackedMatchCount: number;
+  observationRows: number;
 }
 
-export function serializeWindow(window: AdaptiveWindowResult): SerializedWindow {
-  const { currentEntries, baselineEntries, ...rest } = window;
-  return { ...rest, currentMatchIds: currentEntries.map((entry) => entry.match.id), baselineMatchIds: baselineEntries.map((entry) => entry.match.id) };
-}
-
-export function serializeScope(summary: ScopeSummary) {
-  const { players, ...rest } = summary;
-  return { ...rest, players: [...players.values()].map(({ window, ...player }) => ({ ...player, ...(window ? { window: serializeWindow(window) } : {}) })) };
+/** Phase-2 result: full records plus evidence flags of every assembled match (or fallback chunk). */
+export interface AnalysisPhase2 {
+  full: Map<string, MatchRecord>;
+  /** Keyed by public match id (also matches with no visible performance, which are not in `full`). */
+  flags: Map<string, { round: boolean; headshot: boolean }>;
+  players: Player[];
+  factRows: number;
+  factMatches: number;
+  fallbackMatches: number;
+  chunks: number;
+  factMs: number;
+  projectionMs: number;
 }
 
 export class ServerAnalysisService {
   constructor(private readonly database: SqlDatabase, private readonly projection: DatasetProjectionService) {}
 
+  private counted() {
+    let count = 0;
+    const query = (<Row extends Record<string, unknown>>(sql: string, params: unknown[] = []) => { count += 1; return this.database.query<Row>(sql, params); }) as SqlExecutor['query'];
+    return { query, count: () => count };
+  }
+
+  /** Phase 1: lightweight observations over all eligible durable history. */
+  async loadPhase1(query: SqlExecutor['query'] = this.counted().query): Promise<AnalysisPhase1> {
+    const [observationResult, playerResult, contextRows] = await Promise.all([
+      query<ObservationRow>(analysisObservationsSql),
+      query<DatasetPlayerRow>(playersQuery),
+      new PostgresAnalyticsContextRepository({ query }).readContextRows(),
+    ]);
+    const observations = observationResult.rows;
+    const playerRows = playerResult.rows;
+    const context = buildAnalyticsContext(contextRows);
+    const { matches: skeletons, internalByPublic } = skeletonMatches(observations);
+    const agentsByInternal = new Map<string, Set<string>>();
+    for (const row of observations) {
+      if (!row.agent_name) continue;
+      agentsByInternal.set(row.internal_player_id, (agentsByInternal.get(row.internal_player_id) ?? new Set()).add(row.agent_name));
+    }
+    return {
+      skeletons, internalByPublic, agentsByInternal, playerRows,
+      skeletonPlayers: membersFromRows(playerRows, new Map()),
+      population: analysisPopulation(skeletons, { acts: context.evidence.season.acts.map((act) => act.key), seasonStatus: context.evidence.season.status, rankStatus: context.evidence.rank.status }),
+      trackedMatchCount: context.population.trackedMatchCount,
+      observationRows: observations.length,
+    };
+  }
+
+  /**
+   * Phase 2 (full-tracked-aggregate-v1): full evidence for EVERY given match (no cap). One statement reads the
+   * visible performance rows with their fresh analysis facts; a match is assembled from facts only when every
+   * visible participant has one. The rest (absent or stale facts) are reconstructed from raw durable evidence
+   * with the same shared projection, in work-unit chunks. `fallbackChunk = 1` yields per-match flags; flags are
+   * combined with AND either way, so availability is identical.
+   */
+  async loadFull(phase1: AnalysisPhase1, publicIds: Iterable<string>, query: SqlExecutor['query'] = this.counted().query, fallbackChunk = PHASE2_CHUNK_MATCHES): Promise<AnalysisPhase2> {
+    const internalIds = [...publicIds].flatMap((id) => phase1.internalByPublic.get(id) ?? []).sort();
+    const publicByInternal = new Map([...phase1.internalByPublic].map(([publicId, internalId]) => [internalId, publicId]));
+    const full = new Map<string, MatchRecord>();
+    const flags = new Map<string, { round: boolean; headshot: boolean }>();
+    let players: Player[] = membersFromRows(phase1.playerRows, phase1.agentsByInternal);
+    let projectionMs = 0;
+    const factStarted = performance.now();
+    const factRows = internalIds.length ? (await query<FactReadRow>(factReadSql(selectedMatches), [internalIds])).rows : [];
+    const factMs = performance.now() - factStarted;
+    const assemblyStarted = performance.now();
+    const fallbackIds: string[] = [];
+    const factRowsByMatch = new Map<string, FactReadRow[]>();
+    for (const row of factRows) factRowsByMatch.set(row.internal_match_id, [...(factRowsByMatch.get(row.internal_match_id) ?? []), row]);
+    const assembly = assemblyContext(phase1.playerRows);
+    let identityConflicts = 0;
+    let factMatches = 0;
+    for (const [matchId, rows] of factRowsByMatch) {
+      const facts = new Map<string, ParticipantFact>();
+      for (const row of rows) { const fact = factOf(row); if (fact) facts.set(row.internal_participant_id, fact); }
+      const result = assembleMatch(assembly, rows, facts);
+      // A member collision withholds the match on either path; it never needs topology.
+      if (result.kind === 'identity_conflict') { identityConflicts += 1; continue; }
+      if (facts.size !== rows.length) { fallbackIds.push(matchId); continue; }
+      factMatches += 1;
+      if (result.kind !== 'assembled') continue;
+      flags.set(publicByInternal.get(matchId) ?? `internal:${matchId}`, { round: result.roundEvidenceComplete, headshot: result.headshotEvidenceComplete });
+      if (result.match) full.set(result.match.id, result.match);
+    }
+    if (identityConflicts > 0) {
+      process.stdout.write(`${JSON.stringify({ event: 'member_identity_conflict', identityVersion: datasetIdentityVersion, matchesWithheld: identityConflicts })}
+`);
+    }
+    projectionMs += performance.now() - assemblyStarted;
+    const chunks: string[][] = [];
+    for (let index = 0; index < fallbackIds.length; index += fallbackChunk) chunks.push(fallbackIds.slice(index, index + fallbackChunk));
+    const projectChunk = async (ids: string[]) => {
+      const rows = await Promise.all(detailQueries(query, selectedMatches, [ids]));
+      // Raw rounds/events are released after each chunk; only compact match records are kept.
+      const projectionStarted = performance.now();
+      const projected = this.projection.project({
+        players: phase1.playerRows, performances: rows[0].rows, rounds: rows[1].rows, roundParticipants: rows[2].rows, events: rows[3].rows,
+      }, phase1.agentsByInternal);
+      projectionMs += performance.now() - projectionStarted;
+      for (const match of projected.dataset.matches) full.set(match.id, match);
+      // A projected chunk's availability is the AND of its matches' flags.
+      const flag = { round: projected.availability.kast === 'reconstructed', headshot: projected.availability.headshotPercentage === 'derived' };
+      flags.set(ids.length === 1 ? (publicByInternal.get(ids[0]!) ?? `internal:${ids[0]}`) : `chunk:${ids[0]}`, flag);
+      players = projected.dataset.players;
+    };
+    for (let index = 0; index < chunks.length; index += PHASE2_PARALLEL_CHUNKS) {
+      await Promise.all(chunks.slice(index, index + PHASE2_PARALLEL_CHUNKS).map(projectChunk));
+    }
+    return { full, flags, players, factRows: factRows.length, factMatches, fallbackMatches: fallbackIds.length, chunks: chunks.length, factMs, projectionMs };
+  }
+
   async analyze(request: AnalysisRequest) {
     const started = performance.now();
-    {
-      let sqlQueryCount = 0;
-      const query = (<Row extends Record<string, unknown>>(sql: string, params: unknown[] = []) => { sqlQueryCount += 1; return this.database.query<Row>(sql, params); }) as SqlExecutor['query'];
-
-      // ---- Phase 1: lightweight observations over all eligible durable history.
-      const phase1Started = performance.now();
-      const [observationResult, playerResult, contextRows] = await Promise.all([
-        query<ObservationRow>(analysisObservationsSql),
-        query<DatasetPlayerRow>(playersQuery),
-        new PostgresAnalyticsContextRepository({ query }).readContextRows(),
-      ]);
-      const observations = observationResult.rows;
-      const playerRows = playerResult.rows;
-      const context = buildAnalyticsContext(contextRows);
-      const phase1Ms = performance.now() - phase1Started;
-
-      const resolveStarted = performance.now();
-      const { matches: skeletons, internalByPublic } = skeletonMatches(observations);
-      const agentsByInternal = new Map<string, Set<string>>();
-      for (const row of observations) {
-        if (!row.agent_name) continue;
-        agentsByInternal.set(row.internal_player_id, (agentsByInternal.get(row.internal_player_id) ?? new Set()).add(row.agent_name));
-      }
-      const skeletonPlayers: Player[] = membersFromRows(playerRows, new Map());
-      const population: ScopePopulation = {
-        ...populationFromMatches(skeletons, true),
-        seasonKeys: [...new Set([...populationFromMatches(skeletons, true).seasonKeys, ...context.evidence.season.acts.map((act) => act.key)])].sort(),
-        seasonStatus: context.evidence.season.status,
-        rankStatus: context.evidence.rank.status,
-      };
-      const filters = filtersFor(request);
-      const lifetimeFeature = request.feature === 'mapStats' || request.feature === 'agentStats' ? request.feature : 'lifetimeTotals';
-      const dataset = (matches: MatchRecord[], players: Player[]) => ({ players, matches, sourceId: 'durable-neon-v4', isDemo: false as const, mode: 'REAL' as const });
-
-      let selectedIds = new Set<string>();
-      if (request.feature === 'improvementIndex') {
-        // Bounded by policy: only each player's current + baseline windows reach phase 2.
-        const contextual = selectPerformances(createPerformanceEntries(dataset(skeletons, skeletonPlayers)), filters, { population });
-        for (const entries of contextual.byPlayer.values()) {
-          const { window } = resolveProgressWindows(entries, population);
-          for (const entry of [...window.currentEntries, ...window.baselineEntries]) selectedIds.add(entry.match.id);
-        }
-      } else if (request.feature === 'synergy') {
-        selectedIds = new Set(matchesInPairContext(skeletons, { map: request.map, gameMode: request.mode, ...(request.act ? { act: request.act } : {}), ...(request.from ? { from: request.from } : {}), ...(request.to ? { to: request.to } : {}) }).map((match) => match.id));
-      } else {
-        const skeletonEntries = createPerformanceEntries(dataset(skeletons, skeletonPlayers));
-        const first = selectPerformances(skeletonEntries, filters, { population, lifetimeFeature });
-        const ids = [...new Set(first.entries.map((entry) => entry.match.id))];
-        // Every adaptive window (even an unavailable one) needs real evidence for its confidence.
-        for (const player of first.scope?.players.values() ?? []) for (const entry of player.window?.currentEntries ?? []) ids.push(entry.match.id);
-        if (request.form) {
-          const contextual = selectPerformances(skeletonEntries, { ...filters, period: 'all' }, { population });
-          for (const entries of contextual.byPlayer.values()) {
-            const window = resolveAdaptiveWindow(entries, policyFor('recentForm'), { population });
-            for (const entry of [...window.currentEntries, ...window.baselineEntries]) ids.push(entry.match.id);
-          }
-        }
-        selectedIds = new Set(ids);
-      }
-      const resolveMs = performance.now() - resolveStarted;
-
-      // ---- Phase 2 (full-tracked-aggregate-v1): full evidence for EVERY selected match (no cap).
-      // One statement reads the visible performance rows with their fresh analysis facts; a match is
-      // assembled from facts only when every visible participant has one. The rest (absent or stale facts)
-      // are reconstructed from raw durable evidence with the same shared projection, in work-unit chunks.
-      const phase2Started = performance.now();
-      const internalIds = [...selectedIds].flatMap((id) => internalByPublic.get(id) ?? []).sort();
-      const full = new Map<string, MatchRecord>();
-      let availability: DatasetEvidenceAvailability | undefined;
-      let projectedPlayers: Player[] = membersFromRows(playerRows, agentsByInternal);
-      let projectionMs = 0;
-      let factMs = 0;
-      const factStarted = performance.now();
-      const factRows = internalIds.length ? (await query<FactReadRow>(factReadSql(selectedMatches), [internalIds])).rows : [];
-      factMs = performance.now() - factStarted;
-      const assemblyStarted = performance.now();
-      const fallbackIds: string[] = [];
-      const factRowsByMatch = new Map<string, FactReadRow[]>();
-      for (const row of factRows) factRowsByMatch.set(row.internal_match_id, [...(factRowsByMatch.get(row.internal_match_id) ?? []), row]);
-      const assembly = assemblyContext(playerRows);
-      let roundEvidence = true;
-      let headshotEvidence = true;
-      let identityConflicts = 0;
-      let factMatches = 0;
-      for (const [matchId, rows] of factRowsByMatch) {
-        const facts = new Map<string, ParticipantFact>();
-        for (const row of rows) { const fact = factOf(row); if (fact) facts.set(row.internal_participant_id, fact); }
-        const result = assembleMatch(assembly, rows, facts);
-        // A member collision withholds the match on either path; it never needs topology.
-        if (result.kind === 'identity_conflict') { identityConflicts += 1; continue; }
-        if (facts.size !== rows.length) { fallbackIds.push(matchId); continue; }
-        factMatches += 1;
-        if (result.kind !== 'assembled') continue;
-        if (!result.roundEvidenceComplete) roundEvidence = false;
-        if (!result.headshotEvidenceComplete) headshotEvidence = false;
-        if (result.match) full.set(result.match.id, result.match);
-      }
-      if (identityConflicts > 0) {
-        process.stdout.write(`${JSON.stringify({ event: 'member_identity_conflict', identityVersion: datasetIdentityVersion, matchesWithheld: identityConflicts })}
-`);
-      }
-      if (factMatches > 0 || fallbackIds.length === 0) {
-        availability = {
-          acs: 'derived', adr: 'derived',
-          headshotPercentage: headshotEvidence ? 'derived' : 'partial',
-          kast: roundEvidence ? 'reconstructed' : 'partial',
-          firstKills: roundEvidence ? 'reconstructed' : 'partial',
-          firstDeaths: roundEvidence ? 'reconstructed' : 'partial',
-        };
-      }
-      projectionMs += performance.now() - assemblyStarted;
-      const chunks: string[][] = [];
-      for (let index = 0; index < fallbackIds.length; index += PHASE2_CHUNK_MATCHES) chunks.push(fallbackIds.slice(index, index + PHASE2_CHUNK_MATCHES));
-      const projectChunk = async (ids: string[]) => {
-        const rows = await Promise.all(detailQueries(query, selectedMatches, [ids]));
-        // Raw rounds/events are released after each chunk; only compact match records are kept.
-        const projectionStarted = performance.now();
-        const projected = this.projection.project({
-          players: playerRows, performances: rows[0].rows, rounds: rows[1].rows, roundParticipants: rows[2].rows, events: rows[3].rows,
-        }, agentsByInternal);
-        projectionMs += performance.now() - projectionStarted;
-        for (const match of projected.dataset.matches) full.set(match.id, match);
-        availability = availability ? mergeAvailability(availability, projected.availability) : projected.availability;
-        projectedPlayers = projected.dataset.players;
-      };
-      for (let index = 0; index < chunks.length; index += PHASE2_PARALLEL_CHUNKS) {
-        await Promise.all(chunks.slice(index, index + PHASE2_PARALLEL_CHUNKS).map(projectChunk));
-      }
-      const phase2Ms = performance.now() - phase2Started;
-      const aggregateStarted = performance.now();
-      // populationComplete describes evidence reality: every selected match reached full projection.
-      const populationComplete = [...selectedIds].every((id) => full.has(id));
-
-      // ---- Re-resolve with full entries swapped in (identical selection; real evidence for confidence).
-      const merged = skeletons.map((match) => full.get(match.id) ?? match);
-      const players = projectedPlayers;
-      let scope;
-      let forms;
-      let summary;
-      let synergy;
-      /** Matches the bounded windows reference (policy-bounded); never the whole population. */
-      const windowIds = new Set<string>();
-      const keepWindow = <W extends { currentMatchIds: string[]; baselineMatchIds: string[] }>(window: W): W => {
-        for (const id of [...window.currentMatchIds, ...window.baselineMatchIds]) windowIds.add(id);
-        return window;
-      };
-      /** Server-internal member -> match ids of the feature population (weapon CURRENT); never serialized. */
-      const selection: Record<string, string[]> = {};
-      let progress;
-      if (request.feature === 'improvementIndex') {
-        const contextual = selectPerformances(createPerformanceEntries(dataset(merged, players)), filters, { population });
-        progress = [...contextual.byPlayer].map(([playerId, entries]) => {
-          const resolved = resolveProgressWindows(entries, population);
-          // Only entries whose evidence phase 2 loaded may be scored (never a skeleton).
-          const loaded = [...resolved.window.currentEntries, ...resolved.window.baselineEntries].every((entry) => full.has(entry.match.id));
-          return { playerId, actPolicy: resolved.actPolicy, window: serializeWindow(resolved.window), complete: loaded };
-        }).filter((item) => item.complete).map((item) => ({ playerId: item.playerId, actPolicy: item.actPolicy, window: keepWindow(item.window) }));
-      } else if (request.feature === 'synergy') {
-        // duo-synergy-v1 unchanged, now over the full pair population server-side (results only).
-        const pairMatches = [...selectedIds].flatMap((id) => full.get(id) ?? [])
-          .sort((a, b) => b.playedAt.localeCompare(a.playedAt) || a.id.localeCompare(b.id));
-        synergy = buildSynergy(dataset(pairMatches, players), { ...defaultSynergyFilters, map: request.map, gameMode: request.mode,
-          from: request.from ?? '', to: request.to ?? '', ...(request.act ? { act: request.act } : {}) });
-      } else {
-        const entries = createPerformanceEntries(dataset(merged, players));
-        const final = selectPerformances(entries, filters, { population, lifetimeFeature });
-        const kept = new Map<string, PerformanceEntry[]>();
-        for (const [playerId, playerEntries] of final.byPlayer) {
-          const loaded = playerEntries.filter((entry) => full.has(entry.match.id));
-          if (loaded.length) kept.set(playerId, loaded);
-        }
-        for (const [playerId, loaded] of kept) selection[playerId] = loaded.map((entry) => entry.match.id);
-        summary = summarizeSelection(selectionOf(kept));
-        scope = serializeScope(final.scope!);
-        for (const player of scope.players) if (player.window) keepWindow(player.window);
-        if (request.form) {
-          const contextual = selectPerformances(entries, { ...filters, period: 'all' }, { population });
-          forms = [...contextual.byPlayer].map(([playerId, playerEntries]) => ({ playerId, window: keepWindow(serializeWindow(resolveAdaptiveWindow(playerEntries, policyFor('recentForm'), { population }))) }));
-        }
-      }
-      const aggregateMs = performance.now() - aggregateStarted;
-      const matches = [...windowIds].flatMap((id) => full.get(id) ?? []).sort((a, b) => b.playedAt.localeCompare(a.playedAt) || a.id.localeCompare(b.id));
-      const payload = {
-        ok: true as const,
-        schemaVersion: datasetSchemaVersion,
-        view: 'analysis' as const,
-        analysisVersion: SERVER_ANALYSIS_VERSION,
-        scopeRuleVersion: ANALYSIS_SCOPE_VERSION,
-        featurePolicyVersion: FEATURE_SCOPE_POLICY_VERSION,
-        /** TASK-DATA-MODE-POLICY-01: additive; strength populations are Competitive only. */
-        modeEligibilityPolicyVersion: MODE_ELIGIBILITY_POLICY_VERSION,
-        adaptiveWindowVersion: ADAPTIVE_WINDOW_VERSION,
-        scoreVersion: 'community-score-v2' as const,
-        ...(request.feature === 'synergy' ? { synergyVersion: 'duo-synergy-v1' as const } : {}),
-        feature: request.feature,
-        status: populationComplete ? 'available' as const : 'partial' as const,
-        reasons: populationComplete ? [] : ['population_incomplete' as const],
-        coverage: {
-          trackedMatchCount: context.population.trackedMatchCount,
-          /** Every selected match of the feature population was processed with full evidence. */
-          populationComplete,
-          /** Matches the feature population aggregated (policy-bounded features stay bounded by policy). */
-          populationMatches: selectedIds.size,
-          serverHistoryUsed: true as const,
-          transportSnapshotUsed: false as const,
-          /** server-analysis-v2 has no implementation match-count limit. */
-          populationLimit: null,
-          lifetimeComplete: false as const,
-        },
-        population: { ...(population.anchor ? { anchor: population.anchor } : {}), ...(population.floor ? { floor: population.floor } : {}),
-          seasonKeys: population.seasonKeys, seasonStatus: population.seasonStatus, rankStatus: population.rankStatus },
-        ...(scope ? { scope } : {}),
-        ...(summary ? { summary } : {}),
-        ...(synergy ? { synergy } : {}),
-        ...(forms ? { forms } : {}),
-        ...(progress ? { progress, improvementVersion: 'improvement-index-v1' as const } : {}),
-        evidence: availability!,
-        /** Only matches referenced by bounded windows (forms/adaptive/progress); never the population. */
-        dataset: dataset(matches, players),
-      };
-      const metrics = {
-        sqlQueryCount, phase1Ms: round(phase1Ms), resolveMs: round(resolveMs), phase2Ms: round(phase2Ms), projectionMs: round(projectionMs), aggregateMs: round(aggregateMs), totalMs: round(performance.now() - started),
-        observationRows: observations.length, eligibleMatches: skeletons.length, selectedMatches: selectedIds.size, shippedMatches: matches.length, phase2Chunks: chunks.length, serializedBytes: Buffer.byteLength(JSON.stringify(payload)),
-        engine: FULL_TRACKED_AGGREGATE_VERSION, factMs: round(factMs), factRows: factRows.length, factMatches, fallbackMatches: fallbackIds.length,
-      };
-      return { payload, metrics, selection };
-    }
+    const { query, count } = this.counted();
+    const phase1Started = performance.now();
+    const phase1 = await this.loadPhase1(query);
+    const phase1Ms = performance.now() - phase1Started;
+    const resolveStarted = performance.now();
+    const selectedIds = resolveAnalysisMatchIds(request, phase1.skeletons, phase1.skeletonPlayers, phase1.population);
+    const resolveMs = performance.now() - resolveStarted;
+    const phase2Started = performance.now();
+    const phase2 = await this.loadFull(phase1, selectedIds, query);
+    const phase2Ms = performance.now() - phase2Started;
+    const aggregateStarted = performance.now();
+    const { payload, selection, shippedMatches } = finalizeAnalysis({
+      request, skeletons: phase1.skeletons, full: phase2.full, selectedIds, players: phase2.players, population: phase1.population,
+      trackedMatchCount: phase1.trackedMatchCount, availability: availabilityOf(phase2.flags.values()) as DatasetEvidenceAvailability,
+    });
+    const aggregateMs = performance.now() - aggregateStarted;
+    const metrics = {
+      sqlQueryCount: count(), phase1Ms: round(phase1Ms), resolveMs: round(resolveMs), phase2Ms: round(phase2Ms), projectionMs: round(phase2.projectionMs), aggregateMs: round(aggregateMs), totalMs: round(performance.now() - started),
+      observationRows: phase1.observationRows, eligibleMatches: phase1.skeletons.length, selectedMatches: selectedIds.size, shippedMatches, phase2Chunks: phase2.chunks, serializedBytes: Buffer.byteLength(JSON.stringify(payload)),
+      engine: FULL_TRACKED_AGGREGATE_VERSION, factMs: round(phase2.factMs), factRows: phase2.factRows, factMatches: phase2.factMatches, fallbackMatches: phase2.fallbackMatches,
+    };
+    return { payload, metrics, selection };
   }
 }
 

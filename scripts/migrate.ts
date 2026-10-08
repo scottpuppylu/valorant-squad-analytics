@@ -1,8 +1,8 @@
 import { resolve } from 'node:path';
 import { applyMigrations, loadMigrations } from '../server/db/migrations.js';
-import { createNeonDatabase } from '../server/db/neon.js';
+import { createDatabase } from '../server/db/runtime.js';
 
-const database = createNeonDatabase();
+const database = createDatabase();
 if (!database) throw new Error('DATABASE_URL is required to run migrations.');
 
 try {

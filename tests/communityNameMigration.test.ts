@@ -82,6 +82,13 @@ const preserved = ['players', 'provider_identities', 'consents', 'sync_runs', 's
 const dump = async (db: SqlDatabase) => Object.fromEntries(await Promise.all(preserved.map(async (table) => [table, (await db.query(`SELECT * FROM ${table} ORDER BY id`)).rows] as const)));
 const snapshot = async (db: SqlDatabase) => (await new DatasetProjectionService(new PostgresDatasetReadRepository(db)).read()).payload;
 
+/** Rows projected onto the columns that existed before (later additive migrations such as 0012 add nullable columns). */
+const beforeColumns = (after: Record<string, unknown>[] | undefined, before: Record<string, unknown>[] | undefined) =>
+  (after ?? []).map((row, i) => Object.fromEntries(Object.keys((before ?? [])[i] ?? row).map((key) => [key, row[key]])));
+/** position-evidence-v1 (0012) columns must stay NULL on pre-existing rows: the migration is purely additive. */
+const POSITION_COLUMNS = ['position_evidence_version', 'plant_site', 'plant_location_x', 'plant_location_y', 'defuse_location_x', 'defuse_location_y', 'winning_team_role', 'attacking_team_key', 'side_source'];
+const positionColumnsNull = (rows: Record<string, unknown>[] | undefined) => (rows ?? []).every((row) => POSITION_COLUMNS.every((key) => !(key in row) || row[key] === null));
+
 describe('migration 0010 approved community names', () => {
   it('keeps the SQL mapping identical to ops/community-names-2026-10-06.json', () => {
     const sql = readFileSync(resolve('migrations/0010_approved_community_names.sql'), 'utf8');
@@ -102,9 +109,13 @@ describe('migration 0010 approved community names', () => {
     const beforeDump = await dump(db);
     const beforeMembers = await members(db);
     const before = await snapshot(db);
-    expect(await apply(db)).toEqual(['0010', '0011']);
+    expect(await apply(db)).toEqual(['0010', '0011', '0012']);
     expect(await apply(db)).toEqual([]);
-    expect(await dump(db)).toEqual(beforeDump);
+    const afterDump = await dump(db);
+    for (const table of Object.keys(beforeDump)) {
+      expect(beforeColumns(afterDump[table], beforeDump[table]), table).toEqual(beforeDump[table]);
+      expect(positionColumnsNull(afterDump[table]), table).toBe(true);
+    }
     const after = await members(db);
     expect(after.map((m) => [m.id, m.public_id, m.nickname, m.archived_at, m.default_emoji])).toEqual(beforeMembers.map((m) => [m.id, m.public_id, m.nickname, m.archived_at, m.default_emoji]));
     const names = (await db.query<{ game: string; name: string; source: string }>(
@@ -142,16 +153,16 @@ describe('migration 0010 approved community names', () => {
   it('is safe when a member already carries exactly the approved community name', async () => {
     const db = await pre0010(gameNames());
     await new MemberAdminService(db).renameMember(uuid(2, 2), 'jack');
-    expect(await apply(db)).toEqual(['0010', '0011']);
+    expect(await apply(db)).toEqual(['0010', '0011', '0012']);
     expect((await db.query('SELECT count(*)::int AS n FROM members WHERE display_name_source=$1', ['community'])).rows).toEqual([{ n: 9 }]);
   }, 60_000);
 
   it('is a recorded no-op on databases that are not the production identity set (none of the approved names)', async () => {
     const empty = await pre0010([]);
-    expect(await apply(empty)).toEqual(['0010', '0011']);
+    expect(await apply(empty)).toEqual(['0010', '0011', '0012']);
     const other = await pre0010(['FictionalA', 'FictionalB']);
     const before = await members(other);
-    expect(await apply(other)).toEqual(['0010', '0011']);
+    expect(await apply(other)).toEqual(['0010', '0011', '0012']);
     expect(await members(other)).toEqual(before);
   }, 60_000);
 

@@ -11,6 +11,7 @@ import { resolveProgressWindows } from '../analytics/progress/windows';
 import type { Player } from '../types/valorant';
 import { summarizeSelection, type SelectionSummary } from '../analytics/summary';
 import { buildSynergy, defaultSynergyFilters } from '../synergy/analytics';
+import { StaticSnapshotNotPrecomputedError } from '../dataSources/static/StaticSnapshotClient';
 import type { DuoSynergyResult } from '../synergy/types';
 
 export type ScopedAnalysisStatus = 'local' | 'loading' | 'ready' | 'stale' | 'error';
@@ -33,6 +34,8 @@ export interface ScopedAnalysis {
   /** Matches the feature population aggregated (server only). */
   populationMatches?: number;
   populationComplete?: boolean;
+  /** Static snapshot only: the request is valid but outside the precomputed catalog (explicit, never substituted). */
+  notPrecomputed?: true;
 }
 
 const emptySelection: SelectionResult = { entries: [], byPlayer: new Map() };
@@ -51,7 +54,7 @@ export function useScopedAnalysis(filters: AnalysisFilters, options: { lifetimeF
   const query = useMemo(() => analysisQueryFor(filters, lifetimeFeature, options.form === true), [filters, lifetimeFeature, options.form]);
   // Snapshot version in the key: a data refresh re-runs server analysis.
   const key = query ? JSON.stringify([query, snapshot?.version ?? null]) : undefined;
-  const [settled, setSettled] = useState<{ key: string; response?: DatasetAnalysisResponse; failed?: boolean } | undefined>();
+  const [settled, setSettled] = useState<{ key: string; response?: DatasetAnalysisResponse; failed?: boolean; notPrecomputed?: boolean } | undefined>();
 
   useEffect(() => {
     if (!loadAnalysis || !query || !key) return undefined;
@@ -60,8 +63,8 @@ export function useScopedAnalysis(filters: AnalysisFilters, options: { lifetimeF
       if (abort.signal.aborted) return;
       if (!isDatasetAnalysisResponse(response)) throw new Error('Unsupported analysis response.');
       setSettled({ key, response });
-    }).catch(() => {
-      if (!abort.signal.aborted) setSettled({ key, failed: true });
+    }).catch((error: unknown) => {
+      if (!abort.signal.aborted) setSettled({ key, failed: true, notPrecomputed: error instanceof StaticSnapshotNotPrecomputedError });
     });
     return () => abort.abort();
     // `query` is fully described by `key`.
@@ -84,7 +87,8 @@ export function useScopedAnalysis(filters: AnalysisFilters, options: { lifetimeF
   // REAL with no request (指定 Act not chosen yet): an explicit empty population, never the snapshot.
   if (!query) return { status: 'local', source: 'server', selection: emptySelection, summary: emptySummary, dataset: { ...activeDataset, matches: [] } };
   if (server) return { status: 'ready', source: 'server', ...server };
-  return { status: settled?.failed && settled.key === key ? 'error' : 'loading', source: 'server', selection: emptySelection, summary: emptySummary, dataset: { ...activeDataset, matches: [] } };
+  const failed = settled?.failed && settled.key === key;
+  return { status: failed ? 'error' : 'loading', source: 'server', selection: emptySelection, summary: emptySummary, dataset: { ...activeDataset, matches: [] }, ...(failed && settled.notPrecomputed ? { notPrecomputed: true as const } : {}) };
 }
 
 export interface SynergyContext { act?: string; from?: string; to?: string; map: string; mode: string }
@@ -94,13 +98,13 @@ export interface SynergyContext { act?: string; from?: string; to?: string; map:
  * durable history (never the snapshot). TASK-DATA-03B.2C: duo-synergy-v1 runs unchanged on the server
  * over the full pair population and only its results are shipped; Demo runs the same code locally.
  */
-export function useSynergyResults(context: SynergyContext): { status: ScopedAnalysisStatus; source: 'server' | 'snapshot'; results: DuoSynergyResult[]; players: Player[]; trackedMatchCount?: number; populationMatches?: number } {
+export function useSynergyResults(context: SynergyContext): { status: ScopedAnalysisStatus; source: 'server' | 'snapshot'; results: DuoSynergyResult[]; players: Player[]; trackedMatchCount?: number; populationMatches?: number; notPrecomputed?: true } {
   const { dataset, loadAnalysis, snapshot } = useDataset();
   const query = useMemo<AnalysisQuery>(() => ({ feature: 'synergy', map: context.map, mode: context.mode,
     ...(context.act ? { act: context.act } : {}), ...(context.from ? { from: context.from } : {}), ...(context.to ? { to: context.to } : {}) }),
   [context.act, context.from, context.map, context.mode, context.to]);
   const key = JSON.stringify([query, snapshot?.version ?? null]);
-  const [settled, setSettled] = useState<{ key: string; response?: DatasetAnalysisResponse; failed?: boolean } | undefined>();
+  const [settled, setSettled] = useState<{ key: string; response?: DatasetAnalysisResponse; failed?: boolean; notPrecomputed?: boolean } | undefined>();
   useEffect(() => {
     if (!loadAnalysis) return undefined;
     const abort = new AbortController();
@@ -108,7 +112,7 @@ export function useSynergyResults(context: SynergyContext): { status: ScopedAnal
       if (abort.signal.aborted) return;
       if (!isDatasetAnalysisResponse(response)) throw new Error('Unsupported analysis response.');
       setSettled({ key, response });
-    }).catch(() => { if (!abort.signal.aborted) setSettled({ key, failed: true }); });
+    }).catch((error: unknown) => { if (!abort.signal.aborted) setSettled({ key, failed: true, notPrecomputed: error instanceof StaticSnapshotNotPrecomputedError }); });
     return () => abort.abort();
   }, [key, loadAnalysis, query]);
   const local = useMemo(() => (loadAnalysis ? [] : buildSynergy(dataset, { ...defaultSynergyFilters, map: context.map, gameMode: context.mode,
@@ -116,7 +120,8 @@ export function useSynergyResults(context: SynergyContext): { status: ScopedAnal
   if (!loadAnalysis) return { status: 'local', source: 'snapshot', results: local, players: dataset.players };
   if (settled?.response && settled.key === key) return { status: 'ready', source: 'server', results: settled.response.synergy ?? [], players: settled.response.dataset.players,
     trackedMatchCount: settled.response.coverage.trackedMatchCount, populationMatches: settled.response.coverage.populationMatches };
-  return { status: settled?.failed && settled.key === key ? 'error' : 'loading', source: 'server', results: [], players: dataset.players };
+  const failed = settled?.failed && settled.key === key;
+  return { status: failed ? 'error' : 'loading', source: 'server', results: [], players: dataset.players, ...(failed && settled.notPrecomputed ? { notPrecomputed: true as const } : {}) };
 }
 
 /**
@@ -133,7 +138,7 @@ export function useProgressIndex(player: Player | undefined): { status: ScopedAn
     return computeImprovementIndex(player, resolveProgressWindows(entries, population));
   }, [loadAnalysis, performanceEntries, player, population]);
   const key = playerId ? JSON.stringify([playerId, snapshot?.version ?? null]) : undefined;
-  const [settled, setSettled] = useState<{ key: string; response?: DatasetAnalysisResponse; failed?: boolean } | undefined>();
+  const [settled, setSettled] = useState<{ key: string; response?: DatasetAnalysisResponse; failed?: boolean; notPrecomputed?: boolean } | undefined>();
   useEffect(() => {
     if (!loadAnalysis || !playerId || !key) return undefined;
     const abort = new AbortController();

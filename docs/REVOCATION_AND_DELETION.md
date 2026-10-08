@@ -84,6 +84,31 @@ Other retained identity-derived fields were reviewed as follows:
 - assistant, plant, defuse, killer and victim relationships retain only random internal participant UUID references after `player_id` is removed and the participant lookup HMAC is randomized;
 - round presence and anonymous relationships remain because future Trade, KAST, Clutch and Impact reconstruction depends on event topology rather than provider identity.
 
+### position-evidence-v1 (migration 0012) in a retained shared match
+
+TASK-RELEASE-BLOCKER-FIX-01 (2026-10-08). Each item below is proven by the `position-evidence-v1 spatial telemetry`
+tests in `tests/revocationDeletion.test.ts`.
+
+| Evidence | After revocation of participant P |
+|---|---|
+| P's player snapshots (`event_player_locations`: x, y, `view_radians`) | Deleted (whole row) |
+| Kill position (`kill_events.location_x/y`) where P is killer or victim | Cleared (existing rule) |
+| Plant coordinates (`rounds.plant_location_x/y`) where P planted | Cleared |
+| Defuse coordinates (`rounds.defuse_location_x/y`) where P defused | Cleared |
+| Planter / defuser reference (`plant_participant_id` / `defuse_participant_id`) | Kept as anonymous topology; it now points only to the anonymized participant row (`player_id` NULL, random lookup HMAC) |
+| Site label (`plant_site`, a provider A/B/C label), plant / defuse status and time | Kept (shared round facts) |
+| Side (`winning_team_role`, `attacking_team_key`, `side_source`) | Kept (team-level shared round facts) |
+| `source_matches.position_evidence_version` | Kept (version marker, no personal data) |
+| Other participants' snapshots, kill positions, plant / defuse coordinates | Kept unchanged |
+
+**No resurrection.** After deletion, the application database holds no precise coordinate attributable to P.
+- A later analysis-fact rebuild (`hydrateAnalysisFacts`) cannot recreate one: P has no facts and no spatial residue.
+- A repeated `continue` or revoke resurrects or changes nothing.
+
+**Scope.**
+- Exclusive matches are still deleted whole by cascade.
+- Private rebuild staging is a separate store outside this lifecycle.
+
 The retained structure supports trade/KAST/clutch/impact reconstruction for the remaining consenting member without a cross-match or provider identity link to the revoked person. No unavailable derived-metric table exists today; that stage is therefore a documented zero-row operation until such a table is introduced.
 
 ## Sync and rank metadata

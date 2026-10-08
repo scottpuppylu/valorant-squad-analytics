@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { CANONICAL_EVENT_METRIC_RULE_VERSION } from '../server/metrics/eventMetricEngine';
 import { PGlite } from '@electric-sql/pglite';
 import { afterEach, describe, expect, it } from 'vitest';
 import { applyMigrations, loadMigrations } from '../server/db/migrations';
@@ -172,7 +173,7 @@ describe('dataset runtime migrations', () => {
     await database.query(`INSERT INTO kill_events (id,source_match_id,round_id,event_lookup_hmac,event_sequence,time_in_round_ms,killer_participant_id,victim_participant_id)
       VALUES ($1,$2,$3,$4,1,4000,$5,$6)`,[uuid(13,2),uuid(5,1),uuid(9,1),lookup(60000),uuid(8,2),uuid(8,3)]);
     const result = await new DatasetProjectionService(new PostgresDatasetReadRepository(database)).read();
-    expect(result.payload.dataset.matches[0]!.synergyEvidence).toEqual({ruleVersion:'event-metrics-v1',status:'reconstructed',reconstructedRounds:1,pairs:[[0,1,0,1]]});
+    expect(result.payload.dataset.matches[0]!.synergyEvidence).toEqual({ruleVersion:CANONICAL_EVENT_METRIC_RULE_VERSION,status:'reconstructed',reconstructedRounds:1,pairs:[[0,1,0,1]]});
     const serialized = JSON.stringify(result.payload);
     for (const privateValue of [uuid(8,1),uuid(8,2),uuid(8,3),lookup(60000)]) expect(serialized).not.toContain(privateValue);
     await database.query("UPDATE consents SET status='revoked',revoked_at=now() WHERE player_id=$1",[uuid(1,2)]);
@@ -190,7 +191,7 @@ describe('dataset runtime migrations', () => {
     await existing.query(`INSERT INTO source_matches (id,squad_id,provider,provider_match_lookup_hmac,provider_schema_version,normalization_version,affinity,first_observed_at,last_observed_at)
       VALUES ($1,$2,'HenrikDev',$3,'v4','durable-evidence-v1','ap',now(),now())`, [uuid(5, 999), squadId, lookup(999)]);
     const all = await loadMigrations(migrationsPath);
-    expect(await applyMigrations(existing, all)).toEqual(['0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011']);
+    expect(await applyMigrations(existing, all)).toEqual(['0004', '0005', '0006', '0007', '0008', '0009', '0010', '0011', '0012']);
     const before = (await existing.query<{ public_id: string }>('SELECT public_id FROM source_matches')).rows[0]!.public_id;
     expect(before).toMatch(/^[0-9a-f-]{36}$/u);
     expect(await applyMigrations(existing, all)).toEqual([]);
@@ -273,7 +274,7 @@ describe('durable dataset projection privacy and compatibility', () => {
       firstKills: legacy.performances[0]!.firstKills,
       firstDeaths: legacy.performances[0]!.firstDeaths,
       advancedMetrics: {
-        ruleVersion: 'event-metrics-v1',
+        ruleVersion: CANONICAL_EVENT_METRIC_RULE_VERSION,
         evidence: { trade: 'reconstructed', clutch: 'reconstructed' },
         trade: { tradedDeaths: 1 },
       },

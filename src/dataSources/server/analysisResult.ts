@@ -1,12 +1,12 @@
-import { createPerformanceEntries } from '../../analytics/filters';
-import type { AnalysisFilters, PerformanceEntry, SelectionResult } from '../../analytics/types';
-import type { AdaptiveWindowResult, FeatureId, PlayerScope, ScopeSummary, ScopeStatus, WindowSample } from '../../analytics/scope/types';
-import type { NormalizedAnalyticsDataset } from '../types';
-import type { DatasetEvidenceContract } from './contracts';
-import { isRealDataset } from './datasetContract';
-import type { ActPolicy, ProgressWindows } from '../../analytics/progress/windows';
-import { SELECTION_SUMMARY_VERSION, type SelectionSummary } from '../../analytics/summary';
-import type { DuoSynergyResult } from '../../synergy/types';
+import { createPerformanceEntries } from '../../analytics/filters.js';
+import type { AnalysisFilters, PerformanceEntry, SelectionResult } from '../../analytics/types.js';
+import type { AdaptiveWindowResult, FeatureId, PlayerScope, ScopeSummary, ScopeStatus, WindowSample } from '../../analytics/scope/types.js';
+import type { NormalizedAnalyticsDataset } from '../types.js';
+import type { DatasetEvidenceContract } from './contracts.js';
+import { isRealDataset } from './datasetContract.js';
+import type { ActPolicy, ProgressWindows } from '../../analytics/progress/windows.js';
+import { SELECTION_SUMMARY_VERSION, type SelectionSummary } from '../../analytics/summary.js';
+import type { DuoSynergyResult } from '../../synergy/types.js';
 
 /**
  * `view=analysis` contract. TASK-DATA-03B.2C `server-analysis-v2`: the server aggregates the FULL

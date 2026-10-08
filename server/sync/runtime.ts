@@ -1,4 +1,4 @@
-import { createNeonDatabase } from '../db/neon.js';
+import { getSharedDatabase } from '../db/runtime.js';
 import { HenrikDataProvider } from '../henrikDataProvider.js';
 import { DurableEvidenceService } from '../persistence/durableEvidenceService.js';
 import { HistoricalSyncService } from './historicalSyncService.js';
@@ -14,7 +14,7 @@ export function createHistoricalSyncService(): HistoricalSyncService {
   if (!databaseUrl || !hmacKey || !apiKey) {
     throw new Error('Historical synchronization requires all server-only production settings.');
   }
-  const database = createNeonDatabase();
+  const database = getSharedDatabase();
   if (!database) throw new Error('Historical synchronization database is unavailable.');
   singleton = new HistoricalSyncService(
     new PostgresSyncStore(database),

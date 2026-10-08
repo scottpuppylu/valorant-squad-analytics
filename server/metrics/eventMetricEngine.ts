@@ -7,13 +7,23 @@ import type {
   EventMetricMatchInput, MatchMetricReconstruction, MetricKillInput, MetricParticipantInput,
   MetricRoundInput, MetricTraceEntry, PlayerMetricReconstruction,
 } from './types.js';
+import { reconstructV2 } from './eventMetricsV2.js';
 
-export const EVENT_METRIC_RULE_VERSION = 'event-metrics-v1' as const;
+/** The original rules: kept unchanged, callable and reproducible (the rollback engine). */
+export const EVENT_METRIC_RULE_VERSION_V1 = 'event-metrics-v1' as const;
+export type EventMetricRuleVersion = typeof EVENT_METRIC_RULE_VERSION_V1 | 'event-metrics-v2';
+/**
+ * TASK-ANALYTICS-EVENT-METRICS-V2-ROLLOUT-01: the ONE switch that decides the engine of every default
+ * `new EventMetricEngine()` (projection, analysis facts, fact hydration, static export) and therefore the analysis-facts
+ * engine key. Rollback = set it back to EVENT_METRIC_RULE_VERSION_V1: stale facts are re-hydrated from raw evidence by
+ * the existing freshness guard; no raw-data migration. Explicit `{ ruleVersion }` always overrides it.
+ */
+export const CANONICAL_EVENT_METRIC_RULE_VERSION: EventMetricRuleVersion = 'event-metrics-v2';
 export const TRADE_WINDOW_MS = 5_000;
 
 const emptyClutchBreakdown = (): ClutchBreakdown => ({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 });
 const eventKey = (event: MetricKillInput) => `${event.roundId}|${event.sequence}`;
-const evidence = <T>(status: MetricEvidence<T>['status'], value?: T, coverage?: MetricEvidence<T>['coverage']): MetricEvidence<T> => ({
+export const evidence = <T>(status: MetricEvidence<T>['status'], value?: T, coverage?: MetricEvidence<T>['coverage']): MetricEvidence<T> => ({
   status,
   ...(value === undefined ? {} : { value }),
   ...(coverage === undefined ? {} : { coverage }),
@@ -23,7 +33,7 @@ function orderedEvents(events: MetricKillInput[]): MetricKillInput[] {
   return [...events].sort((a, b) => a.timeInRoundMs - b.timeInRoundMs || a.sequence - b.sequence);
 }
 
-function groupEvents(events: MetricKillInput[]): Map<string, MetricKillInput[]> {
+export function groupEvents(events: MetricKillInput[]): Map<string, MetricKillInput[]> {
   const grouped = new Map<string, MetricKillInput[]>();
   for (const event of events) {
     const list = grouped.get(event.roundId) ?? [];
@@ -34,13 +44,13 @@ function groupEvents(events: MetricKillInput[]): Map<string, MetricKillInput[]> 
   return grouped;
 }
 
-function completeBase(input: EventMetricMatchInput): boolean {
+export function completeBase(input: EventMetricMatchInput): boolean {
   return input.normalizationVersion === DURABLE_NORMALIZATION_VERSION
     && input.roundsStatus === 'observed'
     && input.killsStatus === 'observed';
 }
 
-function completeRoundCollection(input: EventMetricMatchInput): boolean {
+export function completeRoundCollection(input: EventMetricMatchInput): boolean {
   return input.normalizationVersion === DURABLE_NORMALIZATION_VERSION
     && input.roundsStatus === 'observed';
 }
@@ -107,7 +117,7 @@ function validTopology(round: MetricRoundInput, events: MetricKillInput[], parti
   return true;
 }
 
-function objectiveFor(
+export function objectiveFor(
   playerId: string,
   rounds: MetricRoundInput[],
   participants: Map<string, MetricParticipantInput>,
@@ -130,7 +140,7 @@ function objectiveFor(
   return evidence('reconstructed', { plants, defuses });
 }
 
-function directAbility(player: MetricParticipantInput): MetricEvidence<AbilityCastMetrics> {
+export function directAbility(player: MetricParticipantInput): MetricEvidence<AbilityCastMetrics> {
   const values = [player.ability1Casts, player.ability2Casts, player.grenadeCasts, player.ultimateCasts];
   if (player.abilityStatus !== 'observed' || values.some((value) => value === undefined)) return evidence(player.abilityStatus === 'missing' ? 'unavailable' : 'partial');
   return evidence('derived', {
@@ -139,7 +149,7 @@ function directAbility(player: MetricParticipantInput): MetricEvidence<AbilityCa
   });
 }
 
-function directEconomy(player: MetricParticipantInput): MetricEvidence<EconomyMetrics> {
+export function directEconomy(player: MetricParticipantInput): MetricEvidence<EconomyMetrics> {
   const values = [player.loadoutValueTotal, player.loadoutValueAverage, player.spentTotal, player.spentAverage, player.damage, player.kills];
   if (player.economyStatus !== 'observed' || values.some((value) => value === undefined)) return evidence(player.economyStatus === 'missing' ? 'unavailable' : 'partial');
   const value = {
@@ -154,7 +164,16 @@ function directEconomy(player: MetricParticipantInput): MetricEvidence<EconomyMe
 }
 
 export class EventMetricEngine {
+  /**
+   * `event-metrics-v1` (original rules, unchanged) or `event-metrics-v2` (round-topology-aware;
+   * docs/EVENT_RECONSTRUCTION_ROBUSTNESS.md). Without an explicit version: CANONICAL_EVENT_METRIC_RULE_VERSION.
+   */
+  constructor(private readonly options: { ruleVersion?: EventMetricRuleVersion } = {}) {}
+
+  get ruleVersion(): EventMetricRuleVersion { return this.options.ruleVersion ?? CANONICAL_EVENT_METRIC_RULE_VERSION; }
+
   reconstruct(input: EventMetricMatchInput): MatchMetricReconstruction {
+    if (this.ruleVersion === 'event-metrics-v2') return reconstructV2(input);
     const participants = new Map(input.participants.map((participant) => [participant.id, participant]));
     const teams = new Map(input.participants.map((participant) => [participant.id, participant.teamKey]));
     const eventsByRound = groupEvents(input.kills);
@@ -289,12 +308,12 @@ export class EventMetricEngine {
       const roleValueInputs = evidence('derived', roleValue);
       players.set(player.id, {
         metrics: {
-          ruleVersion: EVENT_METRIC_RULE_VERSION, coverage, trade: tradeEvidence, kast, opening, clutch,
+          ruleVersion: EVENT_METRIC_RULE_VERSION_V1, coverage, trade: tradeEvidence, kast, opening, clutch,
           objectives, abilityCasts, economy, impactContext, roleValueInputs,
         },
         trace,
       });
     }
-    return { ruleVersion: EVENT_METRIC_RULE_VERSION, players, directTradeEdges: [...trade.directTradeEdges.values()] };
+    return { ruleVersion: EVENT_METRIC_RULE_VERSION_V1, players, directTradeEdges: [...trade.directTradeEdges.values()] };
   }
 }

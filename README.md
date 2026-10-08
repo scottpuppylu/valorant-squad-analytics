@@ -42,6 +42,10 @@ TASK-003、TASK-API-02、TASK-DATA-01A／01B／01C 與 TASK-DATA-02 已完成。
 
 詳細範圍請見 [docs/PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md)，下一個開發任務請見 [docs/TASKS.md](docs/TASKS.md)。
 
+## Production 架構（TASK-INFRA-DATABASE-PORTABILITY-01）
+
+最終 Production：單一 VPS + Docker Compose（Caddy → Node API → PostgreSQL，私有網路，PostgreSQL 不對外開 port）。GitHub Pages 只作 Demo／靜態回滾；Vercel 與 Neon 待遷移後退休。資料庫只依賴標準 PostgreSQL（`pg` 與 `DATABASE_URL`），不依賴任何供應商 SDK。詳見 `docs/VPS_PRODUCTION_ARCHITECTURE.md`、`docs/DATABASE_PORTABILITY.md`、`docs/DATABASE_OPERATIONS.md`、`docs/PRODUCTION_MIGRATION_RUNBOOK.md`。
+
 ## 本機需求
 
 - Node.js 20 或更新版本
@@ -63,7 +67,7 @@ npm audit
 npm run db:validate
 ```
 
-`npm test` 與 CI 只使用 mock／fixture，不會呼叫真實 provider 或 production Neon。`npm run build` 也會掃描 browser source 與 bundle，防止 server secret 名稱進入前端。公開政策唯一版本定義在 `shared/privacyPolicy.ts`；目前版本是 `2026-10-02-public-v1`。
+`npm test` 與 CI 只使用 mock／fixture，不會呼叫真實 provider 或 production 資料庫。`npm run build` 也會掃描 browser source 與 bundle，防止 server secret 名稱進入前端。公開政策唯一版本定義在 `shared/privacyPolicy.ts`；目前版本是 `2026-10-02-public-v1`。
 
 資料庫 migration 位於 `migrations/`；`npm run db:migrate` 僅可在受信任、具 server-only database configuration 的環境執行。所有 provider、資料庫、HMAC、原始事件列與管理憑證都不得進入 React 或公開 dataset response。完整 schema、身分類型、同意與 retention 語意見 [docs/DATABASE.md](docs/DATABASE.md)，撤回與刪除契約見 [docs/REVOCATION_AND_DELETION.md](docs/REVOCATION_AND_DELETION.md)。DATA-02 runtime 與公開政策見 [docs/DATASET_RUNTIME.md](docs/DATASET_RUNTIME.md)，事件規則與證據狀態見 [docs/METRICS_RECONSTRUCTION.md](docs/METRICS_RECONSTRUCTION.md)。
 

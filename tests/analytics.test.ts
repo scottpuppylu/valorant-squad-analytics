@@ -27,7 +27,7 @@ describe('analytics selection pipeline', () => {
       playerId: sample.playerId,
       map: sample.match.map,
       agent: sample.performance.agent,
-      role: sample.player.role,
+      role: sample.player.role ?? 'all',
       gameMode: sample.match.gameMode,
     });
     expect(selection.entries.length).toBeGreaterThan(0);

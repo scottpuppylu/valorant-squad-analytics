@@ -1,4 +1,4 @@
-import { createNeonDatabase } from '../db/neon.js';
+import { getSharedDatabase } from '../db/runtime.js';
 import { WeaponAnalyticsService } from './weaponAnalytics.js';
 import { DatasetProjectionService } from './datasetProjectionService.js';
 import { PostgresDatasetReadRepository } from './postgresDatasetReadRepository.js';
@@ -17,7 +17,7 @@ let analysisSingleton: ServerAnalysisService | undefined;
 export function createServerAnalysisService(): ServerAnalysisService {
   if (datasetReadMode() !== 'public') throw new Error('Dataset read mode is disabled.');
   if (analysisSingleton) return analysisSingleton;
-  const database = createNeonDatabase();
+  const database = getSharedDatabase();
   if (!database) throw new Error('Dataset database is unavailable.');
   analysisSingleton = new ServerAnalysisService(database, new DatasetProjectionService(new PostgresDatasetReadRepository(database)));
   return analysisSingleton;
@@ -28,7 +28,7 @@ let weaponSingleton: WeaponAnalyticsService | undefined;
 export function createWeaponAnalyticsService(): WeaponAnalyticsService {
   if (datasetReadMode() !== 'public') throw new Error('Dataset read mode is disabled.');
   if (weaponSingleton) return weaponSingleton;
-  const database = createNeonDatabase();
+  const database = getSharedDatabase();
   if (!database) throw new Error('Dataset database is unavailable.');
   weaponSingleton = new WeaponAnalyticsService(database, createServerAnalysisService());
   return weaponSingleton;
@@ -38,7 +38,7 @@ export function createWeaponAnalyticsService(): WeaponAnalyticsService {
 export function createAnalyticsContextRepository(): PostgresAnalyticsContextRepository {
   if (datasetReadMode() !== 'public') throw new Error('Dataset read mode is disabled.');
   if (contextSingleton) return contextSingleton;
-  const database = createNeonDatabase();
+  const database = getSharedDatabase();
   if (!database) throw new Error('Dataset database is unavailable.');
   contextSingleton = new PostgresAnalyticsContextRepository(database);
   return contextSingleton;
@@ -47,7 +47,7 @@ export function createAnalyticsContextRepository(): PostgresAnalyticsContextRepo
 export function createDatasetProjectionService(): DatasetProjectionService {
   if (datasetReadMode() !== 'public') throw new Error('Dataset read mode is disabled.');
   if (singleton) return singleton;
-  const database = createNeonDatabase();
+  const database = getSharedDatabase();
   if (!database) throw new Error('Dataset database is unavailable.');
   singleton = new DatasetProjectionService(new PostgresDatasetReadRepository(database));
   return singleton;

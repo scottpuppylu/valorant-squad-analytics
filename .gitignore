@@ -38,3 +38,17 @@ tmp/
 .local/
 temp/
 spike-output/
+
+# VPS runtime secrets and local backups (TASK-INFRA-DATABASE-PORTABILITY-01)
+infra/env/
+backups/
+dist-server/
+
+# Static data snapshots (TASK-INFRA-STATIC-DATA-PUBLISH-01): derived from PostgreSQL, published separately, never committed here
+public-data/
+static-snapshots/
+
+# Third-party agent skills are installed per developer, never vendored into the source tree
+# (TASK-RELEASE-BLOCKER-FIX-01; e.g. the Apache-2.0 neondatabase/agent-skills Neon skill).
+.claude/skills/
+skills-lock.json

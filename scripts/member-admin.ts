@@ -11,7 +11,7 @@
 // Requires server-side DATABASE_URL. Never deployed as an API, never bundled into the browser, and
 // never prints internal ids, PUUIDs, HMACs, credentials or secrets.
 import { readFileSync } from 'node:fs';
-import { createNeonDatabase } from '../server/db/neon.js';
+import { createDatabase } from '../server/db/runtime.js';
 import { MemberAdminError, MemberAdminService, type CommunityNameMapping } from '../server/identity/memberAdminService.js';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -98,7 +98,7 @@ try {
   process.stderr.write(`${error instanceof Error ? error.message : 'Invalid arguments.'}\n`);
   process.exit(2);
 }
-const database = createNeonDatabase();
+const database = createDatabase();
 if (!database) {
   process.stderr.write('DATABASE_URL is required (server operator only).\n');
   process.exit(2);

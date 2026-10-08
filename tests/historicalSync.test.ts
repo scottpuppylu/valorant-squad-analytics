@@ -118,7 +118,7 @@ describe('bounded historical synchronization', () => {
     const service = new HistoricalSyncService(store, durable, provider, hmacKey, { usefulWorkBudgetMs: 25, monotonicNow: () => { clock += 30; return clock; } });
     await expect(service.start(publicPlayerId, 'deep_backfill')).rejects.toMatchObject({ code: 'PROVIDER_TIMEOUT' });
     expect(provider.calls).toBe(0);
-    expect((await database.query('SELECT next_start,history_rule_version FROM sync_cursors')).rows[0]).toEqual({ next_start: 0, history_rule_version: 'deep-history-v1' });
+    expect((await database.query('SELECT next_start,history_rule_version FROM sync_cursors')).rows[0]).toEqual({ next_start: 0, history_rule_version: 'deep-history-v2' });
   });
 
   it('scheduled due selection excludes recent, revoked, obsolete, inactive and anonymized players', async () => {
@@ -253,7 +253,8 @@ describe('bounded historical synchronization', () => {
     let at=new Date('2026-10-05T00:00:00Z');
     const provider=new DeepFixtureProvider(new Map(),new Map([[1,[0,1,2]],[2,[0,1,2]]]));
     await durable.persistMatches({...connection,playerId:publicPlayerId,limit:3},page(match(0),match(1),match(2)));
-    const service=new HistoricalSyncService(store,durable,provider,hmacKey,{now:()=>at});
+    // Fixture pages model a 3-entry stored-index page size.
+    const service=new HistoricalSyncService(store,durable,provider,hmacKey,{now:()=>at,storedPageSize:3});
     const first=await service.start(publicPlayerId,'deep_backfill');
     await service.continue(first.runId);
     for(let n=0;n<2;n+=1){const paused=await service.continue(first.runId);at=new Date(paused.nextAttemptAt!);}
@@ -336,7 +337,7 @@ describe('bounded historical synchronization', () => {
   it('a repeated stored page is stalled, not exhausted, and never fabricates compact-index evidence', async () => {
     await durable.persistMatches({ ...connection, playerId: publicPlayerId, limit: 3 }, page(match(0), match(1), match(2)));
     const provider = new DeepFixtureProvider(new Map(), new Map([[1, [0, 1, 2]], [2, [0, 1, 2]]]));
-    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey, { storedPageSize: 3 });
     let progress = await service.start(publicPlayerId, 'deep_backfill');
     progress = await service.continue(progress.runId);
     progress = await service.continue(progress.runId);
@@ -361,7 +362,7 @@ describe('bounded historical synchronization', () => {
 
   it('short live phase transitions then stored A/B/C overlaps recover older D/E detail one per invocation', async () => {
     const provider = new DeepFixtureProvider(new Map([[0, page(match(0), match(1))]]), new Map([[1, [0, 1, 2]], [2, [3, 4]]]));
-    const service = new HistoricalSyncService(store, durable, provider, hmacKey);
+    const service = new HistoricalSyncService(store, durable, provider, hmacKey, { storedPageSize: 3 });
     let progress = await service.start(publicPlayerId, 'deep_backfill');
     expect(progress).toMatchObject({ status: 'paused', history: { historyPhase: 'stored_index' } });
     for (let attempt = 0; attempt < 5 && progress.status !== 'complete'; attempt += 1) {

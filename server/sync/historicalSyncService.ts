@@ -28,6 +28,8 @@ const LEASE_DURATION_MS = 45_000;
 
 interface HistoricalSyncOptions {
   pageSize?: number;
+  /** Stored-index page size (stored-index-efficiency-v1); default STORED_INDEX_PAGE_SIZE. Tests only. */
+  storedPageSize?: number;
   historyHorizon?: number;
   usefulWorkBudgetMs?: number;
   now?: () => Date;
@@ -89,6 +91,7 @@ function coverage(values: string[]): { from?: string; to?: string } {
 
 export class HistoricalSyncService {
   private readonly pageSize: number;
+  private readonly storedPageSize?: number;
   private readonly historyHorizon: number;
   private readonly usefulWorkBudgetMs: number;
   private readonly now: () => Date;
@@ -102,6 +105,7 @@ export class HistoricalSyncService {
     options: HistoricalSyncOptions = {},
   ) {
     this.pageSize = options.pageSize ?? DEFAULT_PAGE_SIZE;
+    this.storedPageSize = options.storedPageSize;
     this.historyHorizon = options.historyHorizon ?? DEFAULT_HISTORY_HORIZON;
     this.usefulWorkBudgetMs = options.usefulWorkBudgetMs ?? DEFAULT_USEFUL_WORK_BUDGET_MS;
     this.now = options.now ?? (() => new Date());
@@ -284,6 +288,7 @@ export class HistoricalSyncService {
         const chunk = await executeDeepHistoryChunk({
           store: this.store, durable: this.durable, provider: this.provider,
           run, cursor, input, hmacKey: this.hmacKey, pageSize: this.pageSize,
+          ...(this.storedPageSize ? { storedPageSize: this.storedPageSize } : {}),
           now: this.now, monotonicNow: this.monotonicNow, invocationStarted,
           budgetMs: this.usefulWorkBudgetMs,
           metrics: deepMetrics!,

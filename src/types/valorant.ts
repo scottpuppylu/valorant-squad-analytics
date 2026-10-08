@@ -35,7 +35,8 @@ export interface Player {
   nickname?: string;
   /** Currently public accounts of this member (REAL); fictional accounts in Demo. */
   accounts?: PublicAccount[];
-  role: PlayerRole;
+  /** Most-played KNOWN role; absent when no played agent has a known role (never guessed; agent-catalog-v1). */
+  role?: PlayerRole;
   agents: AgentName[];
   accent: string;
   tagline: string;
@@ -91,7 +92,7 @@ export interface MatchRecord {
 export interface PairTradeEvidence {
   playerAId: string;
   playerBId: string;
-  ruleVersion: 'event-metrics-v1';
+  ruleVersion: 'event-metrics-v1' | 'event-metrics-v2';
   status: 'reconstructed' | 'partial' | 'unavailable';
   reconstructedRounds: number;
   aTradedBDeaths?: number;
@@ -99,7 +100,8 @@ export interface PairTradeEvidence {
 }
 
 export interface MatchPairTradeEvidence {
-  ruleVersion: 'event-metrics-v1';
+  /** v2 appears only in the private offline path (TASK-ANALYTICS-EVENT-RECONSTRUCTION-ROBUSTNESS-01); public payloads stay v1. */
+  ruleVersion: 'event-metrics-v1' | 'event-metrics-v2';
   status: 'reconstructed' | 'partial' | 'unavailable';
   reconstructedRounds: number;
   /** Indices refer only to this match's public performances; absent counters mean missing. */

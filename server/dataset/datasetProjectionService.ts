@@ -60,6 +60,7 @@ export function membersFromRows(rows: DatasetPlayerRow[], agentsByAccount: Map<s
       .sort((a, b) => Number(b.is_primary_account) - Number(a.is_primary_account) || a.public_id.localeCompare(b.public_id))
       .map((row) => ({ id: row.public_id, gameName: row.display_name, tag: row.display_tag, isPrimary: row.is_primary_account === true,
         ...(row.account_label ? { label: row.account_label } : {}) }));
+    const role = primaryRoleForAgents(agents);
     return {
       id: memberId,
       handle: member.member_display_name,
@@ -67,7 +68,7 @@ export function membersFromRows(rows: DatasetPlayerRow[], agentsByAccount: Map<s
       nameSource: member.member_name_source === 'community' ? 'community' as const : 'legacy_account' as const,
       ...(member.member_nickname ? { nickname: member.member_nickname } : {}),
       accounts,
-      role: primaryRoleForAgents(agents),
+      ...(role ? { role } : {}),
       agents,
       accent: accentFor(memberId),
       tagline: '持久化戰績成員',
@@ -78,14 +79,15 @@ export function membersFromRows(rows: DatasetPlayerRow[], agentsByAccount: Map<s
 }
 
 export class DatasetProjectionService {
-  private readonly metricEngine = new EventMetricEngine();
 
   private collides(context: AssemblyContext, rows: DatasetPerformanceRow[]): boolean {
     return hasMemberCollision(rows.map((row) => context.playerRowByInternalId.get(row.internal_player_id)?.member_public_id));
   }
 
   /** `cursorKey` is only for tests; production derives the cursor MAC from IDENTIFIER_HMAC_KEY. */
-  constructor(private readonly repository: DatasetReadRepository, private readonly cursorKey?: string) {}
+  /** `metricEngine` defaults to the canonical engine; tests pass the preserved v1 engine explicitly. */
+  constructor(private readonly repository: DatasetReadRepository, private readonly cursorKey?: string,
+    private readonly metricEngine: EventMetricEngine = new EventMetricEngine()) {}
 
   /**
    * Shared per-match projection for the snapshot, history pages and DATA-03B.2B server analysis.

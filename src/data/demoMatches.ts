@@ -57,7 +57,7 @@ function buildPerformance(matchIndex: number, playerIndex: number, rounds: numbe
   const opponents = 1 + optionalSeed % 3;
   const breakdown = (count: number) => Object.fromEntries([1,2,3,4,5].map((n) => [n,n === opponents ? count : 0]));
   // Fictional aggregate evidence, not a reconstruction of real player events.
-  const support = ['Initiator','Controller'].includes(player.role);
+  const support = ['Initiator','Controller'].includes(player.role ?? '');
   const tradeKills = Math.min(kills, 1 + optionalSeed % 3);
   return {
     advancedMetrics: {

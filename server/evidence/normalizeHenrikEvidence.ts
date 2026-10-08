@@ -1,6 +1,7 @@
 import type { MatchImportInput } from '../contracts.js';
 import { eventHmac, participantHmac, providerIdentityHmac, sourceMatchHmac } from '../identityProtection.js';
 import { normalizeSeasonEvidence } from './seasonEvidence.js';
+import { deriveRoundSide, plantSiteLabel, POSITION_EVIDENCE_VERSION } from './positionEvidence.js';
 import { DURABLE_NORMALIZATION_VERSION, type DurableMatchEvidence, type EvidenceParticipant, type EvidenceRound, type EvidenceRoundParticipant, type EvidenceStatus } from './types.js';
 
 type Json = Record<string, unknown>;
@@ -8,6 +9,26 @@ const isRecord = (value: unknown): value is Json => typeof value === 'object' &&
 const asRecords = (value: unknown): Json[] => Array.isArray(value) ? value.filter(isRecord) : [];
 const asText = (value: unknown): string | undefined => typeof value === 'string' && value.length > 0 ? value : undefined;
 const asNumber = (value: unknown): number | undefined => typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+/** Finite { x, y } or undefined (lossless; no bounds, no transform). */
+const point = (value: unknown): { x: number; y: number } | undefined => {
+  if (!isRecord(value)) return undefined;
+  const x = asNumber(value.x); const y = asNumber(value.y);
+  return x !== undefined && y !== undefined ? { x, y } : undefined;
+};
+/** position-evidence-v1 player snapshots of one event: identity under `player`, finite x/y, optional finite view; first row per player wins. */
+function snapshotRows(matchId: string, items: unknown, key?: string): Array<{ participantHmac: string; x: number; y: number; viewRadians?: number }> {
+  const rows = new Map<string, { participantHmac: string; x: number; y: number; viewRadians?: number }>();
+  for (const item of asRecords(items)) {
+    const puuid = asText(isRecord(item.player) ? item.player.puuid : undefined);
+    const location = point(item.location);
+    if (!puuid || !location) continue;
+    const hmac = participantHmac(matchId, puuid, key);
+    if (rows.has(hmac)) continue;
+    const view = asNumber(item.view_radians);
+    rows.set(hmac, { participantHmac: hmac, ...location, ...(view !== undefined ? { viewRadians: view } : {}) });
+  }
+  return [...rows.values()];
+}
 
 function recordsEvidence(container: Json, field: string): { status: EvidenceStatus; records: Json[] } {
   if (!(field in container)) return { status: 'missing', records: [] };
@@ -133,7 +154,8 @@ export function normalizeHenrikEvidence(
     const kills = killEvidence.records;
     const knownParticipants = new Set(participants.map((participant) => participant.lookupHmac));
     for (const kill of kills) {
-      for (const value of [kill.killer, kill.victim, ...asRecords(kill.assistants), ...asRecords(kill.player_locations)]) {
+      // Player snapshots never create participants: a snapshot of someone outside the roster is dropped at write time.
+      for (const value of [kill.killer, kill.victim, ...asRecords(kill.assistants)]) {
         if (!isRecord(value)) continue;
         const puuid = asText(value.puuid);
         if (!puuid) continue;
@@ -143,6 +165,7 @@ export function normalizeHenrikEvidence(
         knownParticipants.add(lookupHmac);
       }
     }
+    const participantTeams = [...new Set(participants.map((participant) => participant.teamKey).filter((team) => team !== 'unknown'))];
     const rounds: EvidenceRound[] = roundEvidence.records.map((round, roundIndex) => {
       const number = asNumber(round.id) ?? roundIndex;
       const plant = isRecord(round.plant) ? round.plant : undefined;
@@ -167,14 +190,19 @@ export function normalizeHenrikEvidence(
           weaponId: weapon.id, weaponName: weapon.name,
           location: locationSource && asNumber(locationSource.x) !== undefined && asNumber(locationSource.y) !== undefined
             ? { x: asNumber(locationSource.x)!, y: asNumber(locationSource.y)! } : undefined,
-          playerLocations: asRecords(kill.player_locations).flatMap((location) => {
-            const id = asText(location.puuid); const x = asNumber(location.x); const y = asNumber(location.y);
-            return id && x !== undefined && y !== undefined ? [{ participantHmac: participantHmac(matchId, id, explicitKey), x, y }] : [];
-          }),
+          // Observed v4 contract: { player: { puuid, … }, location: { x, y }, view_radians } (never flat).
+          playerLocations: snapshotRows(matchId, kill.player_locations, explicitKey),
         }];
       });
+      const plantLocation = point(plant?.location); const defuseLocation = point(defuse?.location);
+      const side = deriveRoundSide({ teamKeys: participantTeams, winningTeam: asText(round.winning_team), winningTeamRole: round.winning_team_role,
+        planterTeam: asText(isRecord(plant?.player) ? plant.player.team : undefined), defuserTeam: asText(isRecord(defuse?.player) ? defuse.player.team : undefined) });
       return {
         number, winningTeam: asText(round.winning_team), result: asText(round.result),
+        ...(plantSiteLabel(plant?.site) ? { plantSite: plantSiteLabel(plant?.site) } : {}),
+        ...(plantLocation ? { plantLocation } : {}), ...(defuseLocation ? { defuseLocation } : {}),
+        ...(side.winningTeamRole ? { winningTeamRole: side.winningTeamRole } : {}),
+        ...(side.attackingTeamKey ? { attackingTeamKey: side.attackingTeamKey, sideSource: side.sideSource } : {}),
         plantStatus: objectStatus(round, 'plant'), plantParticipantHmac: refHmac(matchId, plant?.player, explicitKey), plantTimeMs: asNumber(plant?.round_time_in_ms),
         defuseStatus: objectStatus(round, 'defuse'), defuseParticipantHmac: refHmac(matchId, defuse?.player, explicitKey), defuseTimeMs: asNumber(defuse?.round_time_in_ms),
         participantsStatus: participantEvidence.status,
@@ -192,7 +220,7 @@ export function normalizeHenrikEvidence(
       mapId: asText(map?.id), mapName: asText(map?.name), queueId: asText(queue?.id), queueName: asText(queue?.name),
       startedAt: asText(metadata.started_at), gameLengthMs: asNumber(metadata.game_length_in_ms),
       ...normalizeSeasonEvidence(metadata.season),
-      roundsStatus: roundEvidence.status, killsStatus: killEvidence.status, participants,
+      roundsStatus: roundEvidence.status, killsStatus: killEvidence.status, positionEvidenceVersion: POSITION_EVIDENCE_VERSION, participants,
       teams: asRecords(match.teams).map((team) => ({ teamKey: asText(team.team_id) ?? 'unknown', won: typeof team.won === 'boolean' ? team.won : undefined, roundsWon: asNumber(isRecord(team.rounds) ? team.rounds.won : undefined), roundsLost: asNumber(isRecord(team.rounds) ? team.rounds.lost : undefined) })),
       rounds,
     }];

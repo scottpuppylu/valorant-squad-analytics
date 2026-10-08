@@ -7,9 +7,14 @@ import { buildAnalytics } from '../src/data/analytics';
 import { groupByAgent, groupByMap } from '../src/analytics/analysis';
 import { buildSynergy, defaultSynergyFilters } from '../src/synergy/analytics';
 import { dimensions } from '../src/scoring/versions';
+import { EventMetricEngine } from '../server/metrics/eventMetricEngine';
 
 // Entirely fictional rows: no production identities, queries, credentials or payloads.
-function fixture(kind: 'complete' | 'self' | 'repeat' | 'dead' = 'self', count = 1, players = 1): DatasetProjectionRows {
+// Topologies: 'self' / 'repeat' / 'dead' are legitimate VALORANT events (Spike or self death, revive, recorded-dead kill) that only the
+// preserved event-metrics-v1 engine fails closed on; 'duplicate' (exact duplicate event) and 'ghost' (killer outside the round) are
+// genuinely untrusted under EVERY engine and are the default (TASK-ANALYTICS-EVENT-METRICS-V2-ROLLOUT-01).
+type Kind = 'complete' | 'self' | 'repeat' | 'dead' | 'duplicate' | 'ghost';
+function fixture(kind: Kind = 'duplicate', count = 1, players = 1): DatasetProjectionRows {
   const rows: DatasetProjectionRows = { players: [], performances: [], rounds: [], roundParticipants: [], events: [], coverage: null, sqlQueryCount: 6, databaseMs: 0 };
   for (let p = 0; p < players; p++) rows.players.push({ internal_player_id: `player-${p}`, public_id: `public-${p}`, display_name: `Fictional ${p}`, display_tag: 'DEMO', default_emoji: '🤖',
     is_primary_account: true, account_label: null, internal_member_id: `player-${p}`, member_public_id: `public-${p}`, member_display_name: `Fictional ${p}`, member_name_source: 'legacy_account', member_default_emoji: '🤖' });
@@ -23,16 +28,18 @@ function fixture(kind: 'complete' | 'self' | 'repeat' | 'dead' = 'self', count =
       team_won: true, rounds_won: 1, rounds_lost: 0,
     });
     for (const [id, team] of [[a, 'Blue'], [b, 'Red'], ...(players > 1 ? [[`friend-${m}`, 'Blue']] : [])]) rows.roundParticipants.push({ internal_round_id: round, internal_participant_id: id!, team_key: team!, present: true });
-    const pairs = kind === 'complete' ? [[a, b]] : kind === 'self' ? [[b, b]] : kind === 'repeat' ? [[a, b], [a, b]] : [[a, b], [b, a]];
-    pairs.forEach(([killer, victim], index) => rows.events.push({ internal_match_id: match, internal_round_id: round, event_sequence: index, time_in_round_ms: 1000 + index * 1000, killer_participant_id: killer!, victim_participant_id: victim!, killer_team_key: killer === a ? 'Blue' : 'Red', assistant_participant_id: null }));
+    const pairs = kind === 'complete' ? [[a, b]] : kind === 'self' ? [[b, b]] : kind === 'repeat' || kind === 'duplicate' ? [[a, b], [a, b]]
+      : kind === 'ghost' ? [[`ghost-${m}`, b]] : [[a, b], [b, a]];
+    pairs.forEach(([killer, victim], index) => rows.events.push({ internal_match_id: match, internal_round_id: round, event_sequence: index, time_in_round_ms: kind === 'duplicate' ? 1000 : 1000 + index * 1000, killer_participant_id: killer!, victim_participant_id: victim!, killer_team_key: killer === a ? 'Blue' : 'Red', assistant_participant_id: null }));
   }
   return rows;
 }
-const project = (rows: DatasetProjectionRows) => new DatasetProjectionService({ readProjectionRows: async () => rows, readHistoryPage: async () => { throw new Error('unused'); } }).read();
+const V1 = new EventMetricEngine({ ruleVersion: 'event-metrics-v1' });
+const project = (rows: DatasetProjectionRows, engine?: EventMetricEngine) => new DatasetProjectionService({ readProjectionRows: async () => rows, readHistoryPage: async () => { throw new Error('unused'); } }, undefined, engine).read();
 
 describe('approved basic / advanced evidence decoupling', () => {
-  it.each(['self', 'repeat', 'dead'] as const)('retains basic stats with %s topology without inventing event values', async (kind) => {
-    const { payload } = await project(fixture(kind));
+  it.each([['self', V1], ['repeat', V1], ['dead', V1], ['duplicate', undefined], ['ghost', undefined]] as const)('retains basic stats with %s topology without inventing event values', async (kind, engine) => {
+    const { payload } = await project(fixture(kind), engine);
     expect(payload.state).toBe('ready');
     expect(isDatasetResponse(payload)).toBe(true);
     const p = payload.dataset.matches[0]!.performances[0]!;
@@ -41,6 +48,13 @@ describe('approved basic / advanced evidence decoupling', () => {
     expect(p.advancedMetrics?.evidence).toMatchObject({ trade: 'unavailable', clutch: 'partial', impactContext: 'partial', economy: 'derived', abilityCasts: 'derived' });
     expect(p.advancedMetrics?.economy?.spentTotal).toBe(3000);
     expect(payload.evidence).toMatchObject({ kast: 'partial', firstKills: 'partial', firstDeaths: 'partial' });
+  });
+  it.each(['self', 'repeat', 'dead'] as const)('the canonical engine reconstructs the legitimate %s topology that v1 left partial; basic stats unchanged', async (kind) => {
+    const [legacy, canonical] = [(await project(fixture(kind), V1)).payload, (await project(fixture(kind))).payload];
+    const [p1, p2] = [legacy.dataset.matches[0]!.performances[0]!, canonical.dataset.matches[0]!.performances[0]!];
+    expect(p2.eventEvidence).toEqual({ kast: 'reconstructed', opening: 'reconstructed' });
+    expect(isDatasetResponse(canonical)).toBe(true);
+    for (const key of ['kills', 'deaths', 'assists', 'acs', 'adr', 'headshotPercentage', 'agent', 'teamWon'] as const) expect(p2[key]).toEqual(p1[key]);
   });
   it.each(['kills', 'deaths', 'assists', 'score', 'damage_dealt'] as const)('still omits missing required %s', async (key) => {
     const rows = fixture(); rows.performances[0]![key] = null;
@@ -86,9 +100,9 @@ describe('approved basic / advanced evidence decoupling', () => {
     expect(p).toMatchObject({ kast: 0, firstKills: 0, firstDeaths: 0, eventEvidence: { kast: 'reconstructed', opening: 'reconstructed' } });
   });
   it('retains ten synthetic production-like matches and honest unavailable scores', async () => {
-    const rows = fixture('self', 10);
+    const rows = fixture('duplicate', 10);
     for (let i = 0; i < 10; i++) {
-      const variant = fixture((['self', 'repeat', 'dead'] as const)[i % 3]!);
+      const variant = fixture((['duplicate', 'ghost'] as const)[i % 2]!);
       rows.events = rows.events.filter(e => e.internal_match_id !== `match-${i}`);
       rows.events.push(...variant.events.map(e => ({ ...e, internal_match_id: `match-${i}`, internal_round_id: `round-${i}`, killer_participant_id: e.killer_participant_id.replace('-0', `-${i}`), victim_participant_id: e.victim_participant_id.replace('-0', `-${i}`) })));
     }
@@ -105,7 +119,7 @@ describe('approved basic / advanced evidence decoupling', () => {
     expect(groupByAgent(analytics.performanceEntries)[0]!.kast).toBeUndefined();
   });
   it('aggregates only reconstructed KAST without losing scoring coverage', async () => {
-    const rows = fixture('self', 10); rows.events = rows.events.filter(e => e.internal_match_id !== 'match-0');
+    const rows = fixture('duplicate', 10); rows.events = rows.events.filter(e => e.internal_match_id !== 'match-0');
     rows.events.push(...fixture('complete').events);
     const { payload } = await project(rows), p = payload.dataset.players[0]!;
     expect(aggregatePlayerStats(p, payload.dataset.matches).kast).toBe(1);
@@ -115,7 +129,7 @@ describe('approved basic / advanced evidence decoupling', () => {
     expect(scores.consistency.value).toBeUndefined();
   });
   it('retains same-team pair identity but not fabricated direct Trade counters', async () => {
-    const { payload } = await project(fixture('self', 3, 2));
+    const { payload } = await project(fixture('duplicate', 3, 2));
     expect(payload.dataset.matches[0]!.synergyEvidence).toMatchObject({ status: 'unavailable', pairs: [[0, 1]] });
     const pair = buildSynergy(payload.dataset, defaultSynergyFilters)[0]!;
     expect(pair).toBeDefined(); expect(pair.value).toBeUndefined();

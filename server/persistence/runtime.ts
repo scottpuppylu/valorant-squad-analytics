@@ -1,4 +1,4 @@
-import { createNeonDatabase } from '../db/neon.js';
+import { getSharedDatabase } from '../db/runtime.js';
 import { DurableEvidenceService } from './durableEvidenceService.js';
 
 let singleton: DurableEvidenceService | undefined;
@@ -9,7 +9,7 @@ export function createDurableEvidenceWriter(): DurableEvidenceService | undefine
   if (!hasDatabase && !hasHmacKey) return undefined;
   if (!hasDatabase || !hasHmacKey) throw new Error('Durable evidence persistence requires both server-only database settings.');
   if (singleton) return singleton;
-  const database = createNeonDatabase();
+  const database = getSharedDatabase();
   if (!database) throw new Error('Durable evidence database is unavailable.');
   singleton = new DurableEvidenceService(database, process.env.IDENTIFIER_HMAC_KEY!);
   return singleton;
